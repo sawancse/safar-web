@@ -133,24 +133,7 @@ export default function AuthPage() {
   const [failedAttempts, setFailedAttempts] = useState(0);
 
   // -- Check trusted device on mount --
-  const [checkingDevice, setCheckingDevice] = useState(true);
-
-  useEffect(() => {
-    async function checkDevice() {
-      try {
-        const fp = generateDeviceFingerprint();
-        const lastPhone = localStorage.getItem('last_login_phone');
-        const lastEmail = localStorage.getItem('last_login_email');
-        if (!lastPhone && !lastEmail) { setCheckingDevice(false); return; }
-
-        const auth = await api.checkTrustedDevice(fp, lastPhone || undefined, lastEmail || undefined);
-        saveAuthAndRedirect(auth, router, redirect);
-      } catch {
-        setCheckingDevice(false);
-      }
-    }
-    checkDevice();
-  }, [router, redirect]);
+  const [checkingDevice, setCheckingDevice] = useState(false);
 
   const otpRefs = useRef<(HTMLInputElement | null)[]>([]);
   const countryRef = useRef<HTMLDivElement>(null);
