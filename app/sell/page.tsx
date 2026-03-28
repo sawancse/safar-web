@@ -1,0 +1,1257 @@
+'use client';
+
+import { useState, useEffect, useCallback } from 'react';
+import { useRouter } from 'next/navigation';
+import Link from 'next/link';
+import { api } from '@/lib/api';
+
+/* ── Constants ─────────────────────────────────────────────── */
+
+const STEP_LABELS = [
+  'Property Type',
+  'Location',
+  'Details',
+  'Area & Pricing',
+  'Construction',
+  'Features',
+  'Photos',
+  'Review',
+];
+
+const PROPERTY_TYPES = [
+  { value: 'APARTMENT', label: 'Apartment', icon: '🏢' },
+  { value: 'INDEPENDENT_HOUSE', label: 'Independent House', icon: '🏠' },
+  { value: 'VILLA', label: 'Villa', icon: '🏡' },
+  { value: 'PLOT', label: 'Plot', icon: '📐' },
+  { value: 'PENTHOUSE', label: 'Penthouse', icon: '🌆' },
+  { value: 'STUDIO', label: 'Studio', icon: '🛋️' },
+  { value: 'BUILDER_FLOOR', label: 'Builder Floor', icon: '🏗️' },
+  { value: 'FARM_HOUSE', label: 'Farm House', icon: '🌾' },
+  { value: 'ROW_HOUSE', label: 'Row House', icon: '🏘️' },
+  { value: 'COMMERCIAL_OFFICE', label: 'Commercial Office', icon: '💼' },
+  { value: 'SHOP', label: 'Shop', icon: '🏪' },
+  { value: 'SHOWROOM', label: 'Showroom', icon: '🚗' },
+  { value: 'WAREHOUSE', label: 'Warehouse', icon: '📦' },
+];
+
+const INDIAN_STATES = [
+  'Andhra Pradesh', 'Arunachal Pradesh', 'Assam', 'Bihar', 'Chhattisgarh',
+  'Goa', 'Gujarat', 'Haryana', 'Himachal Pradesh', 'Jharkhand', 'Karnataka',
+  'Kerala', 'Madhya Pradesh', 'Maharashtra', 'Manipur', 'Meghalaya', 'Mizoram',
+  'Nagaland', 'Odisha', 'Punjab', 'Rajasthan', 'Sikkim', 'Tamil Nadu',
+  'Telangana', 'Tripura', 'Uttar Pradesh', 'Uttarakhand', 'West Bengal',
+  'Delhi', 'Chandigarh', 'Puducherry', 'Jammu and Kashmir', 'Ladakh',
+  'Andaman and Nicobar', 'Dadra and Nagar Haveli', 'Lakshadweep',
+];
+
+const INDIAN_CITIES: Record<string, string[]> = {
+  'Maharashtra': ['Mumbai', 'Pune', 'Nagpur', 'Nashik', 'Aurangabad', 'Thane', 'Navi Mumbai'],
+  'Karnataka': ['Bangalore', 'Mysore', 'Hubli', 'Mangalore', 'Belgaum'],
+  'Tamil Nadu': ['Chennai', 'Coimbatore', 'Madurai', 'Salem', 'Tiruchirappalli'],
+  'Telangana': ['Hyderabad', 'Warangal', 'Nizamabad', 'Khammam', 'Karimnagar'],
+  'Delhi': ['New Delhi', 'Dwarka', 'Rohini', 'Saket', 'Janakpuri'],
+  'Gujarat': ['Ahmedabad', 'Surat', 'Vadodara', 'Rajkot', 'Gandhinagar'],
+  'Rajasthan': ['Jaipur', 'Jodhpur', 'Udaipur', 'Kota', 'Ajmer'],
+  'West Bengal': ['Kolkata', 'Howrah', 'Siliguri', 'Durgapur', 'Asansol'],
+  'Uttar Pradesh': ['Lucknow', 'Noida', 'Ghaziabad', 'Agra', 'Varanasi', 'Kanpur', 'Greater Noida'],
+  'Kerala': ['Kochi', 'Thiruvananthapuram', 'Kozhikode', 'Thrissur', 'Kollam'],
+  'Madhya Pradesh': ['Bhopal', 'Indore', 'Jabalpur', 'Gwalior', 'Ujjain'],
+  'Punjab': ['Chandigarh', 'Ludhiana', 'Amritsar', 'Jalandhar', 'Patiala'],
+  'Haryana': ['Gurgaon', 'Faridabad', 'Panipat', 'Ambala', 'Karnal'],
+  'Bihar': ['Patna', 'Gaya', 'Bhagalpur', 'Muzaffarpur', 'Darbhanga'],
+  'Goa': ['Panaji', 'Margao', 'Vasco da Gama', 'Mapusa', 'Ponda'],
+  'Andhra Pradesh': ['Visakhapatnam', 'Vijayawada', 'Guntur', 'Nellore', 'Tirupati'],
+  'Jharkhand': ['Ranchi', 'Jamshedpur', 'Dhanbad', 'Bokaro', 'Hazaribagh'],
+  'Chhattisgarh': ['Raipur', 'Bhilai', 'Bilaspur', 'Korba', 'Durg'],
+  'Odisha': ['Bhubaneswar', 'Cuttack', 'Rourkela', 'Berhampur', 'Sambalpur'],
+  'Himachal Pradesh': ['Shimla', 'Manali', 'Dharamshala', 'Solan', 'Kullu'],
+  'Uttarakhand': ['Dehradun', 'Haridwar', 'Rishikesh', 'Nainital', 'Mussoorie'],
+  'Assam': ['Guwahati', 'Silchar', 'Dibrugarh', 'Jorhat', 'Nagaon'],
+  'Sikkim': ['Gangtok', 'Namchi', 'Pelling'],
+};
+
+const FACING_OPTIONS = ['North', 'South', 'East', 'West', 'North-East', 'North-West', 'South-East', 'South-West'];
+
+const AMENITIES = [
+  'Gym', 'Swimming Pool', 'Club House', "Children's Play Area", 'Park', 'Lift',
+  'Security', 'Power Backup', 'Rainwater Harvesting', 'EV Charging', 'Jogging Track',
+  'Indoor Games', 'Party Hall', 'Yoga Room', 'Intercom',
+];
+
+const OVERLOOKING_OPTIONS = ['Garden', 'Pool', 'Main Road', 'Park', 'City View'];
+
+/* ── Wizard State ─────────────────────────────────────────── */
+
+interface SaleWizardData {
+  // Step 0
+  propertyType: string;
+  // Step 1
+  state: string;
+  city: string;
+  locality: string;
+  pincode: string;
+  address: string;
+  lat: string;
+  lng: string;
+  // Step 2
+  bhk: number;
+  bathrooms: number;
+  balconies: number;
+  floorNumber: number;
+  totalFloors: number;
+  facing: string;
+  ageYears: number;
+  furnishing: string;
+  coveredParking: number;
+  openParking: number;
+  // Step 3
+  carpetAreaSqft: number;
+  builtUpAreaSqft: number;
+  superBuiltUpAreaSqft: number;
+  plotAreaSqft: number;
+  askingPriceRupees: number;
+  negotiable: boolean;
+  maintenancePerMonth: number;
+  transactionType: string;
+  // Step 4
+  possessionStatus: string;
+  possessionDate: string;
+  reraId: string;
+  builderName: string;
+  projectName: string;
+  // Step 5
+  amenities: string[];
+  waterSupply: string;
+  powerBackup: string;
+  gatedCommunity: boolean;
+  cornerProperty: boolean;
+  vastuCompliant: boolean;
+  petAllowed: boolean;
+  overlooking: string[];
+  // Step 6
+  photos: File[];
+  floorPlan: File | null;
+  videoTourUrl: string;
+  brochureUrl: string;
+}
+
+const INITIAL_DATA: SaleWizardData = {
+  propertyType: '',
+  state: '', city: '', locality: '', pincode: '', address: '', lat: '', lng: '',
+  bhk: 2, bathrooms: 2, balconies: 1, floorNumber: 0, totalFloors: 1,
+  facing: '', ageYears: 0, furnishing: 'SEMI_FURNISHED', coveredParking: 0, openParking: 0,
+  carpetAreaSqft: 0, builtUpAreaSqft: 0, superBuiltUpAreaSqft: 0, plotAreaSqft: 0,
+  askingPriceRupees: 0, negotiable: false, maintenancePerMonth: 0, transactionType: 'RESALE',
+  possessionStatus: 'READY', possessionDate: '', reraId: '', builderName: '', projectName: '',
+  amenities: [], waterSupply: 'CORPORATION', powerBackup: 'FULL', gatedCommunity: false,
+  cornerProperty: false, vastuCompliant: false, petAllowed: false, overlooking: [],
+  photos: [], floorPlan: null, videoTourUrl: '', brochureUrl: '',
+};
+
+/* ── Progress Bar ─────────────────────────────────────────── */
+
+function ProgressBar({ step, labels }: { step: number; labels: string[] }) {
+  return (
+    <div className="flex items-center gap-0 mb-8 overflow-x-auto">
+      {labels.map((label, i) => {
+        const done = i < step;
+        const active = i === step;
+        return (
+          <div key={i} className="flex-1 flex items-center min-w-[80px]">
+            <div className="flex flex-col items-center flex-1">
+              <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold transition-colors ${
+                done ? 'bg-green-500 text-white' : active ? 'bg-orange-500 text-white' : 'bg-gray-200 text-gray-500'
+              }`}>
+                {done ? '✓' : i + 1}
+              </div>
+              <span className={`text-xs mt-1 text-center whitespace-nowrap ${active ? 'text-orange-600 font-semibold' : 'text-gray-400'}`}>
+                {label}
+              </span>
+            </div>
+            {i < labels.length - 1 && (
+              <div className={`h-0.5 flex-1 -mt-4 ${done ? 'bg-green-500' : 'bg-gray-200'}`} />
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+/* ── Main Wizard ──────────────────────────────────────────── */
+
+export default function SellPropertyWizard() {
+  const router = useRouter();
+  const [step, setStep] = useState(0);
+  const [data, setData] = useState<SaleWizardData>(INITIAL_DATA);
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState('');
+  const [token, setToken] = useState('');
+  const [photoPreviews, setPhotoPreviews] = useState<string[]>([]);
+  const [floorPlanPreview, setFloorPlanPreview] = useState<string>('');
+  const [dragActive, setDragActive] = useState(false);
+
+  useEffect(() => {
+    const t = localStorage.getItem('access_token') ?? '';
+    if (!t) { router.push('/auth?redirect=/sell'); return; }
+    setToken(t);
+  }, [router]);
+
+  function update(partial: Partial<SaleWizardData>) {
+    setData(prev => ({ ...prev, ...partial }));
+  }
+
+  function toggleAmenity(key: string) {
+    setData(prev => ({
+      ...prev,
+      amenities: prev.amenities.includes(key)
+        ? prev.amenities.filter(a => a !== key)
+        : [...prev.amenities, key],
+    }));
+  }
+
+  function toggleOverlooking(key: string) {
+    setData(prev => ({
+      ...prev,
+      overlooking: prev.overlooking.includes(key)
+        ? prev.overlooking.filter(o => o !== key)
+        : [...prev.overlooking, key],
+    }));
+  }
+
+  function handlePhotoFiles(files: FileList | null) {
+    if (!files) return;
+    const newFiles = Array.from(files).filter(f => f.type.startsWith('image/'));
+    const newPreviews = newFiles.map(f => URL.createObjectURL(f));
+    setData(prev => ({ ...prev, photos: [...prev.photos, ...newFiles] }));
+    setPhotoPreviews(prev => [...prev, ...newPreviews]);
+  }
+
+  function removePhoto(index: number) {
+    setData(prev => ({ ...prev, photos: prev.photos.filter((_, i) => i !== index) }));
+    setPhotoPreviews(prev => prev.filter((_, i) => i !== index));
+  }
+
+  function handleFloorPlan(files: FileList | null) {
+    if (!files || !files[0]) return;
+    const file = files[0];
+    update({ floorPlan: file });
+    setFloorPlanPreview(URL.createObjectURL(file));
+  }
+
+  const handleDrag = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (e.type === 'dragenter' || e.type === 'dragover') setDragActive(true);
+    else if (e.type === 'dragleave') setDragActive(false);
+  }, []);
+
+  const handleDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragActive(false);
+    handlePhotoFiles(e.dataTransfer.files);
+  }, []);
+
+  const pricePerSqft = data.askingPriceRupees && data.carpetAreaSqft
+    ? Math.round(data.askingPriceRupees / data.carpetAreaSqft)
+    : 0;
+
+  const citiesForState = data.state ? (INDIAN_CITIES[data.state] || []) : [];
+
+  function canProceed(): boolean {
+    switch (step) {
+      case 0: return !!data.propertyType;
+      case 1: return !!data.state && !!data.city && !!data.pincode && !!data.address;
+      case 2: return data.bhk > 0 || data.propertyType === 'PLOT';
+      case 3: return data.askingPriceRupees > 0 && (data.carpetAreaSqft > 0 || data.plotAreaSqft > 0);
+      case 4: return !!data.possessionStatus;
+      case 5: return true;
+      case 6: return data.photos.length > 0 || data.propertyType === 'PLOT';
+      default: return true;
+    }
+  }
+
+  async function handleSubmit() {
+    setSubmitting(true);
+    setError('');
+    try {
+      const payload = {
+        propertyType: data.propertyType,
+        state: data.state,
+        city: data.city,
+        locality: data.locality,
+        pincode: data.pincode,
+        address: data.address,
+        latitude: data.lat ? parseFloat(data.lat) : null,
+        longitude: data.lng ? parseFloat(data.lng) : null,
+        bhk: data.bhk,
+        bathrooms: data.bathrooms,
+        balconies: data.balconies,
+        floorNumber: data.floorNumber,
+        totalFloors: data.totalFloors,
+        facing: data.facing,
+        ageYears: data.ageYears,
+        furnishing: data.furnishing,
+        coveredParking: data.coveredParking,
+        openParking: data.openParking,
+        carpetAreaSqft: data.carpetAreaSqft,
+        builtUpAreaSqft: data.builtUpAreaSqft,
+        superBuiltUpAreaSqft: data.superBuiltUpAreaSqft,
+        plotAreaSqft: data.plotAreaSqft,
+        askingPricePaise: data.askingPriceRupees * 100,
+        negotiable: data.negotiable,
+        maintenancePerMonthPaise: data.maintenancePerMonth * 100,
+        transactionType: data.transactionType,
+        possessionStatus: data.possessionStatus,
+        possessionDate: data.possessionDate || null,
+        reraId: data.reraId || null,
+        builderName: data.builderName || null,
+        projectName: data.projectName || null,
+        amenities: data.amenities,
+        waterSupply: data.waterSupply,
+        powerBackup: data.powerBackup,
+        gatedCommunity: data.gatedCommunity,
+        cornerProperty: data.cornerProperty,
+        vastuCompliant: data.vastuCompliant,
+        petAllowed: data.petAllowed,
+        overlooking: data.overlooking,
+        videoTourUrl: data.videoTourUrl || null,
+        brochureUrl: data.brochureUrl || null,
+      };
+      await api.createSaleProperty(payload, token);
+      router.push('/host?tab=sales');
+    } catch (e: any) {
+      setError(e.message || 'Failed to publish property. Please try again.');
+    }
+    setSubmitting(false);
+  }
+
+  function formatPrice(value: number): string {
+    if (value >= 10000000) return `${(value / 10000000).toFixed(2)} Cr`;
+    if (value >= 100000) return `${(value / 100000).toFixed(2)} L`;
+    if (value >= 1000) return `${(value / 1000).toFixed(1)} K`;
+    return value.toLocaleString('en-IN');
+  }
+
+  /* ── Step Renderers ─────────────────────────────────────── */
+
+  function renderStep0() {
+    return (
+      <div>
+        <h2 className="text-2xl font-bold mb-2">What type of property are you selling?</h2>
+        <p className="text-gray-500 mb-6">Select the category that best describes your property.</p>
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+          {PROPERTY_TYPES.map(pt => (
+            <button
+              key={pt.value}
+              onClick={() => update({ propertyType: pt.value })}
+              className={`p-4 rounded-xl border-2 text-left transition-all hover:shadow-md ${
+                data.propertyType === pt.value
+                  ? 'border-orange-500 bg-orange-50 shadow-md'
+                  : 'border-gray-200 bg-white hover:border-orange-300'
+              }`}
+            >
+              <div className="text-3xl mb-2">{pt.icon}</div>
+              <div className="font-semibold text-gray-800 text-sm">{pt.label}</div>
+            </button>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  function renderStep1() {
+    return (
+      <div>
+        <h2 className="text-2xl font-bold mb-2">Where is your property located?</h2>
+        <p className="text-gray-500 mb-6">Help buyers find your property with accurate location details.</p>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">State *</label>
+            <select
+              value={data.state}
+              onChange={e => update({ state: e.target.value, city: '' })}
+              className="w-full border rounded-xl px-4 py-3 focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none"
+            >
+              <option value="">Select State</option>
+              {INDIAN_STATES.map(s => (
+                <option key={s} value={s}>{s}</option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">City *</label>
+            {citiesForState.length > 0 ? (
+              <select
+                value={data.city}
+                onChange={e => update({ city: e.target.value })}
+                className="w-full border rounded-xl px-4 py-3 focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none"
+              >
+                <option value="">Select City</option>
+                {citiesForState.map(c => (
+                  <option key={c} value={c}>{c}</option>
+                ))}
+              </select>
+            ) : (
+              <input
+                type="text"
+                value={data.city}
+                onChange={e => update({ city: e.target.value })}
+                placeholder="Enter city name"
+                className="w-full border rounded-xl px-4 py-3 focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none"
+              />
+            )}
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Locality / Area</label>
+            <input
+              type="text"
+              value={data.locality}
+              onChange={e => update({ locality: e.target.value })}
+              placeholder="e.g. Banjara Hills, Koramangala"
+              className="w-full border rounded-xl px-4 py-3 focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Pincode *</label>
+            <input
+              type="text"
+              value={data.pincode}
+              onChange={e => update({ pincode: e.target.value.replace(/\D/g, '').slice(0, 6) })}
+              placeholder="6-digit pincode"
+              maxLength={6}
+              className="w-full border rounded-xl px-4 py-3 focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none"
+            />
+          </div>
+          <div className="md:col-span-2">
+            <label className="block text-sm font-medium text-gray-700 mb-1">Full Address *</label>
+            <textarea
+              value={data.address}
+              onChange={e => update({ address: e.target.value })}
+              placeholder="House/Flat no, Street, Landmark"
+              rows={2}
+              className="w-full border rounded-xl px-4 py-3 focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none resize-none"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Latitude</label>
+            <input
+              type="text"
+              value={data.lat}
+              onChange={e => update({ lat: e.target.value })}
+              placeholder="e.g. 17.4401"
+              className="w-full border rounded-xl px-4 py-3 focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Longitude</label>
+            <input
+              type="text"
+              value={data.lng}
+              onChange={e => update({ lng: e.target.value })}
+              placeholder="e.g. 78.3489"
+              className="w-full border rounded-xl px-4 py-3 focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none"
+            />
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  function renderStep2() {
+    const isPlot = data.propertyType === 'PLOT';
+    return (
+      <div>
+        <h2 className="text-2xl font-bold mb-2">Property Details</h2>
+        <p className="text-gray-500 mb-6">Tell buyers about your property configuration.</p>
+
+        {!isPlot && (
+          <>
+            <div className="mb-6">
+              <label className="block text-sm font-medium text-gray-700 mb-2">BHK *</label>
+              <div className="flex gap-2 flex-wrap">
+                {[1, 2, 3, 4, 5].map(n => (
+                  <button
+                    key={n}
+                    onClick={() => update({ bhk: n })}
+                    className={`px-5 py-2 rounded-xl border-2 font-medium transition-all ${
+                      data.bhk === n
+                        ? 'border-orange-500 bg-orange-50 text-orange-700'
+                        : 'border-gray-200 hover:border-orange-300'
+                    }`}
+                  >
+                    {n}{n === 5 ? '+' : ''} BHK
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-6">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Bathrooms</label>
+                <select
+                  value={data.bathrooms}
+                  onChange={e => update({ bathrooms: parseInt(e.target.value) })}
+                  className="w-full border rounded-xl px-4 py-3 focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none"
+                >
+                  {[1, 2, 3, 4, 5, 6].map(n => (
+                    <option key={n} value={n}>{n}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Balconies</label>
+                <select
+                  value={data.balconies}
+                  onChange={e => update({ balconies: parseInt(e.target.value) })}
+                  className="w-full border rounded-xl px-4 py-3 focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none"
+                >
+                  {[0, 1, 2, 3, 4, 5].map(n => (
+                    <option key={n} value={n}>{n}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Floor Number</label>
+                <input
+                  type="number"
+                  value={data.floorNumber || ''}
+                  onChange={e => update({ floorNumber: parseInt(e.target.value) || 0 })}
+                  placeholder="e.g. 3"
+                  min={0}
+                  className="w-full border rounded-xl px-4 py-3 focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Total Floors</label>
+                <input
+                  type="number"
+                  value={data.totalFloors || ''}
+                  onChange={e => update({ totalFloors: parseInt(e.target.value) || 1 })}
+                  placeholder="e.g. 10"
+                  min={1}
+                  className="w-full border rounded-xl px-4 py-3 focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Facing Direction</label>
+                <select
+                  value={data.facing}
+                  onChange={e => update({ facing: e.target.value })}
+                  className="w-full border rounded-xl px-4 py-3 focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none"
+                >
+                  <option value="">Select</option>
+                  {FACING_OPTIONS.map(f => (
+                    <option key={f} value={f}>{f}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Property Age (years)</label>
+                <input
+                  type="number"
+                  value={data.ageYears || ''}
+                  onChange={e => update({ ageYears: parseInt(e.target.value) || 0 })}
+                  placeholder="e.g. 5"
+                  min={0}
+                  className="w-full border rounded-xl px-4 py-3 focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none"
+                />
+              </div>
+            </div>
+
+            <div className="mb-6">
+              <label className="block text-sm font-medium text-gray-700 mb-2">Furnishing</label>
+              <div className="flex gap-3 flex-wrap">
+                {[
+                  { value: 'UNFURNISHED', label: 'Unfurnished' },
+                  { value: 'SEMI_FURNISHED', label: 'Semi-Furnished' },
+                  { value: 'FULLY_FURNISHED', label: 'Fully Furnished' },
+                ].map(opt => (
+                  <label key={opt.value} className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="furnishing"
+                      value={opt.value}
+                      checked={data.furnishing === opt.value}
+                      onChange={() => update({ furnishing: opt.value })}
+                      className="w-4 h-4 text-orange-500 focus:ring-orange-500"
+                    />
+                    <span className="text-sm text-gray-700">{opt.label}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Covered Parking</label>
+                <select
+                  value={data.coveredParking}
+                  onChange={e => update({ coveredParking: parseInt(e.target.value) })}
+                  className="w-full border rounded-xl px-4 py-3 focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none"
+                >
+                  {[0, 1, 2, 3, 4].map(n => (
+                    <option key={n} value={n}>{n}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Open Parking</label>
+                <select
+                  value={data.openParking}
+                  onChange={e => update({ openParking: parseInt(e.target.value) })}
+                  className="w-full border rounded-xl px-4 py-3 focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none"
+                >
+                  {[0, 1, 2, 3, 4].map(n => (
+                    <option key={n} value={n}>{n}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+          </>
+        )}
+
+        {isPlot && (
+          <div className="bg-orange-50 border border-orange-200 rounded-xl p-6 text-center text-gray-600">
+            <p className="text-lg font-medium">Plot / Land</p>
+            <p className="text-sm mt-1">Details like BHK, bathrooms and furnishing are not applicable for plots. Continue to the next step to enter area and pricing.</p>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  function renderStep3() {
+    const isPlot = data.propertyType === 'PLOT';
+    return (
+      <div>
+        <h2 className="text-2xl font-bold mb-2">Area & Pricing</h2>
+        <p className="text-gray-500 mb-6">Enter property area and your asking price.</p>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+          {!isPlot && (
+            <>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Carpet Area (sq.ft) *</label>
+                <input
+                  type="number"
+                  value={data.carpetAreaSqft || ''}
+                  onChange={e => update({ carpetAreaSqft: parseInt(e.target.value) || 0 })}
+                  placeholder="e.g. 850"
+                  min={0}
+                  className="w-full border rounded-xl px-4 py-3 focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Built-up Area (sq.ft)</label>
+                <input
+                  type="number"
+                  value={data.builtUpAreaSqft || ''}
+                  onChange={e => update({ builtUpAreaSqft: parseInt(e.target.value) || 0 })}
+                  placeholder="e.g. 1050"
+                  min={0}
+                  className="w-full border rounded-xl px-4 py-3 focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Super Built-up Area (sq.ft)</label>
+                <input
+                  type="number"
+                  value={data.superBuiltUpAreaSqft || ''}
+                  onChange={e => update({ superBuiltUpAreaSqft: parseInt(e.target.value) || 0 })}
+                  placeholder="e.g. 1200"
+                  min={0}
+                  className="w-full border rounded-xl px-4 py-3 focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none"
+                />
+              </div>
+            </>
+          )}
+          {isPlot && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Plot Area (sq.ft) *</label>
+              <input
+                type="number"
+                value={data.plotAreaSqft || ''}
+                onChange={e => update({ plotAreaSqft: parseInt(e.target.value) || 0 })}
+                placeholder="e.g. 2400"
+                min={0}
+                className="w-full border rounded-xl px-4 py-3 focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none"
+              />
+            </div>
+          )}
+        </div>
+
+        <div className="bg-gray-50 rounded-xl p-6 mb-6">
+          <label className="block text-sm font-medium text-gray-700 mb-1">Asking Price (in Rupees) *</label>
+          <div className="flex items-center gap-3">
+            <span className="text-2xl font-bold text-gray-400">&#8377;</span>
+            <input
+              type="number"
+              value={data.askingPriceRupees || ''}
+              onChange={e => update({ askingPriceRupees: parseInt(e.target.value) || 0 })}
+              placeholder="e.g. 7500000"
+              min={0}
+              className="w-full border rounded-xl px-4 py-3 text-xl font-semibold focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none"
+            />
+          </div>
+          {data.askingPriceRupees > 0 && (
+            <div className="mt-3 flex flex-wrap gap-4 text-sm">
+              <span className="bg-orange-100 text-orange-700 px-3 py-1 rounded-full font-medium">
+                {formatPrice(data.askingPriceRupees)}
+              </span>
+              {pricePerSqft > 0 && (
+                <span className="bg-blue-100 text-blue-700 px-3 py-1 rounded-full font-medium">
+                  &#8377;{pricePerSqft.toLocaleString('en-IN')} / sq.ft
+                </span>
+              )}
+            </div>
+          )}
+        </div>
+
+        <div className="flex items-center gap-3 mb-6">
+          <label className="flex items-center gap-2 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={data.negotiable}
+              onChange={e => update({ negotiable: e.target.checked })}
+              className="w-4 h-4 rounded text-orange-500 focus:ring-orange-500"
+            />
+            <span className="text-sm text-gray-700">Price is negotiable</span>
+          </label>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Maintenance / Month (Rupees)</label>
+            <div className="flex items-center gap-2">
+              <span className="text-gray-400 font-bold">&#8377;</span>
+              <input
+                type="number"
+                value={data.maintenancePerMonth || ''}
+                onChange={e => update({ maintenancePerMonth: parseInt(e.target.value) || 0 })}
+                placeholder="e.g. 5000"
+                min={0}
+                className="w-full border rounded-xl px-4 py-3 focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none"
+              />
+            </div>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Transaction Type</label>
+            <div className="flex gap-4">
+              {[
+                { value: 'RESALE', label: 'Resale' },
+                { value: 'NEW_BOOKING', label: 'New Booking' },
+              ].map(opt => (
+                <label key={opt.value} className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="radio"
+                    name="transactionType"
+                    value={opt.value}
+                    checked={data.transactionType === opt.value}
+                    onChange={() => update({ transactionType: opt.value })}
+                    className="w-4 h-4 text-orange-500 focus:ring-orange-500"
+                  />
+                  <span className="text-sm text-gray-700">{opt.label}</span>
+                </label>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  function renderStep4() {
+    return (
+      <div>
+        <h2 className="text-2xl font-bold mb-2">Construction & Legal</h2>
+        <p className="text-gray-500 mb-6">Provide construction status and legal information.</p>
+
+        <div className="mb-6">
+          <label className="block text-sm font-medium text-gray-700 mb-2">Possession Status *</label>
+          <div className="flex gap-3 flex-wrap">
+            {[
+              { value: 'READY', label: 'Ready to Move' },
+              { value: 'UNDER_CONSTRUCTION', label: 'Under Construction' },
+              { value: 'NEW_LAUNCH', label: 'New Launch' },
+            ].map(opt => (
+              <label key={opt.value} className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="radio"
+                  name="possessionStatus"
+                  value={opt.value}
+                  checked={data.possessionStatus === opt.value}
+                  onChange={() => update({ possessionStatus: opt.value })}
+                  className="w-4 h-4 text-orange-500 focus:ring-orange-500"
+                />
+                <span className="text-sm text-gray-700">{opt.label}</span>
+              </label>
+            ))}
+          </div>
+        </div>
+
+        {(data.possessionStatus === 'UNDER_CONSTRUCTION' || data.possessionStatus === 'NEW_LAUNCH') && (
+          <div className="mb-6">
+            <label className="block text-sm font-medium text-gray-700 mb-1">Expected Possession Date</label>
+            <input
+              type="date"
+              value={data.possessionDate}
+              onChange={e => update({ possessionDate: e.target.value })}
+              className="w-full border rounded-xl px-4 py-3 focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none"
+            />
+          </div>
+        )}
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">RERA ID</label>
+            <input
+              type="text"
+              value={data.reraId}
+              onChange={e => update({ reraId: e.target.value })}
+              placeholder="e.g. P52100028614"
+              className="w-full border rounded-xl px-4 py-3 focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none"
+            />
+            <p className="text-xs text-gray-400 mt-1">RERA registration number (if applicable)</p>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Builder Name</label>
+            <input
+              type="text"
+              value={data.builderName}
+              onChange={e => update({ builderName: e.target.value })}
+              placeholder="e.g. Prestige Group"
+              className="w-full border rounded-xl px-4 py-3 focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none"
+            />
+          </div>
+          <div className="md:col-span-2">
+            <label className="block text-sm font-medium text-gray-700 mb-1">Project Name</label>
+            <input
+              type="text"
+              value={data.projectName}
+              onChange={e => update({ projectName: e.target.value })}
+              placeholder="e.g. Prestige Lakeside Habitat"
+              className="w-full border rounded-xl px-4 py-3 focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none"
+            />
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  function renderStep5() {
+    return (
+      <div>
+        <h2 className="text-2xl font-bold mb-2">Features & Amenities</h2>
+        <p className="text-gray-500 mb-6">Highlight what makes your property attractive to buyers.</p>
+
+        <div className="mb-6">
+          <label className="block text-sm font-medium text-gray-700 mb-3">Amenities</label>
+          <div className="flex flex-wrap gap-2">
+            {AMENITIES.map(a => (
+              <button
+                key={a}
+                onClick={() => toggleAmenity(a)}
+                className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${
+                  data.amenities.includes(a)
+                    ? 'bg-orange-500 text-white'
+                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                }`}
+              >
+                {a}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Water Supply</label>
+            <div className="flex flex-col gap-2">
+              {[
+                { value: 'CORPORATION', label: 'Corporation / Municipal' },
+                { value: 'BOREWELL', label: 'Borewell' },
+                { value: 'BOTH', label: 'Both' },
+              ].map(opt => (
+                <label key={opt.value} className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="radio"
+                    name="waterSupply"
+                    value={opt.value}
+                    checked={data.waterSupply === opt.value}
+                    onChange={() => update({ waterSupply: opt.value })}
+                    className="w-4 h-4 text-orange-500 focus:ring-orange-500"
+                  />
+                  <span className="text-sm text-gray-700">{opt.label}</span>
+                </label>
+              ))}
+            </div>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Power Backup</label>
+            <div className="flex flex-col gap-2">
+              {[
+                { value: 'FULL', label: 'Full Backup' },
+                { value: 'PARTIAL', label: 'Partial / Lift & Common Areas' },
+                { value: 'NONE', label: 'None' },
+              ].map(opt => (
+                <label key={opt.value} className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="radio"
+                    name="powerBackup"
+                    value={opt.value}
+                    checked={data.powerBackup === opt.value}
+                    onChange={() => update({ powerBackup: opt.value })}
+                    className="w-4 h-4 text-orange-500 focus:ring-orange-500"
+                  />
+                  <span className="text-sm text-gray-700">{opt.label}</span>
+                </label>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+          <label className="flex items-center gap-2 cursor-pointer p-3 border rounded-xl hover:bg-gray-50">
+            <input
+              type="checkbox"
+              checked={data.gatedCommunity}
+              onChange={e => update({ gatedCommunity: e.target.checked })}
+              className="w-4 h-4 rounded text-orange-500 focus:ring-orange-500"
+            />
+            <span className="text-sm text-gray-700">Gated Community</span>
+          </label>
+          <label className="flex items-center gap-2 cursor-pointer p-3 border rounded-xl hover:bg-gray-50">
+            <input
+              type="checkbox"
+              checked={data.cornerProperty}
+              onChange={e => update({ cornerProperty: e.target.checked })}
+              className="w-4 h-4 rounded text-orange-500 focus:ring-orange-500"
+            />
+            <span className="text-sm text-gray-700">Corner Property</span>
+          </label>
+          <label className="flex items-center gap-2 cursor-pointer p-3 border rounded-xl hover:bg-gray-50">
+            <input
+              type="checkbox"
+              checked={data.vastuCompliant}
+              onChange={e => update({ vastuCompliant: e.target.checked })}
+              className="w-4 h-4 rounded text-orange-500 focus:ring-orange-500"
+            />
+            <span className="text-sm text-gray-700">Vastu Compliant</span>
+          </label>
+          <label className="flex items-center gap-2 cursor-pointer p-3 border rounded-xl hover:bg-gray-50">
+            <input
+              type="checkbox"
+              checked={data.petAllowed}
+              onChange={e => update({ petAllowed: e.target.checked })}
+              className="w-4 h-4 rounded text-orange-500 focus:ring-orange-500"
+            />
+            <span className="text-sm text-gray-700">Pet Allowed</span>
+          </label>
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-3">Overlooking</label>
+          <div className="flex flex-wrap gap-2">
+            {OVERLOOKING_OPTIONS.map(o => (
+              <button
+                key={o}
+                onClick={() => toggleOverlooking(o)}
+                className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${
+                  data.overlooking.includes(o)
+                    ? 'bg-orange-500 text-white'
+                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                }`}
+              >
+                {o}
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  function renderStep6() {
+    return (
+      <div>
+        <h2 className="text-2xl font-bold mb-2">Photos & Media</h2>
+        <p className="text-gray-500 mb-6">Upload photos to attract more buyers. Properties with photos get 5x more views.</p>
+
+        <div className="mb-6">
+          <label className="block text-sm font-medium text-gray-700 mb-2">Property Photos *</label>
+          <div
+            onDragEnter={handleDrag}
+            onDragLeave={handleDrag}
+            onDragOver={handleDrag}
+            onDrop={handleDrop}
+            className={`border-2 border-dashed rounded-xl p-8 text-center transition-colors cursor-pointer ${
+              dragActive ? 'border-orange-500 bg-orange-50' : 'border-gray-300 hover:border-orange-400'
+            }`}
+            onClick={() => document.getElementById('photo-input')?.click()}
+          >
+            <div className="text-4xl mb-2">+</div>
+            <p className="text-gray-600 font-medium">Drag & drop photos here</p>
+            <p className="text-gray-400 text-sm mt-1">or click to browse (JPG, PNG, WebP)</p>
+            <input
+              id="photo-input"
+              type="file"
+              accept="image/*"
+              multiple
+              className="hidden"
+              onChange={e => handlePhotoFiles(e.target.files)}
+            />
+          </div>
+          {photoPreviews.length > 0 && (
+            <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-3 mt-4">
+              {photoPreviews.map((src, i) => (
+                <div key={i} className="relative group">
+                  <img src={src} alt={`Photo ${i + 1}`} className="w-full h-24 object-cover rounded-xl" />
+                  <button
+                    onClick={() => removePhoto(i)}
+                    className="absolute top-1 right-1 w-6 h-6 bg-red-500 text-white rounded-full text-xs flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                  >
+                    X
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+          <p className="text-xs text-gray-400 mt-2">{photoPreviews.length} photo{photoPreviews.length !== 1 ? 's' : ''} selected</p>
+        </div>
+
+        <div className="mb-6">
+          <label className="block text-sm font-medium text-gray-700 mb-2">Floor Plan</label>
+          <div
+            className="border-2 border-dashed rounded-xl p-6 text-center cursor-pointer border-gray-300 hover:border-orange-400 transition-colors"
+            onClick={() => document.getElementById('floorplan-input')?.click()}
+          >
+            {floorPlanPreview ? (
+              <img src={floorPlanPreview} alt="Floor plan" className="max-h-40 mx-auto rounded-lg" />
+            ) : (
+              <>
+                <p className="text-gray-600 text-sm">Click to upload floor plan</p>
+                <p className="text-gray-400 text-xs mt-1">Optional</p>
+              </>
+            )}
+            <input
+              id="floorplan-input"
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={e => handleFloorPlan(e.target.files)}
+            />
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Video Tour URL</label>
+            <input
+              type="url"
+              value={data.videoTourUrl}
+              onChange={e => update({ videoTourUrl: e.target.value })}
+              placeholder="https://youtube.com/watch?v=..."
+              className="w-full border rounded-xl px-4 py-3 focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Brochure URL</label>
+            <input
+              type="url"
+              value={data.brochureUrl}
+              onChange={e => update({ brochureUrl: e.target.value })}
+              placeholder="https://drive.google.com/..."
+              className="w-full border rounded-xl px-4 py-3 focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none"
+            />
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  function renderStep7() {
+    const isPlot = data.propertyType === 'PLOT';
+    const typeLabel = PROPERTY_TYPES.find(p => p.value === data.propertyType)?.label || data.propertyType;
+
+    const sections = [
+      {
+        title: 'Property Type',
+        step: 0,
+        items: [
+          { label: 'Type', value: typeLabel },
+        ],
+      },
+      {
+        title: 'Location',
+        step: 1,
+        items: [
+          { label: 'Address', value: data.address },
+          { label: 'Locality', value: data.locality },
+          { label: 'City', value: `${data.city}, ${data.state}` },
+          { label: 'Pincode', value: data.pincode },
+          ...(data.lat ? [{ label: 'Coordinates', value: `${data.lat}, ${data.lng}` }] : []),
+        ],
+      },
+      ...(!isPlot ? [{
+        title: 'Property Details',
+        step: 2,
+        items: [
+          { label: 'Configuration', value: `${data.bhk} BHK` },
+          { label: 'Bathrooms', value: `${data.bathrooms}` },
+          { label: 'Balconies', value: `${data.balconies}` },
+          { label: 'Floor', value: `${data.floorNumber} of ${data.totalFloors}` },
+          ...(data.facing ? [{ label: 'Facing', value: data.facing }] : []),
+          { label: 'Age', value: `${data.ageYears} years` },
+          { label: 'Furnishing', value: data.furnishing.replace(/_/g, ' ').toLowerCase().replace(/^\w/, c => c.toUpperCase()) },
+          { label: 'Parking', value: `${data.coveredParking} covered, ${data.openParking} open` },
+        ],
+      }] : []),
+      {
+        title: 'Area & Pricing',
+        step: 3,
+        items: [
+          ...(!isPlot ? [
+            { label: 'Carpet Area', value: `${data.carpetAreaSqft} sq.ft` },
+            ...(data.builtUpAreaSqft ? [{ label: 'Built-up Area', value: `${data.builtUpAreaSqft} sq.ft` }] : []),
+            ...(data.superBuiltUpAreaSqft ? [{ label: 'Super Built-up Area', value: `${data.superBuiltUpAreaSqft} sq.ft` }] : []),
+          ] : [
+            { label: 'Plot Area', value: `${data.plotAreaSqft} sq.ft` },
+          ]),
+          { label: 'Asking Price', value: `₹${formatPrice(data.askingPriceRupees)}` },
+          { label: 'Negotiable', value: data.negotiable ? 'Yes' : 'No' },
+          ...(data.maintenancePerMonth ? [{ label: 'Maintenance', value: `₹${data.maintenancePerMonth.toLocaleString('en-IN')}/month` }] : []),
+          { label: 'Transaction', value: data.transactionType === 'RESALE' ? 'Resale' : 'New Booking' },
+        ],
+      },
+      {
+        title: 'Construction & Legal',
+        step: 4,
+        items: [
+          { label: 'Possession', value: data.possessionStatus === 'READY' ? 'Ready to Move' : data.possessionStatus === 'UNDER_CONSTRUCTION' ? 'Under Construction' : 'New Launch' },
+          ...(data.possessionDate ? [{ label: 'Possession Date', value: data.possessionDate }] : []),
+          ...(data.reraId ? [{ label: 'RERA ID', value: data.reraId }] : []),
+          ...(data.builderName ? [{ label: 'Builder', value: data.builderName }] : []),
+          ...(data.projectName ? [{ label: 'Project', value: data.projectName }] : []),
+        ],
+      },
+      {
+        title: 'Features',
+        step: 5,
+        items: [
+          ...(data.amenities.length ? [{ label: 'Amenities', value: data.amenities.join(', ') }] : []),
+          { label: 'Water Supply', value: data.waterSupply.replace(/_/g, ' ').toLowerCase().replace(/^\w/, c => c.toUpperCase()) },
+          { label: 'Power Backup', value: data.powerBackup.replace(/_/g, ' ').toLowerCase().replace(/^\w/, c => c.toUpperCase()) },
+          ...(data.gatedCommunity ? [{ label: 'Gated Community', value: 'Yes' }] : []),
+          ...(data.cornerProperty ? [{ label: 'Corner Property', value: 'Yes' }] : []),
+          ...(data.vastuCompliant ? [{ label: 'Vastu Compliant', value: 'Yes' }] : []),
+          ...(data.petAllowed ? [{ label: 'Pet Allowed', value: 'Yes' }] : []),
+          ...(data.overlooking.length ? [{ label: 'Overlooking', value: data.overlooking.join(', ') }] : []),
+        ],
+      },
+      {
+        title: 'Photos & Media',
+        step: 6,
+        items: [
+          { label: 'Photos', value: `${data.photos.length} uploaded` },
+          { label: 'Floor Plan', value: data.floorPlan ? 'Uploaded' : 'Not uploaded' },
+          ...(data.videoTourUrl ? [{ label: 'Video Tour', value: 'Provided' }] : []),
+          ...(data.brochureUrl ? [{ label: 'Brochure', value: 'Provided' }] : []),
+        ],
+      },
+    ];
+
+    return (
+      <div>
+        <h2 className="text-2xl font-bold mb-2">Review & Publish</h2>
+        <p className="text-gray-500 mb-6">Review all details before publishing your property listing.</p>
+
+        <div className="space-y-4">
+          {sections.map(section => (
+            <div key={section.title} className="bg-white border rounded-xl p-5">
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="font-semibold text-gray-800">{section.title}</h3>
+                <button
+                  onClick={() => setStep(section.step)}
+                  className="text-sm text-orange-500 hover:text-orange-600 font-medium"
+                >
+                  Edit
+                </button>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                {section.items.map((item, i) => (
+                  <div key={i} className="flex gap-2">
+                    <span className="text-sm text-gray-500 min-w-[120px]">{item.label}:</span>
+                    <span className="text-sm text-gray-800 font-medium">{item.value}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {error && (
+          <div className="mt-4 bg-red-50 border border-red-200 rounded-xl p-4 text-red-600 text-sm">
+            {error}
+          </div>
+        )}
+
+        <div className="mt-6 flex justify-end">
+          <button
+            onClick={handleSubmit}
+            disabled={submitting}
+            className="px-8 py-3 bg-orange-500 text-white font-semibold rounded-xl hover:bg-orange-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          >
+            {submitting ? 'Publishing...' : 'Publish Property'}
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  const stepRenderers = [renderStep0, renderStep1, renderStep2, renderStep3, renderStep4, renderStep5, renderStep6, renderStep7];
+
+  return (
+    <div className="min-h-screen bg-gray-50">
+      {/* Header */}
+      <div className="bg-white border-b sticky top-0 z-10">
+        <div className="max-w-4xl mx-auto px-4 py-4 flex items-center justify-between">
+          <Link href="/host?tab=sales" className="text-gray-500 hover:text-gray-700 text-sm font-medium">
+            &larr; Back to Dashboard
+          </Link>
+          <h1 className="text-lg font-bold text-gray-800">Sell Your Property</h1>
+          <div className="w-20" />
+        </div>
+      </div>
+
+      <div className="max-w-4xl mx-auto px-4 py-8">
+        <ProgressBar step={step} labels={STEP_LABELS} />
+
+        <div className="bg-white rounded-xl border p-6 md:p-8 mb-6">
+          {stepRenderers[step]()}
+        </div>
+
+        {/* Navigation */}
+        {step < 7 && (
+          <div className="flex justify-between">
+            <button
+              onClick={() => setStep(s => s - 1)}
+              disabled={step === 0}
+              className="px-6 py-3 border rounded-xl font-medium text-gray-600 hover:bg-gray-50 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+            >
+              Back
+            </button>
+            <button
+              onClick={() => setStep(s => s + 1)}
+              disabled={!canProceed()}
+              className="px-6 py-3 bg-orange-500 text-white font-semibold rounded-xl hover:bg-orange-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            >
+              Continue
+            </button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
