@@ -173,10 +173,14 @@ export default function BookPage() {
     }
   }
 
-  const securityDepositPaise = isPG ? (listing?.securityDepositPaise ?? 0) : 0;
+  const securityDepositPaise = listing?.securityDepositPaise ?? 0;
   const cleaningFeePaise = isMonthly ? 0 : (listing?.cleaningFeePaise ?? 0);
-  const gstPaise = listing?.gstApplicable ? Math.round(roomSubtotalPaise * 0.18) : 0;
-  const totalPaise = roomSubtotalPaise + cleaningFeePaise + gstPaise + securityDepositPaise;
+  const maintenancePaise = isMonthly && !(listing?.maintenanceIncluded) ? ((listing?.maintenanceChargePaise ?? 0) * Math.max(1, fullMonths)) : 0;
+  const insurancePaise = listing?.insuranceEnabled ? (listing?.insuranceAmountPaise ?? 0) : 0;
+  // GST: only for commercial, NOT residential rent
+  const isCommercial = listing?.type === 'COMMERCIAL';
+  const gstPaise = (isCommercial || listing?.gstApplicable) && !isMonthly ? Math.round(roomSubtotalPaise * 0.18) : 0;
+  const totalPaise = roomSubtotalPaise + cleaningFeePaise + gstPaise + maintenancePaise + insurancePaise;
 
   // Unit labels
   const unitLabel = isMonthly ? 'month' : isHourly ? 'hour' : 'night';
@@ -630,17 +634,19 @@ export default function BookPage() {
               ) : (
                 <div className="space-y-1.5 text-sm">
                   <div className="flex justify-between">
-                    <span className="text-gray-500">Check-in</span>
+                    <span className="text-gray-500">{isMonthly ? 'Move-in' : 'Check-in'}</span>
                     <span className="font-medium">{fmtDate(checkIn)}</span>
                   </div>
+                  {!isMonthly && (
+                    <div className="flex justify-between">
+                      <span className="text-gray-500">Check-out</span>
+                      <span className="font-medium">{fmtDate(checkOut)}</span>
+                    </div>
+                  )}
                   <div className="flex justify-between">
-                    <span className="text-gray-500">Check-out</span>
-                    <span className="font-medium">{fmtDate(checkOut)}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-500">Duration</span>
+                    <span className="text-gray-500">{isMonthly ? 'Lease' : 'Duration'}</span>
                     <span className="font-medium">
-                      {durationLabel}{isMonthly ? ` (${nights} nights)` : ''}
+                      {durationLabel}
                     </span>
                   </div>
                 </div>
@@ -671,7 +677,7 @@ export default function BookPage() {
             {/* Rooms & Guests — editable */}
             <div className="border-t pt-3">
               <div className="flex items-center justify-between mb-2">
-                <p className="text-xs font-semibold text-gray-500 uppercase">Rooms & Guests</p>
+                <p className="text-xs font-semibold text-gray-500 uppercase">{isMonthly ? 'Occupants' : 'Rooms & Guests'}</p>
                 {!booking && (
                   <button type="button" onClick={() => setEditingGuests(!editingGuests)}
                     className="text-xs text-orange-600 hover:text-orange-700 font-semibold">
@@ -927,17 +933,43 @@ export default function BookPage() {
                       <span>{formatPaise(cleaningFeePaise)}</span>
                     </div>
                   )}
+                  {maintenancePaise > 0 && (
+                    <div className="flex justify-between text-gray-600">
+                      <span>Maintenance ({Math.max(1, fullMonths)} mo)</span>
+                      <span>{formatPaise(maintenancePaise)}</span>
+                    </div>
+                  )}
+                  {insurancePaise > 0 && (
+                    <div className="flex justify-between text-gray-600">
+                      <span>{listing?.insuranceType === 'PREMIUM' ? 'Premium Protection' : 'Micro-insurance'}</span>
+                      <span>{formatPaise(insurancePaise)}</span>
+                    </div>
+                  )}
                   {gstPaise > 0 && (
                     <div className="flex justify-between text-gray-400">
                       <span>GST (18%)</span>
                       <span>{formatPaise(gstPaise)}</span>
                     </div>
                   )}
+                  {isMonthly && !isCommercial && (
+                    <p className="text-[10px] text-gray-400">Residential rent is GST-exempt</p>
+                  )}
                   <div className="flex justify-between font-bold text-base border-t pt-2">
-                    <span>Estimated Total</span>
+                    <span>Estimated {isMonthly ? 'Rent' : 'Total'}</span>
                     <span>{formatPaise(totalPaise)}</span>
                   </div>
-                  <p className="text-[11px] text-gray-400">* Insurance & taxes confirmed after booking</p>
+                  {securityDepositPaise > 0 && (
+                    <div className="mt-2 p-2.5 bg-amber-50 border border-amber-200 rounded-lg">
+                      <div className="flex justify-between text-sm">
+                        <span className="text-amber-800 font-medium">Security Deposit</span>
+                        <span className="text-amber-800 font-bold">{formatPaise(securityDepositPaise)}</span>
+                      </div>
+                      <p className="text-[10px] text-amber-600 mt-0.5">
+                        {listing?.depositType === 'REFUNDABLE' ? 'Fully refundable at move-out' :
+                         listing?.depositType === 'PARTIAL_REFUNDABLE' ? 'Partially refundable (minus damages)' : 'Non-refundable'}
+                      </p>
+                    </div>
+                  )}
                 </>
               )}
 
@@ -951,10 +983,10 @@ export default function BookPage() {
                   {formatPaise(Math.round(totalPaise / nights))} avg per night for {rooms} rooms
                 </p>
               )}
-              {isPG ? (
-                <p className="text-xs text-gray-400">Security deposit refunded on checkout after deductions</p>
+              {securityDepositPaise > 0 ? (
+                <p className="text-xs text-gray-400">Deposit {listing?.depositType === 'REFUNDABLE' ? 'refunded' : 'settled'} at move-out</p>
               ) : (
-                <p className="text-xs text-gray-400">Zero deposit · Micro-insurance included</p>
+                <p className="text-xs text-gray-400">No deposit required</p>
               )}
             </div>
 
