@@ -137,7 +137,7 @@ export default function ListingCard({ listing }: Props) {
   }
 
   const priceUnit =
-    listing.type === 'PG' || listing.type === 'COLIVING' ? '/ month' :
+    listing.pricingUnit === 'MONTH' || listing.type === 'PG' || listing.type === 'COLIVING' ? '/ month' :
     listing.pricingUnit === 'HOUR' ? '/ hour' : '/ night';
 
   return (

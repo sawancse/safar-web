@@ -84,9 +84,9 @@ export default async function ListingDetailPage({ params }: Props) {
   const isPG = listing.type === 'PG' || listing.type === 'COLIVING';
   const ratingInfo = listing.avgRating && listing.avgRating > 0 ? getRatingLabel(listing.avgRating) : null;
 
-  // Per-night price display
+  // Price unit label
   const perNightLabel = listing.pricingUnit === 'HOUR' ? 'per hour'
-    : (isPG ? 'per month' : 'per night');
+    : (listing.pricingUnit === 'MONTH' || isPG) ? 'per month' : 'per night';
 
   return (
     <div className="max-w-6xl mx-auto px-4 py-8">
