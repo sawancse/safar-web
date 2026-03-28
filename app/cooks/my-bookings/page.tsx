@@ -32,7 +32,7 @@ export default function MyChefBookingsPage() {
   const [reviewComment, setReviewComment] = useState('');
 
   useEffect(() => {
-    const token = localStorage.getItem('token');
+    const token = localStorage.getItem('access_token');
     if (!token) { router.push('/auth'); return; }
 
     Promise.all([
@@ -48,14 +48,14 @@ export default function MyChefBookingsPage() {
 
   async function handleCancel(id: string) {
     if (!confirm('Cancel this booking?')) return;
-    const token = localStorage.getItem('token')!;
+    const token = localStorage.getItem('access_token')!;
     await api.cancelChefBooking(id, 'Customer cancelled', token);
     setBookings(prev => prev.map(b => b.id === id ? { ...b, status: 'CANCELLED' } : b));
   }
 
   async function handleRate() {
     if (!ratingModal) return;
-    const token = localStorage.getItem('token')!;
+    const token = localStorage.getItem('access_token')!;
     await api.rateChefBooking(ratingModal.id, rating, reviewComment, token);
     setBookings(prev => prev.map(b => b.id === ratingModal.id ? { ...b, ratingGiven: rating, reviewComment } : b));
     setRatingModal(null);

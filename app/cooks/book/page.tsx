@@ -53,7 +53,7 @@ export default function BookCookPage() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    const token = localStorage.getItem('token');
+    const token = localStorage.getItem('access_token');
     if (!token) { router.push('/auth'); return; }
     setSaving(true); setError(''); setSuccess('');
 
