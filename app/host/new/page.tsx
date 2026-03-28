@@ -243,12 +243,17 @@ interface WizardData {
   checkInUntil: string;
   checkOutFrom: string;
   checkOutUntil: string;
+  // Deposit & Lease (all types)
+  securityDepositPaise: number;
+  depositType: 'REFUNDABLE' | 'NON_REFUNDABLE' | 'PARTIAL_REFUNDABLE';
+  depositTerms: string;
+  maintenanceChargePaise: number;
+  minLeaseMonths: number;
   // PG/Co-living specific
   occupancyType: 'MALE' | 'FEMALE' | 'COED' | '';
   foodType: 'VEG' | 'NON_VEG' | 'BOTH' | 'NONE';
   gateClosingTime: string;
   noticePeriodDays: number;
-  securityDepositPaise: number;
   // Hotel specific
   hotelChain: string;
   frontDesk24h: boolean;
@@ -267,7 +272,8 @@ const INITIAL_DATA: WizardData = {
   lat: 0, lng: 0, starRating: 0, basePricePaise: 0, maxGuests: 2,
   bedrooms: 1, bathrooms: 1, pricingUnit: 'NIGHT',
   areaSqft: 0, minBookingHours: 1, operatingHoursFrom: '09:00', operatingHoursUntil: '21:00', gstin: '',
-  occupancyType: '', foodType: 'NONE', gateClosingTime: '22:00', noticePeriodDays: 30, securityDepositPaise: 0,
+  securityDepositPaise: 0, depositType: 'REFUNDABLE', depositTerms: '', maintenanceChargePaise: 0, minLeaseMonths: 0,
+  occupancyType: '', foodType: 'NONE', gateClosingTime: '22:00', noticePeriodDays: 30,
   hotelChain: '', frontDesk24h: false, checkinTime: '14:00', checkoutTime: '11:00',
   amenities: [], bedTypes: [], mealPlan: 'NONE', accessibilityFeatures: [], breakfastIncluded: false, parkingType: 'NONE',
   petFriendly: false, maxPets: 0, childrenAllowed: true,
@@ -386,6 +392,12 @@ export default function NewListingWizard() {
         weeklyDiscountPercent: data.weeklyDiscountPercent ? Number(data.weeklyDiscountPercent) : null,
         monthlyDiscountPercent: data.monthlyDiscountPercent ? Number(data.monthlyDiscountPercent) : null,
         visibilityBoostPercent: data.visibilityBoostPercent || 0,
+        // Deposit & Lease (all types)
+        securityDepositPaise: data.securityDepositPaise > 0 ? data.securityDepositPaise : null,
+        depositType: data.depositType,
+        depositTerms: data.depositTerms || null,
+        maintenanceChargePaise: data.maintenanceChargePaise > 0 ? data.maintenanceChargePaise : null,
+        minLeaseMonths: data.minLeaseMonths > 0 ? data.minLeaseMonths : null,
       };
       if (isPG) {
         body.pricingUnit = 'MONTH';
@@ -393,7 +405,6 @@ export default function NewListingWizard() {
         body.foodType = data.foodType;
         body.gateClosingTime = data.gateClosingTime;
         body.noticePeriodDays = data.noticePeriodDays;
-        body.securityDepositPaise = data.securityDepositPaise > 0 ? data.securityDepositPaise : null;
         body.minStayDays = 30;
       }
       if (isHotel) {
@@ -656,6 +667,61 @@ export default function NewListingWizard() {
             </div>
           </div>
 
+          {/* ── Deposit & Lease ─────────────────────────── */}
+          <div className="border-t pt-4 mt-4">
+            <h3 className="text-sm font-bold text-gray-800 mb-3">Security Deposit & Lease</h3>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs font-semibold text-gray-600 mb-1">Security Deposit (INR)</label>
+                <input type="number" min="0"
+                  className="w-full border rounded-xl px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-orange-400"
+                  placeholder="e.g. 10000"
+                  value={data.securityDepositPaise ? data.securityDepositPaise / 100 : ''}
+                  onChange={e => update({ securityDepositPaise: Math.round(Number(e.target.value) * 100) })} />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-gray-600 mb-1">Deposit Type</label>
+                <select value={data.depositType} onChange={e => update({ depositType: e.target.value as any })}
+                  className="w-full border rounded-xl px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-orange-400">
+                  <option value="REFUNDABLE">Fully Refundable</option>
+                  <option value="PARTIAL_REFUNDABLE">Partially Refundable</option>
+                  <option value="NON_REFUNDABLE">Non-Refundable</option>
+                </select>
+              </div>
+              <div className="col-span-2">
+                <label className="block text-xs font-semibold text-gray-600 mb-1">Deposit Terms (optional)</label>
+                <input type="text"
+                  className="w-full border rounded-xl px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-orange-400"
+                  placeholder="e.g. Refunded within 7 days after checkout minus damages"
+                  value={data.depositTerms} onChange={e => update({ depositTerms: e.target.value })} />
+              </div>
+              {(data.pricingUnit === 'MONTH' || isPG) && (
+                <>
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-600 mb-1">Monthly Maintenance (INR)</label>
+                    <input type="number" min="0"
+                      className="w-full border rounded-xl px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-orange-400"
+                      placeholder="e.g. 2000"
+                      value={data.maintenanceChargePaise ? data.maintenanceChargePaise / 100 : ''}
+                      onChange={e => update({ maintenanceChargePaise: Math.round(Number(e.target.value) * 100) })} />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-600 mb-1">Minimum Lease (months)</label>
+                    <select value={data.minLeaseMonths} onChange={e => update({ minLeaseMonths: Number(e.target.value) })}
+                      className="w-full border rounded-xl px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-orange-400">
+                      <option value={0}>No minimum</option>
+                      <option value={1}>1 month</option>
+                      <option value={3}>3 months</option>
+                      <option value={6}>6 months</option>
+                      <option value={11}>11 months</option>
+                      <option value={12}>12 months</option>
+                    </select>
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+
           {/* Capacity */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -778,12 +844,7 @@ export default function NewListingWizard() {
                   value={data.noticePeriodDays} onChange={e => update({ noticePeriodDays: Number(e.target.value) || 0 })} />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Security Deposit (INR)</label>
-                <input type="number" min="0"
-                  className="w-full border rounded-xl px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-orange-400"
-                  placeholder="5000"
-                  value={data.securityDepositPaise ? data.securityDepositPaise / 100 : ''}
-                  onChange={e => update({ securityDepositPaise: Math.round(Number(e.target.value) * 100) })} />
+                {/* Deposit moved to global section below */}
               </div>
             </>
           )}

@@ -66,6 +66,10 @@ export interface Listing {
   gateClosingTime?: string;
   noticePeriodDays?: number;
   securityDepositPaise?: number;
+  depositType?: string;
+  depositTerms?: string;
+  maintenanceChargePaise?: number;
+  minLeaseMonths?: number;
   // Hotel
   hotelChain?: string;
   frontDesk24h?: boolean;

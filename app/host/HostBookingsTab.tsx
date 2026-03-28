@@ -456,7 +456,7 @@ export default function HostBookingsTab({ token: initialToken }: { token: string
                 )}
 
                 {/* Action buttons */}
-                {(b.status === 'PENDING_PAYMENT' || b.status === 'CONFIRMED' || b.status === 'CHECKED_IN') && (
+                {(b.status === 'PENDING_PAYMENT' || b.status === 'CONFIRMED' || b.status === 'CHECKED_IN' || b.status === 'COMPLETED') && (
                   <div className="border-t px-5 py-3 flex flex-wrap gap-2">
                     {b.status === 'PENDING_PAYMENT' && (
                       <>
@@ -497,6 +497,24 @@ export default function HostBookingsTab({ token: initialToken }: { token: string
                         className="text-sm px-4 py-2 rounded-xl bg-green-500 hover:bg-green-600 text-white font-semibold disabled:opacity-50 transition">
                         {actionLoading === b.id ? 'Processing...' : 'Mark Completed'}
                       </button>
+                    )}
+                    {b.status === 'COMPLETED' && (b.securityDepositPaise ?? 0) > 0 && b.securityDepositStatus !== 'REFUNDED' && (
+                      <button onClick={() => {
+                        if (confirm(`Refund full deposit of ₹${((b.securityDepositPaise ?? 0) / 100).toLocaleString()}?`)) {
+                          handleAction(b.id, () =>
+                            fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080'}/api/v1/bookings/${b.id}/deposit-refund?refundType=FULL`, {
+                              method: 'POST', headers: { Authorization: `Bearer ${token}` },
+                            }).then(r => r.json())
+                          );
+                        }
+                      }}
+                        disabled={actionLoading === b.id}
+                        className="text-sm px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-semibold disabled:opacity-50 transition">
+                        {actionLoading === b.id ? 'Processing...' : `Refund Deposit ₹${((b.securityDepositPaise ?? 0) / 100).toLocaleString()}`}
+                      </button>
+                    )}
+                    {b.securityDepositStatus === 'REFUNDED' && (
+                      <span className="text-xs text-green-600 font-medium px-3 py-1 bg-green-50 rounded-full">Deposit Refunded</span>
                     )}
                   </div>
                 )}

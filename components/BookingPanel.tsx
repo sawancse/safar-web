@@ -464,6 +464,32 @@ export default function BookingPanel({ listing, selectedRoomType, roomSelections
             <span>{formatPaise(totalPaise)}</span>
           </div>
 
+          {(listing.securityDepositPaise ?? 0) > 0 && (
+            <div className="mt-2 p-2.5 bg-amber-50 border border-amber-200 rounded-lg">
+              <div className="flex justify-between text-sm">
+                <span className="text-amber-800 font-medium">Security Deposit</span>
+                <span className="text-amber-800 font-bold">{formatPaise(listing.securityDepositPaise ?? 0)}</span>
+              </div>
+              <p className="text-[10px] text-amber-600 mt-0.5">
+                {listing.depositType === 'REFUNDABLE' ? 'Fully refundable at checkout' :
+                 listing.depositType === 'PARTIAL_REFUNDABLE' ? 'Partially refundable (minus damages)' :
+                 'Non-refundable'}
+                {listing.depositTerms ? ` · ${listing.depositTerms}` : ''}
+              </p>
+            </div>
+          )}
+
+          {(listing.maintenanceChargePaise ?? 0) > 0 && (
+            <div className="flex justify-between text-xs text-gray-500 mt-1">
+              <span>Monthly maintenance</span>
+              <span>{formatPaise(listing.maintenanceChargePaise ?? 0)}/mo</span>
+            </div>
+          )}
+
+          {(listing.minLeaseMonths ?? 0) > 0 && (
+            <p className="text-[10px] text-gray-400 mt-1">Minimum lease: {listing.minLeaseMonths ?? 0} month{(listing.minLeaseMonths ?? 0) > 1 ? 's' : ''}</p>
+          )}
+
           {!isCommercial && effectiveRooms > 1 && (
             <p className="text-xs text-gray-400 text-right">
               {formatPaise(Math.round(totalPaise / nights))} avg/night for {effectiveRooms} rooms
@@ -507,7 +533,9 @@ export default function BookingPanel({ listing, selectedRoomType, roomSelections
       )}
 
       <p className="text-xs text-gray-400 text-center mt-3">
-        {isCommercial ? 'GST invoice included' : 'Zero deposit · Micro-insurance included'}
+        {isCommercial ? 'GST invoice included' :
+         (listing.securityDepositPaise ?? 0) > 0 ? `${listing.depositType === 'REFUNDABLE' ? 'Refundable' : 'Security'} deposit applies` :
+         'Zero deposit · Micro-insurance included'}
       </p>
 
       {listing.petFriendly && !isCommercial && (
