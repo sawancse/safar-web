@@ -249,6 +249,30 @@ interface WizardData {
   depositTerms: string;
   maintenanceChargePaise: number;
   minLeaseMonths: number;
+  // Rental-specific (apartment/flat)
+  apartmentName: string;
+  apartmentType: string;
+  floorNumber: number;
+  totalFloors: number;
+  propertyAge: string;
+  facing: string;
+  builtUpAreaSqft: number;
+  rentalType: string;
+  rentNegotiable: boolean;
+  maintenanceIncluded: boolean;
+  availableFrom: string;
+  preferredTenants: string[];
+  waterSupply: string;
+  gatedSecurity: boolean;
+  nonVegAllowed: boolean;
+  propertyCondition: string;
+  showPropertyBy: string;
+  directionTips: string;
+  visitAvailability: string;
+  visitTimeFrom: string;
+  visitTimeUntil: string;
+  secondaryPhone: string;
+  multipleUnits: boolean;
   // PG/Co-living specific
   occupancyType: 'MALE' | 'FEMALE' | 'COED' | '';
   foodType: 'VEG' | 'NON_VEG' | 'BOTH' | 'NONE';
@@ -273,6 +297,11 @@ const INITIAL_DATA: WizardData = {
   bedrooms: 1, bathrooms: 1, pricingUnit: 'NIGHT',
   areaSqft: 0, minBookingHours: 1, operatingHoursFrom: '09:00', operatingHoursUntil: '21:00', gstin: '',
   securityDepositPaise: 0, depositType: 'REFUNDABLE', depositTerms: '', maintenanceChargePaise: 0, minLeaseMonths: 0,
+  apartmentName: '', apartmentType: '', floorNumber: 0, totalFloors: 0, propertyAge: '', facing: '',
+  builtUpAreaSqft: 0, rentalType: 'RENT', rentNegotiable: false, maintenanceIncluded: false,
+  availableFrom: '', preferredTenants: [], waterSupply: '', gatedSecurity: false, nonVegAllowed: true,
+  propertyCondition: '', showPropertyBy: 'OWNER', directionTips: '', visitAvailability: 'EVERYDAY',
+  visitTimeFrom: '10:00', visitTimeUntil: '18:00', secondaryPhone: '', multipleUnits: false,
   occupancyType: '', foodType: 'NONE', gateClosingTime: '22:00', noticePeriodDays: 30,
   hotelChain: '', frontDesk24h: false, checkinTime: '14:00', checkoutTime: '11:00',
   amenities: [], bedTypes: [], mealPlan: 'NONE', accessibilityFeatures: [], breakfastIncluded: false, parkingType: 'NONE',
@@ -356,6 +385,7 @@ export default function NewListingWizard() {
   const isCommercial = data.type === 'COMMERCIAL';
   const isPG = data.type === 'PG' || data.type === 'COLIVING';
   const isHotel = data.type === 'HOTEL' || data.type === 'BUDGET_HOTEL';
+  const isRental = ['HOME', 'APARTMENT', 'ROOM', 'VILLA', 'PG', 'COLIVING', 'FARMSTAY', 'BNB'].includes(data.type);
   const STEP_LABELS = ['Property Type', 'Details', isCommercial ? 'Facilities & Policies' : 'Facilities & Rules', 'Review'];
 
   /* ── Validation ──────────────────────────────────────────── */
@@ -398,6 +428,32 @@ export default function NewListingWizard() {
         depositTerms: data.depositTerms || null,
         maintenanceChargePaise: data.maintenanceChargePaise > 0 ? data.maintenanceChargePaise : null,
         minLeaseMonths: data.minLeaseMonths > 0 ? data.minLeaseMonths : null,
+        // Rental fields
+        ...(isRental ? {
+          apartmentName: data.apartmentName || null,
+          apartmentType: data.apartmentType || null,
+          floorNumber: data.floorNumber || null,
+          totalFloors: data.totalFloors || null,
+          propertyAge: data.propertyAge || null,
+          facing: data.facing || null,
+          builtUpAreaSqft: data.builtUpAreaSqft || null,
+          rentalType: data.rentalType,
+          rentNegotiable: data.rentNegotiable,
+          maintenanceIncluded: data.maintenanceIncluded,
+          availableFrom: data.availableFrom || null,
+          preferredTenants: data.preferredTenants.length > 0 ? data.preferredTenants.join(',') : null,
+          waterSupply: data.waterSupply || null,
+          gatedSecurity: data.gatedSecurity,
+          nonVegAllowed: data.nonVegAllowed,
+          propertyCondition: data.propertyCondition || null,
+          showPropertyBy: data.showPropertyBy || null,
+          directionTips: data.directionTips || null,
+          visitAvailability: data.visitAvailability || null,
+          visitTimeFrom: data.visitTimeFrom || null,
+          visitTimeUntil: data.visitTimeUntil || null,
+          secondaryPhone: data.secondaryPhone || null,
+          multipleUnits: data.multipleUnits,
+        } : {}),
       };
       if (isPG) {
         body.pricingUnit = 'MONTH';
@@ -721,6 +777,194 @@ export default function NewListingWizard() {
               )}
             </div>
           </div>
+
+          {/* ── Rental Property Details ─────────────── */}
+          {isRental && (
+            <div className="border-t pt-4 mt-4 space-y-4">
+              <h3 className="text-sm font-bold text-gray-800">Property Details</h3>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-semibold text-gray-600 mb-1">Society / Building Name</label>
+                  <input value={data.apartmentName} onChange={e => update({ apartmentName: e.target.value })}
+                    className="w-full border rounded-xl px-3 py-2 text-sm" placeholder="e.g. Prestige Lakeside" />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-gray-600 mb-1">Apartment Type</label>
+                  <select value={data.apartmentType} onChange={e => update({ apartmentType: e.target.value })}
+                    className="w-full border rounded-xl px-3 py-2 text-sm">
+                    <option value="">Select</option>
+                    <option value="GATED_COMMUNITY">Gated Community</option>
+                    <option value="STANDALONE">Standalone Building</option>
+                    <option value="VILLA">Villa</option>
+                    <option value="BUILDER_FLOOR">Builder Floor</option>
+                    <option value="PENTHOUSE">Penthouse</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-gray-600 mb-1">Floor Number</label>
+                  <input type="number" min="0" value={data.floorNumber || ''} onChange={e => update({ floorNumber: Number(e.target.value) })}
+                    className="w-full border rounded-xl px-3 py-2 text-sm" placeholder="e.g. 3" />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-gray-600 mb-1">Total Floors</label>
+                  <input type="number" min="1" value={data.totalFloors || ''} onChange={e => update({ totalFloors: Number(e.target.value) })}
+                    className="w-full border rounded-xl px-3 py-2 text-sm" placeholder="e.g. 12" />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-gray-600 mb-1">Property Age</label>
+                  <select value={data.propertyAge} onChange={e => update({ propertyAge: e.target.value })}
+                    className="w-full border rounded-xl px-3 py-2 text-sm">
+                    <option value="">Select</option>
+                    <option value="NEW">New Construction</option>
+                    <option value="1_TO_3">1-3 years</option>
+                    <option value="3_TO_5">3-5 years</option>
+                    <option value="5_TO_10">5-10 years</option>
+                    <option value="10_PLUS">10+ years</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-gray-600 mb-1">Facing</label>
+                  <select value={data.facing} onChange={e => update({ facing: e.target.value })}
+                    className="w-full border rounded-xl px-3 py-2 text-sm">
+                    <option value="">Select</option>
+                    {['NORTH', 'SOUTH', 'EAST', 'WEST', 'NORTH_EAST', 'NORTH_WEST', 'SOUTH_EAST', 'SOUTH_WEST'].map(f =>
+                      <option key={f} value={f}>{f.replace(/_/g, '-')}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-gray-600 mb-1">Built-up Area (sq.ft)</label>
+                  <input type="number" min="0" value={data.builtUpAreaSqft || ''} onChange={e => update({ builtUpAreaSqft: Number(e.target.value) })}
+                    className="w-full border rounded-xl px-3 py-2 text-sm" placeholder="e.g. 1200" />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-gray-600 mb-1">Water Supply</label>
+                  <select value={data.waterSupply} onChange={e => update({ waterSupply: e.target.value })}
+                    className="w-full border rounded-xl px-3 py-2 text-sm">
+                    <option value="">Select</option>
+                    <option value="MUNICIPAL">Municipal</option>
+                    <option value="BOREWELL">Borewell</option>
+                    <option value="BOTH">Both</option>
+                    <option value="TANKER">Tanker</option>
+                  </select>
+                </div>
+              </div>
+
+              <h3 className="text-sm font-bold text-gray-800 pt-2">Rental Terms</h3>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-semibold text-gray-600 mb-1">Available for</label>
+                  <select value={data.rentalType} onChange={e => update({ rentalType: e.target.value })}
+                    className="w-full border rounded-xl px-3 py-2 text-sm">
+                    <option value="RENT">Rent</option>
+                    <option value="LEASE">Lease</option>
+                    <option value="RENT_OR_LEASE">Rent or Lease</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-gray-600 mb-1">Available From</label>
+                  <input type="date" value={data.availableFrom} onChange={e => update({ availableFrom: e.target.value })}
+                    className="w-full border rounded-xl px-3 py-2 text-sm" />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-gray-600 mb-1">Property Condition</label>
+                  <select value={data.propertyCondition} onChange={e => update({ propertyCondition: e.target.value })}
+                    className="w-full border rounded-xl px-3 py-2 text-sm">
+                    <option value="">Select</option>
+                    <option value="VACANT">Vacant</option>
+                    <option value="OCCUPIED">Currently Occupied</option>
+                    <option value="UNDER_RENOVATION">Under Renovation</option>
+                  </select>
+                </div>
+                <div className="flex items-end gap-4">
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input type="checkbox" checked={data.rentNegotiable} onChange={e => update({ rentNegotiable: e.target.checked })} className="rounded" />
+                    <span className="text-xs font-medium">Rent Negotiable</span>
+                  </label>
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input type="checkbox" checked={data.maintenanceIncluded} onChange={e => update({ maintenanceIncluded: e.target.checked })} className="rounded" />
+                    <span className="text-xs font-medium">Maintenance Included</span>
+                  </label>
+                </div>
+              </div>
+
+              <h3 className="text-sm font-bold text-gray-800 pt-2">Tenant Preferences</h3>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="col-span-2">
+                  <label className="block text-xs font-semibold text-gray-600 mb-2">Preferred Tenants</label>
+                  <div className="flex flex-wrap gap-2">
+                    {['ANYONE', 'FAMILY', 'BACHELOR_MALE', 'BACHELOR_FEMALE', 'COMPANY'].map(t => (
+                      <button key={t} type="button"
+                        onClick={() => update({
+                          preferredTenants: data.preferredTenants.includes(t)
+                            ? data.preferredTenants.filter(x => x !== t)
+                            : [...data.preferredTenants, t]
+                        })}
+                        className={`px-3 py-1.5 rounded-full text-xs font-medium border transition
+                          ${data.preferredTenants.includes(t) ? 'bg-orange-500 text-white border-orange-500' : 'bg-white text-gray-600 border-gray-300'}`}>
+                        {t.replace(/_/g, ' ')}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input type="checkbox" checked={data.gatedSecurity} onChange={e => update({ gatedSecurity: e.target.checked })} className="rounded" />
+                  <span className="text-xs font-medium">Gated Security</span>
+                </label>
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input type="checkbox" checked={data.nonVegAllowed} onChange={e => update({ nonVegAllowed: e.target.checked })} className="rounded" />
+                  <span className="text-xs font-medium">Non-Veg Allowed</span>
+                </label>
+              </div>
+
+              <h3 className="text-sm font-bold text-gray-800 pt-2">Property Visits</h3>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-semibold text-gray-600 mb-1">Who will show?</label>
+                  <select value={data.showPropertyBy} onChange={e => update({ showPropertyBy: e.target.value })}
+                    className="w-full border rounded-xl px-3 py-2 text-sm">
+                    <option value="OWNER">I will show</option>
+                    <option value="AGENT">Agent</option>
+                    <option value="CARETAKER">Caretaker</option>
+                    <option value="KEY_WITH_NEIGHBOR">Key with neighbor</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-gray-600 mb-1">Visit Availability</label>
+                  <select value={data.visitAvailability} onChange={e => update({ visitAvailability: e.target.value })}
+                    className="w-full border rounded-xl px-3 py-2 text-sm">
+                    <option value="EVERYDAY">Everyday</option>
+                    <option value="WEEKDAY">Weekdays (Mon-Fri)</option>
+                    <option value="WEEKEND">Weekends (Sat-Sun)</option>
+                    <option value="CUSTOM">Custom</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-gray-600 mb-1">Visit Time From</label>
+                  <input type="time" value={data.visitTimeFrom} onChange={e => update({ visitTimeFrom: e.target.value })}
+                    className="w-full border rounded-xl px-3 py-2 text-sm" />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-gray-600 mb-1">Visit Time Until</label>
+                  <input type="time" value={data.visitTimeUntil} onChange={e => update({ visitTimeUntil: e.target.value })}
+                    className="w-full border rounded-xl px-3 py-2 text-sm" />
+                </div>
+                <div className="col-span-2">
+                  <label className="block text-xs font-semibold text-gray-600 mb-1">Directions for Tenant</label>
+                  <input value={data.directionTips} onChange={e => update({ directionTips: e.target.value })}
+                    className="w-full border rounded-xl px-3 py-2 text-sm" placeholder="e.g. Near SBI bank, take left after signal" />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-gray-600 mb-1">Secondary Phone</label>
+                  <input value={data.secondaryPhone} onChange={e => update({ secondaryPhone: e.target.value })}
+                    className="w-full border rounded-xl px-3 py-2 text-sm" placeholder="+91..." maxLength={13} />
+                </div>
+                <label className="flex items-center gap-2 cursor-pointer self-end">
+                  <input type="checkbox" checked={data.multipleUnits} onChange={e => update({ multipleUnits: e.target.checked })} className="rounded" />
+                  <span className="text-xs font-medium">Multiple similar units available</span>
+                </label>
+              </div>
+            </div>
+          )}
 
           {/* Capacity */}
           <div>

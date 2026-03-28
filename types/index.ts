@@ -70,6 +70,30 @@ export interface Listing {
   depositTerms?: string;
   maintenanceChargePaise?: number;
   minLeaseMonths?: number;
+  // Rental details
+  apartmentName?: string;
+  apartmentType?: string;
+  floorNumber?: number;
+  totalFloors?: number;
+  propertyAge?: string;
+  facing?: string;
+  builtUpAreaSqft?: number;
+  rentalType?: string;
+  rentNegotiable?: boolean;
+  maintenanceIncluded?: boolean;
+  availableFrom?: string;
+  preferredTenants?: string;
+  waterSupply?: string;
+  gatedSecurity?: boolean;
+  nonVegAllowed?: boolean;
+  propertyCondition?: string;
+  showPropertyBy?: string;
+  directionTips?: string;
+  visitAvailability?: string;
+  visitTimeFrom?: string;
+  visitTimeUntil?: string;
+  secondaryPhone?: string;
+  multipleUnits?: boolean;
   // Hotel
   hotelChain?: string;
   frontDesk24h?: boolean;

@@ -209,6 +209,62 @@ export default async function ListingDetailPage({ params }: Props) {
             {listing.coupleFriendly && <span className="text-pink-600 font-medium">💑 Couple-friendly</span>}
           </div>
 
+          {/* Rental Property Details */}
+          {(listing.apartmentName || listing.floorNumber || listing.facing || listing.builtUpAreaSqft || listing.preferredTenants) && (
+            <div className="border rounded-xl p-5 space-y-3">
+              <h2 className="text-lg font-semibold">Property Details</h2>
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 text-sm">
+                {listing.apartmentName && (
+                  <div><span className="text-gray-500">Society:</span> <span className="font-medium">{listing.apartmentName}</span></div>
+                )}
+                {listing.apartmentType && (
+                  <div><span className="text-gray-500">Type:</span> <span className="font-medium">{listing.apartmentType.replace(/_/g, ' ')}</span></div>
+                )}
+                {listing.floorNumber != null && (
+                  <div><span className="text-gray-500">Floor:</span> <span className="font-medium">{listing.floorNumber}{listing.totalFloors ? ` of ${listing.totalFloors}` : ''}</span></div>
+                )}
+                {listing.propertyAge && (
+                  <div><span className="text-gray-500">Age:</span> <span className="font-medium">{listing.propertyAge.replace(/_/g, ' ').replace('PLUS', '+')}</span></div>
+                )}
+                {listing.facing && (
+                  <div><span className="text-gray-500">Facing:</span> <span className="font-medium">{listing.facing.replace(/_/g, '-')}</span></div>
+                )}
+                {listing.builtUpAreaSqft && (
+                  <div><span className="text-gray-500">Area:</span> <span className="font-medium">{listing.builtUpAreaSqft} sq.ft</span></div>
+                )}
+                {listing.waterSupply && (
+                  <div><span className="text-gray-500">Water:</span> <span className="font-medium">{listing.waterSupply}</span></div>
+                )}
+                {listing.gatedSecurity && (
+                  <div className="text-green-600 font-medium">🔒 Gated Security</div>
+                )}
+                {listing.nonVegAllowed === false && (
+                  <div className="text-orange-600 font-medium">🥬 Veg Only</div>
+                )}
+              </div>
+              {listing.preferredTenants && (
+                <div className="flex gap-2 flex-wrap pt-1">
+                  <span className="text-sm text-gray-500">Preferred:</span>
+                  {listing.preferredTenants.split(',').map((t: string) => (
+                    <span key={t} className="text-xs bg-blue-50 text-blue-700 px-2 py-0.5 rounded-full font-medium">{t.trim().replace(/_/g, ' ')}</span>
+                  ))}
+                </div>
+              )}
+              {listing.availableFrom && (
+                <p className="text-sm text-gray-600">Available from: <span className="font-medium">{new Date(listing.availableFrom).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}</span></p>
+              )}
+              {listing.rentNegotiable && (
+                <p className="text-sm text-green-600 font-medium">Rent negotiable</p>
+              )}
+              {listing.directionTips && (
+                <p className="text-sm text-gray-500">📍 {listing.directionTips}</p>
+              )}
+              {listing.visitAvailability && (
+                <p className="text-xs text-gray-400">Visit: {listing.visitAvailability.replace(/_/g, ' ')}{listing.visitTimeFrom ? ` (${listing.visitTimeFrom}–${listing.visitTimeUntil})` : ''}</p>
+              )}
+            </div>
+          )}
+
           {/* About this Safar */}
           <ExpandableText text={listing.description} />
 

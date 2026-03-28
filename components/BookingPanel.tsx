@@ -487,7 +487,7 @@ export default function BookingPanel({ listing, selectedRoomType, roomSelections
           )}
 
           {(listing.minLeaseMonths ?? 0) > 0 && (
-            <p className="text-[10px] text-gray-400 mt-1">Minimum lease: {listing.minLeaseMonths ?? 0} month{(listing.minLeaseMonths ?? 0) > 1 ? 's' : ''}</p>
+            <p className="text-[10px] text-gray-400 mt-1">Minimum lease: {listing.minLeaseMonths} month{(listing.minLeaseMonths ?? 0) > 1 ? 's' : ''}</p>
           )}
 
           {!isCommercial && effectiveRooms > 1 && (

@@ -73,6 +73,15 @@ export default function EditListingModal({ listing, onClose, onSaved, token }: P
         breakfastIncluded,
         addressLine1, city, state, pincode,
         lat: lat || null, lng: lng || null,
+        // Rental fields
+        ...(isRental ? {
+          apartmentName: apartmentName || null, apartmentType: apartmentType || null,
+          floorNumber: floorNumber || null, totalFloors: totalFloors || null,
+          propertyAge: propertyAge || null, facing: facing || null,
+          builtUpAreaSqft: builtUpAreaSqft || null, rentalType,
+          rentNegotiable, preferredTenants: preferredTenants || null,
+          propertyCondition: propertyCondition || null, availableFrom: availableFrom || null,
+        } : {}),
       }, token);
       onSaved();
     } catch (e: any) {
@@ -81,9 +90,26 @@ export default function EditListingModal({ listing, onClose, onSaved, token }: P
     setSaving(false);
   };
 
+  const isRental = ['HOME', 'APARTMENT', 'ROOM', 'VILLA', 'PG', 'COLIVING', 'FARMSTAY', 'BNB'].includes(listing.type);
+
+  // Rental state
+  const [apartmentName, setApartmentName] = useState(listing.apartmentName || '');
+  const [apartmentType, setApartmentType] = useState(listing.apartmentType || '');
+  const [floorNumber, setFloorNumber] = useState(listing.floorNumber || 0);
+  const [totalFloors, setTotalFloors] = useState(listing.totalFloors || 0);
+  const [propertyAge, setPropertyAge] = useState(listing.propertyAge || '');
+  const [facing, setFacing] = useState(listing.facing || '');
+  const [builtUpAreaSqft, setBuiltUpAreaSqft] = useState(listing.builtUpAreaSqft || 0);
+  const [rentalType, setRentalType] = useState(listing.rentalType || 'RENT');
+  const [rentNegotiable, setRentNegotiable] = useState(listing.rentNegotiable || false);
+  const [preferredTenants, setPreferredTenants] = useState(listing.preferredTenants || '');
+  const [propertyCondition, setPropertyCondition] = useState(listing.propertyCondition || '');
+  const [availableFrom, setAvailableFrom] = useState(listing.availableFrom || '');
+
   const SECTIONS = [
     { key: 'basic', label: 'Basic Info' },
     { key: 'location', label: 'Location' },
+    ...(isRental ? [{ key: 'rental', label: 'Rental Details' }] : []),
     { key: 'rooms', label: 'Rooms & Beds' },
     { key: 'pricing', label: 'Pricing' },
     { key: 'facilities', label: 'Facilities' },
@@ -175,6 +201,98 @@ export default function EditListingModal({ listing, onClose, onSaved, token }: P
               <p className="text-xs text-gray-400">
                 Updating the city or pincode will re-geocode the listing for map and search accuracy.
               </p>
+            </div>
+          )}
+
+          {activeSection === 'rental' && (
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Society / Building</label>
+                  <input value={apartmentName} onChange={e => setApartmentName(e.target.value)}
+                    className="w-full border rounded-lg px-3 py-2 text-sm" placeholder="e.g. Prestige Lakeside" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Apartment Type</label>
+                  <select value={apartmentType} onChange={e => setApartmentType(e.target.value)}
+                    className="w-full border rounded-lg px-3 py-2 text-sm">
+                    <option value="">Select</option>
+                    <option value="GATED_COMMUNITY">Gated Community</option>
+                    <option value="STANDALONE">Standalone</option>
+                    <option value="VILLA">Villa</option>
+                    <option value="BUILDER_FLOOR">Builder Floor</option>
+                    <option value="PENTHOUSE">Penthouse</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Floor / Total Floors</label>
+                  <div className="flex gap-2">
+                    <input type="number" min={0} value={floorNumber || ''} onChange={e => setFloorNumber(Number(e.target.value))}
+                      className="w-full border rounded-lg px-3 py-2 text-sm" placeholder="Floor" />
+                    <input type="number" min={1} value={totalFloors || ''} onChange={e => setTotalFloors(Number(e.target.value))}
+                      className="w-full border rounded-lg px-3 py-2 text-sm" placeholder="Total" />
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Property Age</label>
+                  <select value={propertyAge} onChange={e => setPropertyAge(e.target.value)}
+                    className="w-full border rounded-lg px-3 py-2 text-sm">
+                    <option value="">Select</option>
+                    <option value="NEW">New</option>
+                    <option value="1_TO_3">1-3 yrs</option>
+                    <option value="3_TO_5">3-5 yrs</option>
+                    <option value="5_TO_10">5-10 yrs</option>
+                    <option value="10_PLUS">10+ yrs</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Facing</label>
+                  <select value={facing} onChange={e => setFacing(e.target.value)}
+                    className="w-full border rounded-lg px-3 py-2 text-sm">
+                    <option value="">Select</option>
+                    {['NORTH','SOUTH','EAST','WEST','NORTH_EAST','SOUTH_EAST'].map(f =>
+                      <option key={f} value={f}>{f.replace(/_/g,'-')}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Built-up Area (sqft)</label>
+                  <input type="number" min={0} value={builtUpAreaSqft || ''} onChange={e => setBuiltUpAreaSqft(Number(e.target.value))}
+                    className="w-full border rounded-lg px-3 py-2 text-sm" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Available for</label>
+                  <select value={rentalType} onChange={e => setRentalType(e.target.value)}
+                    className="w-full border rounded-lg px-3 py-2 text-sm">
+                    <option value="RENT">Rent</option>
+                    <option value="LEASE">Lease</option>
+                    <option value="RENT_OR_LEASE">Rent or Lease</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Available From</label>
+                  <input type="date" value={availableFrom} onChange={e => setAvailableFrom(e.target.value)}
+                    className="w-full border rounded-lg px-3 py-2 text-sm" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Property Condition</label>
+                  <select value={propertyCondition} onChange={e => setPropertyCondition(e.target.value)}
+                    className="w-full border rounded-lg px-3 py-2 text-sm">
+                    <option value="">Select</option>
+                    <option value="VACANT">Vacant</option>
+                    <option value="OCCUPIED">Occupied</option>
+                    <option value="UNDER_RENOVATION">Under Renovation</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Preferred Tenants</label>
+                  <input value={preferredTenants} onChange={e => setPreferredTenants(e.target.value)}
+                    className="w-full border rounded-lg px-3 py-2 text-sm" placeholder="ANYONE, FAMILY, BACHELOR_MALE" />
+                </div>
+              </div>
+              <label className="flex items-center gap-2">
+                <input type="checkbox" checked={rentNegotiable} onChange={e => setRentNegotiable(e.target.checked)} className="rounded" />
+                <span className="text-sm font-medium">Rent Negotiable</span>
+              </label>
             </div>
           )}
 
