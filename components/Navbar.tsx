@@ -141,6 +141,9 @@ export default function Navbar() {
               <Link href="/search" className="hover:text-orange-500 transition">
                 {t('nav.search')}
               </Link>
+              <Link href="/cooks" className="hover:text-orange-500 transition">
+                Cooks
+              </Link>
               <Link href="/aashray" className="hover:text-teal-600 transition text-teal-700 font-semibold">
                 Aashray
               </Link>
@@ -404,6 +407,9 @@ export default function Navbar() {
             <>
               <Link href="/search" className="flex items-center gap-3 py-2.5 text-gray-700 hover:text-orange-500" onClick={() => setMenuOpen(false)}>
                 <span className="w-5 text-center">{'\u{1F50D}'}</span> {t('nav.search')}
+              </Link>
+              <Link href="/cooks" className="flex items-center gap-3 py-2.5 text-gray-700 hover:text-orange-500" onClick={() => setMenuOpen(false)}>
+                <span className="w-5 text-center">{'\u{1F468}\u{200D}\u{1F373}'}</span> Cooks
               </Link>
               <Link href="/auth" className="flex items-center gap-3 py-2.5 text-orange-500 font-semibold" onClick={() => setMenuOpen(false)}>
                 <span className="w-5 text-center">{'\u{1F511}'}</span> {t('nav.login')}
