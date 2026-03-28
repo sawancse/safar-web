@@ -94,6 +94,10 @@ export interface Listing {
   visitTimeUntil?: string;
   secondaryPhone?: string;
   multipleUnits?: boolean;
+  // Insurance
+  insuranceEnabled?: boolean;
+  insuranceAmountPaise?: number;
+  insuranceType?: string;
   // Hotel
   hotelChain?: string;
   frontDesk24h?: boolean;

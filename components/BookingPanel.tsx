@@ -168,7 +168,11 @@ export default function BookingPanel({ listing, selectedRoomType, roomSelections
     ? (listing.maintenanceChargePaise ?? 0) * Math.max(1, pgFullMonths)
     : 0;
 
-  const totalPaise = discountedBase + gstPaise;
+  // Insurance (optional per listing)
+  const insurancePaise = listing.insuranceEnabled && (listing.insuranceAmountPaise ?? 0) > 0
+    ? (listing.insuranceAmountPaise ?? 0) : 0;
+
+  const totalPaise = discountedBase + gstPaise + insurancePaise;
 
   const canBook = isCommercial
     ? (bookingDate && hours >= minHours)
@@ -491,6 +495,14 @@ export default function BookingPanel({ listing, selectedRoomType, roomSelections
             </div>
           )}
 
+          {/* Insurance */}
+          {insurancePaise > 0 && (
+            <div className="flex justify-between text-gray-500">
+              <span>{listing.insuranceType === 'PREMIUM' ? 'Premium Protection' : listing.insuranceType === 'DAMAGE_PROTECTION' ? 'Damage Protection' : 'Micro-insurance'}</span>
+              <span>{formatPaise(insurancePaise)}</span>
+            </div>
+          )}
+
           {/* No GST note for residential */}
           {isMonthly && !isCommercial && !listing.gstApplicable && (
             <div className="text-[10px] text-gray-400">
@@ -575,7 +587,8 @@ export default function BookingPanel({ listing, selectedRoomType, roomSelections
       <p className="text-xs text-gray-400 text-center mt-3">
         {isCommercial ? 'GST invoice included' :
          (listing.securityDepositPaise ?? 0) > 0 ? `${listing.depositType === 'REFUNDABLE' ? 'Refundable' : 'Security'} deposit applies` :
-         'Zero deposit · Micro-insurance included'}
+         listing.insuranceEnabled ? 'Protection plan included' :
+         'No deposit required'}
       </p>
 
       {listing.petFriendly && !isCommercial && (

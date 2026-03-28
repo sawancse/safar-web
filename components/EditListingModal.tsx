@@ -74,6 +74,10 @@ export default function EditListingModal({ listing, onClose, onSaved, token }: P
         addressLine1, city, state, pincode,
         lat: lat || null, lng: lng || null,
         // Rental fields
+        // Insurance
+        insuranceEnabled,
+        insuranceAmountPaise: insuranceEnabled && insuranceAmountPaise > 0 ? insuranceAmountPaise : null,
+        insuranceType: insuranceEnabled ? insuranceType : null,
         ...(isRental ? {
           apartmentName: apartmentName || null, apartmentType: apartmentType || null,
           floorNumber: floorNumber || null, totalFloors: totalFloors || null,
@@ -105,6 +109,10 @@ export default function EditListingModal({ listing, onClose, onSaved, token }: P
   const [preferredTenants, setPreferredTenants] = useState(listing.preferredTenants || '');
   const [propertyCondition, setPropertyCondition] = useState(listing.propertyCondition || '');
   const [availableFrom, setAvailableFrom] = useState(listing.availableFrom || '');
+  // Insurance
+  const [insuranceEnabled, setInsuranceEnabled] = useState(listing.insuranceEnabled || false);
+  const [insuranceAmountPaise, setInsuranceAmountPaise] = useState(listing.insuranceAmountPaise || 0);
+  const [insuranceType, setInsuranceType] = useState(listing.insuranceType || 'BASIC');
 
   const SECTIONS = [
     { key: 'basic', label: 'Basic Info' },
@@ -373,6 +381,34 @@ export default function EditListingModal({ listing, onClose, onSaved, token }: P
                     className="w-full border rounded-lg px-3 py-2 text-sm" min={0}
                     placeholder="Discounted rate for 30+ day stays" />
                   <p className="text-xs text-gray-400 mt-1">If set, guests booking 30+ nights will see this monthly rate instead.</p>
+                </div>
+              )}
+
+              {/* Insurance */}
+              <div className="border-t pt-3 mt-2">
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input type="checkbox" checked={insuranceEnabled}
+                    onChange={e => setInsuranceEnabled(e.target.checked)} className="rounded" />
+                  <span className="text-sm font-medium">Enable guest protection / micro-insurance</span>
+                </label>
+              </div>
+              {insuranceEnabled && (
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Amount (₹)</label>
+                    <input type="number" min={0} value={(insuranceAmountPaise || 0) / 100}
+                      onChange={e => setInsuranceAmountPaise(Number(e.target.value) * 100)}
+                      className="w-full border rounded-lg px-3 py-2 text-sm" placeholder="500" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Type</label>
+                    <select value={insuranceType} onChange={e => setInsuranceType(e.target.value)}
+                      className="w-full border rounded-lg px-3 py-2 text-sm">
+                      <option value="BASIC">Basic</option>
+                      <option value="PREMIUM">Premium</option>
+                      <option value="DAMAGE_PROTECTION">Damage Protection</option>
+                    </select>
+                  </div>
                 </div>
               )}
             </div>

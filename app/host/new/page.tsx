@@ -249,6 +249,10 @@ interface WizardData {
   depositTerms: string;
   maintenanceChargePaise: number;
   minLeaseMonths: number;
+  // Insurance
+  insuranceEnabled: boolean;
+  insuranceAmountPaise: number;
+  insuranceType: string;
   // Rental-specific (apartment/flat)
   apartmentName: string;
   apartmentType: string;
@@ -297,6 +301,7 @@ const INITIAL_DATA: WizardData = {
   bedrooms: 1, bathrooms: 1, pricingUnit: 'NIGHT',
   areaSqft: 0, minBookingHours: 1, operatingHoursFrom: '09:00', operatingHoursUntil: '21:00', gstin: '',
   securityDepositPaise: 0, depositType: 'REFUNDABLE', depositTerms: '', maintenanceChargePaise: 0, minLeaseMonths: 0,
+  insuranceEnabled: false, insuranceAmountPaise: 0, insuranceType: 'BASIC',
   apartmentName: '', apartmentType: '', floorNumber: 0, totalFloors: 0, propertyAge: '', facing: '',
   builtUpAreaSqft: 0, rentalType: 'RENT', rentNegotiable: false, maintenanceIncluded: false,
   availableFrom: '', preferredTenants: [], waterSupply: '', gatedSecurity: false, nonVegAllowed: true,
@@ -428,6 +433,10 @@ export default function NewListingWizard() {
         depositTerms: data.depositTerms || null,
         maintenanceChargePaise: data.maintenanceChargePaise > 0 ? data.maintenanceChargePaise : null,
         minLeaseMonths: data.minLeaseMonths > 0 ? data.minLeaseMonths : null,
+        // Insurance
+        insuranceEnabled: data.insuranceEnabled,
+        insuranceAmountPaise: data.insuranceEnabled && data.insuranceAmountPaise > 0 ? data.insuranceAmountPaise : null,
+        insuranceType: data.insuranceEnabled ? data.insuranceType : null,
         // Rental fields
         ...(isRental ? {
           apartmentName: data.apartmentName || null,
@@ -771,6 +780,36 @@ export default function NewListingWizard() {
                       <option value={6}>6 months</option>
                       <option value={11}>11 months</option>
                       <option value={12}>12 months</option>
+                    </select>
+                  </div>
+                </>
+              )}
+
+              {/* Insurance */}
+              <div className="col-span-2 border-t pt-3 mt-2">
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input type="checkbox" checked={data.insuranceEnabled}
+                    onChange={e => update({ insuranceEnabled: e.target.checked })} className="rounded" />
+                  <span className="text-xs font-semibold text-gray-700">Enable guest protection / micro-insurance</span>
+                </label>
+              </div>
+              {data.insuranceEnabled && (
+                <>
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-600 mb-1">Insurance Amount (INR)</label>
+                    <input type="number" min="0"
+                      className="w-full border rounded-xl px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-orange-400"
+                      placeholder="e.g. 500"
+                      value={data.insuranceAmountPaise ? data.insuranceAmountPaise / 100 : ''}
+                      onChange={e => update({ insuranceAmountPaise: Math.round(Number(e.target.value) * 100) })} />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-600 mb-1">Protection Type</label>
+                    <select value={data.insuranceType} onChange={e => update({ insuranceType: e.target.value })}
+                      className="w-full border rounded-xl px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-orange-400">
+                      <option value="BASIC">Basic (accidental damage)</option>
+                      <option value="PREMIUM">Premium (damage + theft + liability)</option>
+                      <option value="DAMAGE_PROTECTION">Damage Protection Only</option>
                     </select>
                   </div>
                 </>
