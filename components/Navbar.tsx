@@ -141,12 +141,56 @@ export default function Navbar() {
               <Link href="/search" className="hover:text-orange-500 transition">
                 {t('nav.search')}
               </Link>
-              <Link href="/cooks" className="hover:text-orange-500 transition">
-                Cooks
-              </Link>
-              <Link href="/aashray" className="hover:text-teal-600 transition text-teal-700 font-semibold">
-                Aashray
-              </Link>
+              <div className="relative group">
+                <button className="hover:text-orange-500 transition flex items-center gap-1">
+                  Services <span className="text-[10px]">▼</span>
+                </button>
+                <div className="absolute top-full left-0 mt-2 w-56 bg-white rounded-xl shadow-lg border border-gray-100 py-2 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50">
+                  <Link href="/cooks" className="flex items-center gap-3 px-4 py-2.5 hover:bg-orange-50 transition">
+                    <span className="text-lg">👨‍🍳</span>
+                    <div>
+                      <p className="text-sm font-medium text-gray-900">Safar Cooks</p>
+                      <p className="text-[11px] text-gray-400">Home cooks & caterers</p>
+                    </div>
+                  </Link>
+                  <Link href="/experiences" className="flex items-center gap-3 px-4 py-2.5 hover:bg-orange-50 transition">
+                    <span className="text-lg">✨</span>
+                    <div>
+                      <p className="text-sm font-medium text-gray-900">Experiences</p>
+                      <p className="text-[11px] text-gray-400">Tours & activities</p>
+                    </div>
+                  </Link>
+                  <Link href="/medical" className="flex items-center gap-3 px-4 py-2.5 hover:bg-orange-50 transition">
+                    <span className="text-lg">🏥</span>
+                    <div>
+                      <p className="text-sm font-medium text-gray-900">Medical Stays</p>
+                      <p className="text-[11px] text-gray-400">Hospital-partnered housing</p>
+                    </div>
+                  </Link>
+                  <Link href="/aashray" className="flex items-center gap-3 px-4 py-2.5 hover:bg-orange-50 transition">
+                    <span className="text-lg">🏠</span>
+                    <div>
+                      <p className="text-sm font-medium text-gray-900">Aashray</p>
+                      <p className="text-[11px] text-gray-400">Refugee & emergency housing</p>
+                    </div>
+                  </Link>
+                  <div className="border-t my-1" />
+                  <Link href="/buy" className="flex items-center gap-3 px-4 py-2.5 hover:bg-orange-50 transition">
+                    <span className="text-lg">🏡</span>
+                    <div>
+                      <p className="text-sm font-medium text-gray-900">Buy / Sell</p>
+                      <p className="text-[11px] text-gray-400">Property marketplace</p>
+                    </div>
+                  </Link>
+                  <Link href="/projects" className="flex items-center gap-3 px-4 py-2.5 hover:bg-orange-50 transition">
+                    <span className="text-lg">🏗️</span>
+                    <div>
+                      <p className="text-sm font-medium text-gray-900">New Projects</p>
+                      <p className="text-[11px] text-gray-400">Builder developments</p>
+                    </div>
+                  </Link>
+                </div>
+              </div>
             </>
           )}
         </div>
@@ -408,9 +452,26 @@ export default function Navbar() {
               <Link href="/search" className="flex items-center gap-3 py-2.5 text-gray-700 hover:text-orange-500" onClick={() => setMenuOpen(false)}>
                 <span className="w-5 text-center">{'\u{1F50D}'}</span> {t('nav.search')}
               </Link>
-              <Link href="/cooks" className="flex items-center gap-3 py-2.5 text-gray-700 hover:text-orange-500" onClick={() => setMenuOpen(false)}>
-                <span className="w-5 text-center">{'\u{1F468}\u{200D}\u{1F373}'}</span> Cooks
+              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide pt-3 pb-1">Services</p>
+              <Link href="/cooks" className="flex items-center gap-3 py-2 text-gray-700 hover:text-orange-500" onClick={() => setMenuOpen(false)}>
+                <span className="w-5 text-center">{'\u{1F468}\u{200D}\u{1F373}'}</span> Safar Cooks
               </Link>
+              <Link href="/experiences" className="flex items-center gap-3 py-2 text-gray-700 hover:text-orange-500" onClick={() => setMenuOpen(false)}>
+                <span className="w-5 text-center">{'\u{2728}'}</span> Experiences
+              </Link>
+              <Link href="/medical" className="flex items-center gap-3 py-2 text-gray-700 hover:text-orange-500" onClick={() => setMenuOpen(false)}>
+                <span className="w-5 text-center">{'\u{1F3E5}'}</span> Medical Stays
+              </Link>
+              <Link href="/aashray" className="flex items-center gap-3 py-2 text-teal-700 hover:text-teal-600 font-medium" onClick={() => setMenuOpen(false)}>
+                <span className="w-5 text-center">{'\u{1F3E0}'}</span> Aashray
+              </Link>
+              <Link href="/buy" className="flex items-center gap-3 py-2 text-gray-700 hover:text-orange-500" onClick={() => setMenuOpen(false)}>
+                <span className="w-5 text-center">{'\u{1F3E1}'}</span> Buy / Sell
+              </Link>
+              <Link href="/projects" className="flex items-center gap-3 py-2 text-gray-700 hover:text-orange-500" onClick={() => setMenuOpen(false)}>
+                <span className="w-5 text-center">{'\u{1F3D7}'}</span> New Projects
+              </Link>
+              <div className="border-t my-2" />
               <Link href="/auth" className="flex items-center gap-3 py-2.5 text-orange-500 font-semibold" onClick={() => setMenuOpen(false)}>
                 <span className="w-5 text-center">{'\u{1F511}'}</span> {t('nav.login')}
               </Link>
