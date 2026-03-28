@@ -249,6 +249,12 @@ interface WizardData {
   depositTerms: string;
   maintenanceChargePaise: number;
   minLeaseMonths: number;
+  // Rental house rules
+  rentPaymentDay: number; // 1-28
+  smokingAllowed: boolean;
+  visitorPolicy: string;
+  quietHoursFrom: string;
+  quietHoursUntil: string;
   // Insurance
   insuranceEnabled: boolean;
   insuranceAmountPaise: number;
@@ -301,6 +307,7 @@ const INITIAL_DATA: WizardData = {
   bedrooms: 1, bathrooms: 1, pricingUnit: 'NIGHT',
   areaSqft: 0, minBookingHours: 1, operatingHoursFrom: '09:00', operatingHoursUntil: '21:00', gstin: '',
   securityDepositPaise: 0, depositType: 'REFUNDABLE', depositTerms: '', maintenanceChargePaise: 0, minLeaseMonths: 0,
+  rentPaymentDay: 1, smokingAllowed: false, visitorPolicy: 'ALLOWED', quietHoursFrom: '22:00', quietHoursUntil: '06:00',
   insuranceEnabled: false, insuranceAmountPaise: 0, insuranceType: 'BASIC',
   apartmentName: '', apartmentType: '', floorNumber: 0, totalFloors: 0, propertyAge: '', facing: '',
   builtUpAreaSqft: 0, rentalType: 'RENT', rentNegotiable: false, maintenanceIncluded: false,
@@ -391,6 +398,7 @@ export default function NewListingWizard() {
   const isPG = data.type === 'PG' || data.type === 'COLIVING';
   const isHotel = data.type === 'HOTEL' || data.type === 'BUDGET_HOTEL';
   const isRental = ['HOME', 'APARTMENT', 'ROOM', 'VILLA', 'PG', 'COLIVING', 'FARMSTAY', 'BNB'].includes(data.type);
+  const isMonthlyPricing = data.pricingUnit === 'MONTH';
   const STEP_LABELS = ['Property Type', 'Details', isCommercial ? 'Facilities & Policies' : 'Facilities & Rules', 'Review'];
 
   /* ── Validation ──────────────────────────────────────────── */
@@ -433,6 +441,14 @@ export default function NewListingWizard() {
         depositTerms: data.depositTerms || null,
         maintenanceChargePaise: data.maintenanceChargePaise > 0 ? data.maintenanceChargePaise : null,
         minLeaseMonths: data.minLeaseMonths > 0 ? data.minLeaseMonths : null,
+        // Rental rules
+        ...(isMonthlyPricing ? {
+          rentPaymentDay: data.rentPaymentDay,
+          visitorPolicy: data.visitorPolicy,
+          quietHoursFrom: data.quietHoursFrom,
+          quietHoursUntil: data.quietHoursUntil,
+          smokingAllowed: data.smokingAllowed,
+        } : {}),
         // Insurance
         insuranceEnabled: data.insuranceEnabled,
         insuranceAmountPaise: data.insuranceEnabled && data.insuranceAmountPaise > 0 ? data.insuranceAmountPaise : null,
@@ -1363,69 +1379,131 @@ export default function NewListingWizard() {
           </div>
         </div>
 
-        {/* House Rules — residential only */}
+        {/* House Rules — context-aware */}
         {!isCommercial && (
         <div className="border-t pt-6 mt-6 space-y-5">
-          <h3 className="text-base font-bold text-gray-900">House Rules</h3>
+          <h3 className="text-base font-bold text-gray-900">
+            {isMonthlyPricing ? 'Tenant Rules' : 'House Rules'}
+          </h3>
 
-          {/* Check-in/out times */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          {/* Check-in/out times — STAYS ONLY (not monthly rentals) */}
+          {!isMonthlyPricing && (
             <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">Check-in from</label>
-              <input type="time" className="w-full border rounded-lg px-3 py-2 text-sm"
-                value={data.checkInFrom} onChange={e => update({ checkInFrom: e.target.value })} />
+              <p className="text-sm font-medium text-gray-700 mb-2">Check-in / Check-out</p>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">Check-in from</label>
+                  <input type="time" className="w-full border rounded-lg px-3 py-2 text-sm"
+                    value={data.checkInFrom} onChange={e => update({ checkInFrom: e.target.value })} />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">Check-in until</label>
+                  <input type="time" className="w-full border rounded-lg px-3 py-2 text-sm"
+                    value={data.checkInUntil} onChange={e => update({ checkInUntil: e.target.value })} />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">Check-out from</label>
+                  <input type="time" className="w-full border rounded-lg px-3 py-2 text-sm"
+                    value={data.checkOutFrom} onChange={e => update({ checkOutFrom: e.target.value })} />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">Check-out until</label>
+                  <input type="time" className="w-full border rounded-lg px-3 py-2 text-sm"
+                    value={data.checkOutUntil} onChange={e => update({ checkOutUntil: e.target.value })} />
+                </div>
+              </div>
             </div>
-            <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">Check-in until</label>
-              <input type="time" className="w-full border rounded-lg px-3 py-2 text-sm"
-                value={data.checkInUntil} onChange={e => update({ checkInUntil: e.target.value })} />
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">Check-out from</label>
-              <input type="time" className="w-full border rounded-lg px-3 py-2 text-sm"
-                value={data.checkOutFrom} onChange={e => update({ checkOutFrom: e.target.value })} />
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">Check-out until</label>
-              <input type="time" className="w-full border rounded-lg px-3 py-2 text-sm"
-                value={data.checkOutUntil} onChange={e => update({ checkOutUntil: e.target.value })} />
-            </div>
-          </div>
+          )}
 
-          {/* Children */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Do you allow children?</label>
-            <div className="flex gap-3">
-              {[true, false].map(val => (
-                <button key={String(val)} type="button"
-                  onClick={() => update({ childrenAllowed: val })}
-                  className={`px-5 py-2 rounded-lg text-sm font-medium border transition ${
-                    data.childrenAllowed === val
-                      ? 'border-orange-500 bg-orange-50 text-orange-600'
-                      : 'border-gray-200 text-gray-600 hover:border-gray-300'
-                  }`}>
-                  {val ? 'Yes' : 'No'}
-                </button>
-              ))}
-            </div>
-          </div>
+          {/* Rental-specific rules — MONTHLY ONLY */}
+          {isMonthlyPricing && (
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">Rent Payment Day (of month)</label>
+                  <select value={data.rentPaymentDay} onChange={e => update({ rentPaymentDay: Number(e.target.value) })}
+                    className="w-full border rounded-lg px-3 py-2 text-sm">
+                    {[1, 5, 7, 10, 15, 25, 28].map(d => (
+                      <option key={d} value={d}>{d}{d === 1 ? 'st' : d === 5 ? 'th' : d === 7 ? 'th' : 'th'} of every month</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">Notice Period (days)</label>
+                  <select value={data.noticePeriodDays} onChange={e => update({ noticePeriodDays: Number(e.target.value) })}
+                    className="w-full border rounded-lg px-3 py-2 text-sm">
+                    <option value={15}>15 days</option>
+                    <option value={30}>30 days (1 month)</option>
+                    <option value={60}>60 days (2 months)</option>
+                    <option value={90}>90 days (3 months)</option>
+                  </select>
+                </div>
+              </div>
 
-          {/* Pets */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Do you allow pets?</label>
-            <div className="flex gap-3">
-              {[true, false].map(val => (
-                <button key={String(val)} type="button"
-                  onClick={() => update({ petFriendly: val, maxPets: val ? 2 : 0 })}
-                  className={`px-5 py-2 rounded-lg text-sm font-medium border transition ${
-                    data.petFriendly === val
-                      ? 'border-orange-500 bg-orange-50 text-orange-600'
-                      : 'border-gray-200 text-gray-600 hover:border-gray-300'
-                  }`}>
-                  {val ? 'Yes' : 'No'}
-                </button>
-              ))}
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-2">Visitor Policy</label>
+                <div className="flex gap-2 flex-wrap">
+                  {[
+                    { value: 'ALLOWED', label: 'Visitors allowed' },
+                    { value: 'RESTRICTED', label: 'Restricted hours only' },
+                    { value: 'NO_OVERNIGHT', label: 'No overnight guests' },
+                    { value: 'NOT_ALLOWED', label: 'No visitors' },
+                  ].map(v => (
+                    <button key={v.value} type="button" onClick={() => update({ visitorPolicy: v.value })}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition ${
+                        data.visitorPolicy === v.value ? 'border-orange-500 bg-orange-50 text-orange-600' : 'border-gray-200 text-gray-600'
+                      }`}>{v.label}</button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">Quiet Hours From</label>
+                  <input type="time" className="w-full border rounded-lg px-3 py-2 text-sm"
+                    value={data.quietHoursFrom} onChange={e => update({ quietHoursFrom: e.target.value })} />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">Quiet Hours Until</label>
+                  <input type="time" className="w-full border rounded-lg px-3 py-2 text-sm"
+                    value={data.quietHoursUntil} onChange={e => update({ quietHoursUntil: e.target.value })} />
+                </div>
+              </div>
             </div>
+          )}
+
+          {/* Common rules — both stays & rentals */}
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+            <label className="flex items-center gap-2 p-3 border rounded-lg cursor-pointer hover:bg-gray-50">
+              <input type="checkbox" checked={data.childrenAllowed} onChange={e => update({ childrenAllowed: e.target.checked })} className="rounded" />
+              <div>
+                <span className="text-sm font-medium">Children Allowed</span>
+              </div>
+            </label>
+            <label className="flex items-center gap-2 p-3 border rounded-lg cursor-pointer hover:bg-gray-50">
+              <input type="checkbox" checked={data.petFriendly} onChange={e => update({ petFriendly: e.target.checked, maxPets: e.target.checked ? 2 : 0 })} className="rounded" />
+              <div>
+                <span className="text-sm font-medium">Pets Allowed</span>
+              </div>
+            </label>
+            <label className="flex items-center gap-2 p-3 border rounded-lg cursor-pointer hover:bg-gray-50">
+              <input type="checkbox" checked={data.smokingAllowed} onChange={e => update({ smokingAllowed: e.target.checked })} className="rounded" />
+              <div>
+                <span className="text-sm font-medium">Smoking Allowed</span>
+              </div>
+            </label>
+            <label className="flex items-center gap-2 p-3 border rounded-lg cursor-pointer hover:bg-gray-50">
+              <input type="checkbox" checked={data.nonVegAllowed} onChange={e => update({ nonVegAllowed: e.target.checked })} className="rounded" />
+              <div>
+                <span className="text-sm font-medium">Non-Veg Allowed</span>
+              </div>
+            </label>
+            <label className="flex items-center gap-2 p-3 border rounded-lg cursor-pointer hover:bg-gray-50">
+              <input type="checkbox" checked={data.gatedSecurity} onChange={e => update({ gatedSecurity: e.target.checked })} className="rounded" />
+              <div>
+                <span className="text-sm font-medium">Gated Security</span>
+              </div>
+            </label>
           </div>
         </div>
         )}
@@ -1535,14 +1613,21 @@ export default function NewListingWizard() {
           {/* House rules / Operating hours */}
           <div className="border rounded-xl p-4">
             <h4 className="text-sm font-bold text-gray-800 mb-2">
-              {isCommercial ? 'Operating Hours' : 'House Rules'}
+              {isCommercial ? 'Operating Hours' : isMonthlyPricing ? 'Tenant Rules' : 'House Rules'}
             </h4>
-            <p className="text-sm text-gray-600">
-              {isCommercial
-                ? `Open: ${data.operatingHoursFrom} – ${data.operatingHoursUntil}`
-                : `Check-in: ${data.checkInFrom} – ${data.checkInUntil} | Check-out: ${data.checkOutFrom} – ${data.checkOutUntil}`
-              }
-            </p>
+            <div className="text-sm text-gray-600 space-y-1">
+              {isCommercial && <p>Open: {data.operatingHoursFrom} – {data.operatingHoursUntil}</p>}
+              {!isCommercial && !isMonthlyPricing && <p>Check-in: {data.checkInFrom} – {data.checkInUntil} | Check-out: {data.checkOutFrom} – {data.checkOutUntil}</p>}
+              {isMonthlyPricing && (
+                <>
+                  <p>Rent due: {data.rentPaymentDay}{data.rentPaymentDay === 1 ? 'st' : 'th'} of every month</p>
+                  <p>Notice period: {data.noticePeriodDays} days</p>
+                  <p>Visitors: {data.visitorPolicy.replace(/_/g, ' ').toLowerCase()}</p>
+                  <p>Quiet hours: {data.quietHoursFrom} – {data.quietHoursUntil}</p>
+                </>
+              )}
+              <p>Smoking: {data.smokingAllowed ? 'Allowed' : 'Not allowed'} | Pets: {data.petFriendly ? 'Allowed' : 'Not allowed'} | Non-veg: {data.nonVegAllowed ? 'Allowed' : 'Not allowed'}</p>
+            </div>
           </div>
 
           {/* Amenities tags */}
