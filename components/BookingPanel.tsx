@@ -314,29 +314,82 @@ export default function BookingPanel({ listing, selectedRoomType, roomSelections
         ) : (
           /* ── Residential: Check-in/out + Rooms + Guests ──── */
           <>
-            <div className="grid grid-cols-2 divide-x">
-              <div className="p-3">
-                <label className="block text-xs font-semibold text-gray-500 mb-1">CHECK-IN</label>
-                <input type="date" className="w-full text-sm outline-none bg-transparent"
-                  value={checkIn} min={today}
-                  onChange={(e) => {
-                    setCheckIn(e.target.value);
-                    if (!checkOut || e.target.value >= checkOut) {
+            {isMonthly ? (
+              /* ── Monthly Rental: Move-in + Duration ──── */
+              <>
+                <div className="p-3">
+                  <label className="block text-xs font-semibold text-gray-500 mb-1">MOVE-IN DATE</label>
+                  <input type="date" className="w-full text-sm outline-none bg-transparent"
+                    value={checkIn} min={today}
+                    onChange={(e) => {
+                      setCheckIn(e.target.value);
+                      // Auto-set checkout to +1 month
                       const d = new Date(e.target.value);
-                      d.setDate(d.getDate() + 1);
+                      d.setMonth(d.getMonth() + 1);
                       setCheckOut(d.toISOString().split('T')[0]);
-                    }
-                  }} />
+                    }} />
+                </div>
+                <div className="border-t p-3">
+                  <label className="block text-xs font-semibold text-gray-500 mb-1">LEASE DURATION</label>
+                  <select className="w-full text-sm outline-none bg-transparent"
+                    value={checkIn && checkOut ? Math.round((new Date(checkOut).getTime() - new Date(checkIn).getTime()) / (30 * 86400000)) : 1}
+                    onChange={(e) => {
+                      if (!checkIn) return;
+                      const months = Number(e.target.value);
+                      const d = new Date(checkIn);
+                      d.setMonth(d.getMonth() + months);
+                      setCheckOut(d.toISOString().split('T')[0]);
+                    }}>
+                    {[1, 2, 3, 6, 11, 12, 24].map(m => (
+                      <option key={m} value={m}>{m} month{m > 1 ? 's' : ''}{(listing.minLeaseMonths ?? 0) > 0 && m < (listing.minLeaseMonths ?? 0) ? ' (below minimum)' : ''}</option>
+                    ))}
+                  </select>
+                  {(listing.minLeaseMonths ?? 0) > 0 && (
+                    <p className="text-[10px] text-gray-400 mt-1">Minimum lease: {listing.minLeaseMonths} months</p>
+                  )}
+                </div>
+                <div className="border-t p-3">
+                  <label className="block text-xs font-semibold text-gray-500 mb-1">OCCUPANTS</label>
+                  <div className="flex items-center gap-3">
+                    <button type="button"
+                      onClick={() => setGuestCounts(g => ({ ...g, adults: Math.max(1, g.adults - 1) }))}
+                      disabled={guestCounts.adults <= 1}
+                      className="w-8 h-8 rounded-full border border-gray-300 text-gray-600 flex items-center justify-center hover:border-gray-500 disabled:opacity-30 transition">-</button>
+                    <span className="text-sm font-semibold w-16 text-center">{guestCounts.adults} person{guestCounts.adults > 1 ? 's' : ''}</span>
+                    <button type="button"
+                      onClick={() => setGuestCounts(g => ({ ...g, adults: Math.min(listing.maxGuests ?? 10, g.adults + 1) }))}
+                      disabled={guestCounts.adults >= (listing.maxGuests ?? 10)}
+                      className="w-8 h-8 rounded-full border border-gray-300 text-gray-600 flex items-center justify-center hover:border-gray-500 disabled:opacity-30 transition">+</button>
+                  </div>
+                </div>
+              </>
+            ) : (
+              /* ── Nightly Stay: Check-in/out ──── */
+              <div className="grid grid-cols-2 divide-x">
+                <div className="p-3">
+                  <label className="block text-xs font-semibold text-gray-500 mb-1">CHECK-IN</label>
+                  <input type="date" className="w-full text-sm outline-none bg-transparent"
+                    value={checkIn} min={today}
+                    onChange={(e) => {
+                      setCheckIn(e.target.value);
+                      if (!checkOut || e.target.value >= checkOut) {
+                        const d = new Date(e.target.value);
+                        d.setDate(d.getDate() + 1);
+                        setCheckOut(d.toISOString().split('T')[0]);
+                      }
+                    }} />
+                </div>
+                <div className="p-3">
+                  <label className="block text-xs font-semibold text-gray-500 mb-1">CHECK-OUT</label>
+                  <input type="date" className="w-full text-sm outline-none bg-transparent"
+                    value={checkOut} min={checkIn || today}
+                    onChange={(e) => setCheckOut(e.target.value)} />
+                </div>
               </div>
-              <div className="p-3">
-                <label className="block text-xs font-semibold text-gray-500 mb-1">CHECK-OUT</label>
-                <input type="date" className="w-full text-sm outline-none bg-transparent"
-                  value={checkOut} min={checkIn || today}
-                  onChange={(e) => setCheckOut(e.target.value)} />
-              </div>
-            </div>
+            )}
 
-            {/* Rooms & Guests */}
+            {/* Rooms & Guests — hide for monthly rentals (occupants shown above) */}
+            {!isMonthly && (<>
             <div className="border-t p-3">
               <button type="button" onClick={() => setShowRoomGuest(!showRoomGuest)}
                 className="w-full text-left">
@@ -418,6 +471,7 @@ export default function BookingPanel({ listing, selectedRoomType, roomSelections
                 </button>
               </div>
             )}
+            </>)}
           </>
         )}
       </div>
@@ -426,8 +480,8 @@ export default function BookingPanel({ listing, selectedRoomType, roomSelections
       <button onClick={handleBook} disabled={!canBook}
         className="w-full bg-orange-500 hover:bg-orange-600 text-white font-semibold py-3 rounded-xl disabled:opacity-50 transition">
         {!canBook
-          ? (isCommercial ? 'Select date & time' : 'Select dates')
-          : `Reserve · ${formatPaise(totalPaise)}`
+          ? (isCommercial ? 'Select date & time' : isMonthly ? 'Select move-in date' : 'Select dates')
+          : isMonthly ? `Rent Now · ${formatPaise(totalPaise)}/mo` : `Reserve · ${formatPaise(totalPaise)}`
         }
       </button>
 
