@@ -219,7 +219,7 @@ interface WizardData {
   maxGuests: number;
   bedrooms: number;
   bathrooms: number;
-  pricingUnit: 'NIGHT' | 'HOUR';
+  pricingUnit: 'NIGHT' | 'HOUR' | 'MONTH';
   // Commercial-specific
   areaSqft: number;
   minBookingHours: number;
@@ -378,7 +378,7 @@ export default function NewListingWizard() {
         maxGuests: data.maxGuests,
         amenities: data.amenities,
         basePricePaise: data.basePricePaise,
-        pricingUnit: isCommercial ? 'HOUR' : data.pricingUnit,
+        pricingUnit: data.pricingUnit,
         instantBook: data.instantBook,
         cancellationPolicy: data.cancellationPolicy,
         freeCancellation: data.freeCancellation,
@@ -388,7 +388,7 @@ export default function NewListingWizard() {
         visibilityBoostPercent: data.visibilityBoostPercent || 0,
       };
       if (isPG) {
-        body.pricingUnit = 'NIGHT'; // stored as nightly but displayed as monthly
+        body.pricingUnit = 'MONTH';
         if (data.occupancyType) body.occupancyType = data.occupancyType;
         body.foodType = data.foodType;
         body.gateClosingTime = data.gateClosingTime;
@@ -478,7 +478,7 @@ export default function NewListingWizard() {
                       type: typeVal as ListingType,
                       category: cat.label,
                       commercialCategory: commCat,
-                      pricingUnit: isComm ? 'HOUR' : 'NIGHT',
+                      pricingUnit: isComm ? 'HOUR' : (typeVal === 'PG' || typeVal === 'COLIVING') ? 'MONTH' : 'NIGHT',
                     })}
                     className={`text-left border-2 rounded-xl p-4 transition-all hover:shadow-md ${
                       selected
@@ -610,14 +610,29 @@ export default function NewListingWizard() {
             </>
           )}
 
+          {/* Pricing Unit */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Pricing type</label>
+            <div className="flex gap-2">
+              {([['NIGHT', 'Per Night'], ['MONTH', 'Per Month'], ['HOUR', 'Per Hour']] as const).map(([val, lbl]) => (
+                <button key={val} type="button"
+                  onClick={() => update({ pricingUnit: val })}
+                  className={`flex-1 py-2 px-3 rounded-xl text-sm font-medium border transition-all
+                    ${data.pricingUnit === val ? 'bg-orange-50 border-orange-500 text-orange-600' : 'border-gray-200 text-gray-600 hover:bg-gray-50'}`}>
+                  {lbl}
+                </button>
+              ))}
+            </div>
+          </div>
+
           {/* Price */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Price per {isCommercial ? 'hour' : isPG ? 'month' : 'night'} (INR) *
+              Price per {data.pricingUnit === 'HOUR' ? 'hour' : data.pricingUnit === 'MONTH' ? 'month' : 'night'} (INR) *
             </label>
             <input required type="number" min="1"
               className="w-full border rounded-xl px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-orange-400"
-              placeholder={isCommercial ? '500' : '2500'}
+              placeholder={data.pricingUnit === 'HOUR' ? '500' : data.pricingUnit === 'MONTH' ? '8000' : '2500'}
               value={data.basePricePaise ? data.basePricePaise / 100 : ''}
               onChange={e => update({ basePricePaise: Math.round(Number(e.target.value) * 100) })} />
           </div>
@@ -1097,7 +1112,7 @@ export default function NewListingWizard() {
                 <p className="text-lg font-bold text-gray-900">
                   {(data.basePricePaise / 100).toLocaleString('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 })}
                 </p>
-                <p className="text-xs text-gray-500">per {data.pricingUnit === 'HOUR' ? 'hour' : isPG ? 'month' : 'night'}</p>
+                <p className="text-xs text-gray-500">per {data.pricingUnit === 'HOUR' ? 'hour' : data.pricingUnit === 'MONTH' ? 'month' : 'night'}</p>
               </div>
             </div>
             {data.starRating > 0 && (

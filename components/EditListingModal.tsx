@@ -48,6 +48,13 @@ export default function EditListingModal({ listing, onClose, onSaved, token }: P
   const [childrenAllowed, setChildrenAllowed] = useState(listing.childrenAllowed !== false);
   const [longTermMonthlyPaise, setLongTermMonthlyPaise] = useState(listing.longTermMonthlyPaise || 0);
   const [breakfastIncluded, setBreakfastIncluded] = useState(listing.breakfastIncluded || false);
+  // Location fields
+  const [addressLine1, setAddressLine1] = useState(listing.addressLine1 || '');
+  const [city, setCity] = useState(listing.city || '');
+  const [state, setState] = useState(listing.state || '');
+  const [pincode, setPincode] = useState(listing.pincode || '');
+  const [lat, setLat] = useState(listing.lat || 0);
+  const [lng, setLng] = useState(listing.lng || 0);
 
   const handleSave = async () => {
     setSaving(true);
@@ -64,6 +71,8 @@ export default function EditListingModal({ listing, onClose, onSaved, token }: P
         checkInFrom, checkInUntil, checkOutFrom, checkOutUntil,
         childrenAllowed, longTermMonthlyPaise,
         breakfastIncluded,
+        addressLine1, city, state, pincode,
+        lat: lat || null, lng: lng || null,
       }, token);
       onSaved();
     } catch (e: any) {
@@ -74,6 +83,7 @@ export default function EditListingModal({ listing, onClose, onSaved, token }: P
 
   const SECTIONS = [
     { key: 'basic', label: 'Basic Info' },
+    { key: 'location', label: 'Location' },
     { key: 'rooms', label: 'Rooms & Beds' },
     { key: 'pricing', label: 'Pricing' },
     { key: 'facilities', label: 'Facilities' },
@@ -123,6 +133,48 @@ export default function EditListingModal({ listing, onClose, onSaved, token }: P
                     className="w-full border rounded-lg px-3 py-2 text-sm" min={1} />
                 </div>
               </div>
+            </div>
+          )}
+
+          {activeSection === 'location' && (
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Address</label>
+                <input value={addressLine1} onChange={e => setAddressLine1(e.target.value)}
+                  className="w-full border rounded-lg px-3 py-2 text-sm" placeholder="Street address, area, landmark" />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">City</label>
+                  <input value={city} onChange={e => setCity(e.target.value)}
+                    className="w-full border rounded-lg px-3 py-2 text-sm" placeholder="e.g. Hyderabad" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">State</label>
+                  <input value={state} onChange={e => setState(e.target.value)}
+                    className="w-full border rounded-lg px-3 py-2 text-sm" placeholder="e.g. Telangana" />
+                </div>
+              </div>
+              <div className="grid grid-cols-3 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Pincode</label>
+                  <input value={pincode} onChange={e => setPincode(e.target.value)}
+                    className="w-full border rounded-lg px-3 py-2 text-sm" maxLength={6} placeholder="500001" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Latitude</label>
+                  <input type="number" step="any" value={lat || ''} onChange={e => setLat(Number(e.target.value))}
+                    className="w-full border rounded-lg px-3 py-2 text-sm" placeholder="17.385" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Longitude</label>
+                  <input type="number" step="any" value={lng || ''} onChange={e => setLng(Number(e.target.value))}
+                    className="w-full border rounded-lg px-3 py-2 text-sm" placeholder="78.4867" />
+                </div>
+              </div>
+              <p className="text-xs text-gray-400">
+                Updating the city or pincode will re-geocode the listing for map and search accuracy.
+              </p>
             </div>
           )}
 

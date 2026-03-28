@@ -638,6 +638,19 @@ export const api = {
       headers: { Authorization: `Bearer ${token}` },
     }),
 
+  /* ── KYC Document Upload ��─────────────────────────────────── */
+  kycPresignUpload: (docType: string, contentType: string, token: string) =>
+    apiFetch<{ uploadUrl: string; publicUrl: string; key: string }>(
+      `/api/v1/media/upload/kyc-presign?docType=${docType}&contentType=${encodeURIComponent(contentType)}`,
+      { method: 'POST', headers: { Authorization: `Bearer ${token}` } }
+    ),
+
+  uploadKycDocument: async (file: File, docType: string, token: string): Promise<string> => {
+    const { uploadUrl, publicUrl } = await api.kycPresignUpload(docType, file.type, token);
+    await fetch(uploadUrl, { method: 'PUT', body: file, headers: { 'Content-Type': file.type } });
+    return publicUrl;
+  },
+
   /* ── Media Management ─────────────────────────────────────── */
   presignUpload: (listingId: string, mediaType: string, contentType: string) =>
     apiFetch<{ mediaId: string; uploadUrl: string; s3Key: string; cdnUrl: string }>(
@@ -652,9 +665,10 @@ export const api = {
       body: JSON.stringify(data),
     }),
 
-  deleteMedia: (listingId: string, mediaId: string) =>
+  deleteMedia: (listingId: string, mediaId: string, token?: string) =>
     apiFetch<void>(`/api/v1/listings/${listingId}/media/${mediaId}`, {
       method: 'DELETE',
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
     }),
 
   reorderMedia: (listingId: string, mediaIds: string[]) =>
@@ -711,6 +725,11 @@ export const api = {
     }),
   updateKycBusiness: (data: any, token: string) =>
     apiFetch<any>('/api/v1/users/me/kyc/business', {
+      method: 'PUT', body: JSON.stringify(data),
+      headers: { Authorization: `Bearer ${token}` },
+    }),
+  updateKycDocuments: (data: { aadhaarFrontUrl?: string; aadhaarBackUrl?: string; panUrl?: string; selfieUrl?: string }, token: string) =>
+    apiFetch<any>('/api/v1/users/me/kyc/documents', {
       method: 'PUT', body: JSON.stringify(data),
       headers: { Authorization: `Bearer ${token}` },
     }),
@@ -1240,6 +1259,138 @@ export const api = {
       headers: { Authorization: `Bearer ${token}` },
     }),
 
+  updatePenaltyConfig: (tenancyId: string, params: string, token: string) =>
+    apiFetch<any>(`/api/v1/pg-tenancies/${tenancyId}/penalty-config?${params}`, {
+      method: 'PATCH',
+      headers: { Authorization: `Bearer ${token}` },
+    }),
+
+  // PG Agreement
+  createAgreement: (tenancyId: string, data: any, token: string) =>
+    apiFetch<any>(`/api/v1/pg-tenancies/${tenancyId}/agreement`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+      headers: { Authorization: `Bearer ${token}` },
+    }),
+  getAgreement: (tenancyId: string, token: string) =>
+    apiFetch<any>(`/api/v1/pg-tenancies/${tenancyId}/agreement`, {
+      headers: { Authorization: `Bearer ${token}` },
+    }),
+  hostSignAgreement: (tenancyId: string, token: string) =>
+    apiFetch<any>(`/api/v1/pg-tenancies/${tenancyId}/agreement/host-sign`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}` },
+    }),
+  tenantSignAgreement: (tenancyId: string, token: string) =>
+    apiFetch<any>(`/api/v1/pg-tenancies/${tenancyId}/agreement/tenant-sign`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}` },
+    }),
+  getAgreementText: (tenancyId: string, token: string) =>
+    apiFetch<string>(`/api/v1/pg-tenancies/${tenancyId}/agreement/text`, {
+      headers: { Authorization: `Bearer ${token}` },
+    }),
+
+  // PG Settlement
+  initiateSettlement: (tenancyId: string, data: any, token: string) =>
+    apiFetch<any>(`/api/v1/pg-tenancies/${tenancyId}/settlement`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+      headers: { Authorization: `Bearer ${token}` },
+    }),
+  getSettlement: (tenancyId: string, token: string) =>
+    apiFetch<any>(`/api/v1/pg-tenancies/${tenancyId}/settlement`, {
+      headers: { Authorization: `Bearer ${token}` },
+    }),
+  addSettlementDeduction: (tenancyId: string, data: any, token: string) =>
+    apiFetch<any>(`/api/v1/pg-tenancies/${tenancyId}/settlement/deductions`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+      headers: { Authorization: `Bearer ${token}` },
+    }),
+  removeSettlementDeduction: (tenancyId: string, deductionId: string, token: string) =>
+    apiFetch<any>(`/api/v1/pg-tenancies/${tenancyId}/settlement/deductions/${deductionId}`, {
+      method: 'DELETE',
+      headers: { Authorization: `Bearer ${token}` },
+    }),
+  completeInspection: (tenancyId: string, notes: string, token: string) =>
+    apiFetch<any>(`/api/v1/pg-tenancies/${tenancyId}/settlement/inspection`, {
+      method: 'POST',
+      body: JSON.stringify({ inspectionNotes: notes }),
+      headers: { Authorization: `Bearer ${token}` },
+    }),
+  approveSettlement: (tenancyId: string, role: string, token: string) =>
+    apiFetch<any>(`/api/v1/pg-tenancies/${tenancyId}/settlement/approve`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}`, 'X-User-Role': role },
+    }),
+  processSettlementRefund: (tenancyId: string, token: string) =>
+    apiFetch<any>(`/api/v1/pg-tenancies/${tenancyId}/settlement/process-refund`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}` },
+    }),
+  markSettled: (tenancyId: string, token: string) =>
+    apiFetch<any>(`/api/v1/pg-tenancies/${tenancyId}/settlement/mark-settled`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}` },
+    }),
+
+  // Utility Readings
+  recordUtilityReading: (tenancyId: string, data: any, token: string) =>
+    apiFetch<any>(`/api/v1/pg-tenancies/${tenancyId}/utility-readings`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+      headers: { Authorization: `Bearer ${token}` },
+    }),
+  getUtilityReadings: (tenancyId: string, token: string, type?: string) =>
+    apiFetch<any[]>(`/api/v1/pg-tenancies/${tenancyId}/utility-readings${type ? `?utilityType=${type}` : ''}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    }),
+  getUnbilledUtilities: (tenancyId: string, token: string) =>
+    apiFetch<any>(`/api/v1/pg-tenancies/${tenancyId}/utility-readings/unbilled`, {
+      headers: { Authorization: `Bearer ${token}` },
+    }),
+
+  // Maintenance Requests
+  createMaintenanceRequest: (tenancyId: string, data: any, token: string) =>
+    apiFetch<any>(`/api/v1/pg-tenancies/${tenancyId}/maintenance`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+      headers: { Authorization: `Bearer ${token}` },
+    }),
+  getMaintenanceRequests: (tenancyId: string, token: string, status?: string) =>
+    apiFetch<any>(`/api/v1/pg-tenancies/${tenancyId}/maintenance${status ? `?status=${status}` : ''}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    }),
+  updateMaintenanceRequest: (tenancyId: string, requestId: string, data: any, token: string) =>
+    apiFetch<any>(`/api/v1/pg-tenancies/${tenancyId}/maintenance/${requestId}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+      headers: { Authorization: `Bearer ${token}` },
+    }),
+  rateMaintenanceRequest: (tenancyId: string, requestId: string, rating: number, feedback: string, token: string) =>
+    apiFetch<any>(`/api/v1/pg-tenancies/${tenancyId}/maintenance/${requestId}/rate`, {
+      method: 'POST',
+      body: JSON.stringify({ rating, feedback }),
+      headers: { Authorization: `Bearer ${token}` },
+    }),
+
+  // Tenant Dashboard
+  getTenantDashboard: (token: string) =>
+    apiFetch<any>('/api/v1/pg-tenancies/my-dashboard', {
+      headers: { Authorization: `Bearer ${token}` },
+    }),
+
+  // Host Payouts
+  getHostPayouts: (hostId: string, token: string) =>
+    apiFetch<any>(`/api/v1/payments/host-payouts?hostId=${hostId}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    }),
+  getHostPayoutSummary: (hostId: string, month: number, year: number, token: string) =>
+    apiFetch<any>(`/api/v1/payments/host-payouts/summary?hostId=${hostId}&month=${month}&year=${year}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    }),
+
   // ──────────────────────────────────────────
   // Seeker Profiles (Reverse Search)
   // ──────────────────────────────────────────
@@ -1297,4 +1448,288 @@ export const api = {
       method: 'POST',
       headers: { Authorization: `Bearer ${token}` },
     }),
+
+  // ──────────────────────────────────────────
+  // Sale Properties (Buy/Sell Marketplace)
+
+  searchSaleProperties: (params: Record<string, any>) => {
+    const qs = new URLSearchParams();
+    Object.entries(params).forEach(([k, v]) => {
+      if (v !== null && v !== undefined && v !== '') {
+        if (Array.isArray(v)) v.forEach(item => qs.append(k, String(item)));
+        else qs.set(k, String(v));
+      }
+    });
+    return apiFetch<any>(`/api/v1/search/sale-properties?${qs.toString()}`);
+  },
+
+  getSaleProperty: (id: string) =>
+    apiFetch<any>(`/api/v1/sale-properties/${id}`),
+
+  createSaleProperty: (data: object, token: string) =>
+    apiFetch<any>('/api/v1/sale-properties', {
+      method: 'POST',
+      body: JSON.stringify(data),
+      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+    }),
+
+  updateSaleProperty: (id: string, data: object, token: string) =>
+    apiFetch<any>(`/api/v1/sale-properties/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+    }),
+
+  updateSalePropertyStatus: (id: string, status: string, token: string) =>
+    apiFetch<any>(`/api/v1/sale-properties/${id}/status?status=${status}`, {
+      method: 'PATCH',
+      headers: { Authorization: `Bearer ${token}` },
+    }),
+
+  getSellerSaleProperties: (token: string, status?: string) =>
+    apiFetch<any>(`/api/v1/sale-properties/seller${status ? '?status=' + status : ''}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    }),
+
+  deleteSaleProperty: (id: string, token: string) =>
+    apiFetch<void>(`/api/v1/sale-properties/${id}`, {
+      method: 'DELETE',
+      headers: { Authorization: `Bearer ${token}` },
+    }),
+
+  getSimilarSaleProperties: (id: string) =>
+    apiFetch<any[]>(`/api/v1/sale-properties/${id}/similar`),
+
+  salePropertyAutocomplete: (q: string) =>
+    apiFetch<any[]>(`/api/v1/search/sale-properties/autocomplete?q=${encodeURIComponent(q)}`),
+
+  getRecentSaleProperties: (city: string, limit?: number) =>
+    apiFetch<any[]>(`/api/v1/search/sale-properties/recent?city=${city}&limit=${limit ?? 10}`),
+
+  // Inquiries
+  createInquiry: (data: object, token: string) =>
+    apiFetch<any>('/api/v1/inquiries', {
+      method: 'POST',
+      body: JSON.stringify(data),
+      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+    }),
+
+  getBuyerInquiries: (token: string) =>
+    apiFetch<any>('/api/v1/inquiries/buyer', {
+      headers: { Authorization: `Bearer ${token}` },
+    }),
+
+  getSellerInquiries: (token: string) =>
+    apiFetch<any>('/api/v1/inquiries/seller', {
+      headers: { Authorization: `Bearer ${token}` },
+    }),
+
+  updateInquiryStatus: (id: string, status: string, token: string) =>
+    apiFetch<any>(`/api/v1/inquiries/${id}/status?status=${status}`, {
+      method: 'PATCH',
+      headers: { Authorization: `Bearer ${token}` },
+    }),
+
+  // Site Visits
+  scheduleSiteVisit: (data: object, token: string) =>
+    apiFetch<any>('/api/v1/site-visits', {
+      method: 'POST',
+      body: JSON.stringify(data),
+      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+    }),
+
+  getBuyerSiteVisits: (token: string) =>
+    apiFetch<any>('/api/v1/site-visits/buyer', {
+      headers: { Authorization: `Bearer ${token}` },
+    }),
+
+  getSellerSiteVisits: (token: string) =>
+    apiFetch<any>('/api/v1/site-visits/seller', {
+      headers: { Authorization: `Bearer ${token}` },
+    }),
+
+  updateVisitStatus: (id: string, status: string, token: string) =>
+    apiFetch<any>(`/api/v1/site-visits/${id}/status?status=${status}`, {
+      method: 'PATCH',
+      headers: { Authorization: `Bearer ${token}` },
+    }),
+
+  addVisitFeedback: (id: string, feedback: string, rating: number | null, token: string) =>
+    apiFetch<any>(`/api/v1/site-visits/${id}/feedback?feedback=${encodeURIComponent(feedback)}${rating ? '&rating=' + rating : ''}`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}` },
+    }),
+
+  // Buyer Profile
+  saveBuyerProfile: (data: object, token: string) =>
+    apiFetch<any>('/api/v1/buyer-profile', {
+      method: 'POST',
+      body: JSON.stringify(data),
+      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+    }),
+
+  getBuyerProfile: (token: string) =>
+    apiFetch<any>('/api/v1/buyer-profile', {
+      headers: { Authorization: `Bearer ${token}` },
+    }),
+
+  getBuyerRecommendations: (token: string) =>
+    apiFetch<any[]>('/api/v1/buyer-profile/recommendations', {
+      headers: { Authorization: `Bearer ${token}` },
+    }),
+
+  // Locality Trends
+  getLocalityTrends: (city: string, locality: string) =>
+    apiFetch<any[]>(`/api/v1/locality-trends?city=${city}&locality=${locality}`),
+
+  getCityLocalityPrices: (city: string) =>
+    apiFetch<any[]>(`/api/v1/locality-trends/city?city=${city}`),
+
+  // Admin Sale Properties
+  adminListSaleProperties: (token: string, status?: string) =>
+    apiFetch<any>(`/api/v1/sale-properties/admin/list${status ? '?status=' + status : ''}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    }),
+
+  adminVerifySaleProperty: (id: string, token: string) =>
+    apiFetch<any>(`/api/v1/sale-properties/${id}/verify`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}` },
+    }),
+
+  adminVerifyRera: (id: string, token: string) =>
+    apiFetch<any>(`/api/v1/sale-properties/${id}/verify-rera`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}` },
+    }),
+
+  adminSuspendSaleProperty: (id: string, token: string) =>
+    apiFetch<any>(`/api/v1/sale-properties/${id}/suspend`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}` },
+    }),
+
+  // ── Safar Cooks ────────────────────────────────────────────────────────
+  searchChefs: (params: Record<string, string>) =>
+    apiFetch<any>(`/api/v1/chefs/search?${new URLSearchParams(params)}`),
+
+  getChef: (chefId: string) =>
+    apiFetch<any>(`/api/v1/chefs/${chefId}`),
+
+  getChefMenus: (chefId: string) =>
+    apiFetch<any[]>(`/api/v1/chefs/${chefId}/menus`),
+
+  getMenuItems: (menuId: string) =>
+    apiFetch<any[]>(`/api/v1/chefs/menus/${menuId}/items`),
+
+  registerChef: (data: any, token: string) =>
+    apiFetch<any>('/api/v1/chefs', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}` },
+      body: JSON.stringify(data),
+    }),
+
+  bookChef: (data: any, token: string) =>
+    apiFetch<any>('/api/v1/chef-bookings', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}` },
+      body: JSON.stringify(data),
+    }),
+
+  getMyChefBookings: (token: string) =>
+    apiFetch<any[]>('/api/v1/chef-bookings/my', {
+      headers: { Authorization: `Bearer ${token}` },
+    }),
+
+  createChefSubscription: (data: any, token: string) =>
+    apiFetch<any>('/api/v1/chef-subscriptions', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}` },
+      body: JSON.stringify(data),
+    }),
+
+  getMyChefSubscriptions: (token: string) =>
+    apiFetch<any[]>('/api/v1/chef-subscriptions/my', {
+      headers: { Authorization: `Bearer ${token}` },
+    }),
+
+  createEventBooking: (data: any, token: string) =>
+    apiFetch<any>('/api/v1/chef-events', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}` },
+      body: JSON.stringify(data),
+    }),
+
+  getMyEventBookings: (token: string) =>
+    apiFetch<any[]>('/api/v1/chef-events/my', {
+      headers: { Authorization: `Bearer ${token}` },
+    }),
+
+  cancelChefBooking: (id: string, reason: string, token: string) =>
+    apiFetch<any>(`/api/v1/chef-bookings/${id}/cancel?reason=${encodeURIComponent(reason)}`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}` },
+    }),
+
+  rateChefBooking: (id: string, rating: number, comment: string, token: string) =>
+    apiFetch<any>(`/api/v1/chef-bookings/${id}/rate?rating=${rating}&comment=${encodeURIComponent(comment)}`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}` },
+    }),
+
+  /* ── Builder Projects ────────────────────────────────────── */
+
+  searchBuilderProjects: (params: Record<string, string>) =>
+    apiFetch<any>(`/api/v1/builder-projects/search?${new URLSearchParams(params)}`),
+
+  getBuilderProject: (id: string) =>
+    apiFetch<any>(`/api/v1/builder-projects/${id}`),
+
+  createBuilderProject: (data: any, token: string) =>
+    apiFetch<any>('/api/v1/builder-projects', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}` },
+      body: JSON.stringify(data),
+    }),
+
+  updateBuilderProject: (id: string, data: any, token: string) =>
+    apiFetch<any>(`/api/v1/builder-projects/${id}`, {
+      method: 'PUT',
+      headers: { Authorization: `Bearer ${token}` },
+      body: JSON.stringify(data),
+    }),
+
+  publishBuilderProject: (id: string, token: string) =>
+    apiFetch<any>(`/api/v1/builder-projects/${id}/publish`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}` },
+    }),
+
+  getMyBuilderProjects: (token: string) =>
+    apiFetch<any[]>('/api/v1/builder-projects/my', {
+      headers: { Authorization: `Bearer ${token}` },
+    }),
+
+  addUnitType: (projectId: string, data: any, token: string) =>
+    apiFetch<any>(`/api/v1/builder-projects/${projectId}/unit-types`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}` },
+      body: JSON.stringify(data),
+    }),
+
+  getUnitTypes: (projectId: string) =>
+    apiFetch<any[]>(`/api/v1/builder-projects/${projectId}/unit-types`),
+
+  calculateUnitPrice: (unitTypeId: string, floor: number, preferredFacing: string) =>
+    apiFetch<any>(`/api/v1/builder-projects/unit-types/${unitTypeId}/calculate-price?floor=${floor}&facing=${encodeURIComponent(preferredFacing)}`),
+
+  addConstructionUpdate: (projectId: string, data: any, token: string) =>
+    apiFetch<any>(`/api/v1/builder-projects/${projectId}/construction-updates`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}` },
+      body: JSON.stringify(data),
+    }),
+
+  getConstructionUpdates: (projectId: string) =>
+    apiFetch<any[]>(`/api/v1/builder-projects/${projectId}/construction-updates`),
 };

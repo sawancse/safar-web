@@ -20,6 +20,11 @@ import HostReviewsTab from './HostReviewsTab';
 import HostPricingRulesTab from './HostPricingRulesTab';
 import HostPgPackagesTab from './HostPgPackagesTab';
 import HostMessagesTab from './HostMessagesTab';
+import HostRoomOccupancyTab from './HostRoomOccupancyTab';
+import HostSettlementTab from '@/components/host/HostSettlementTab';
+import HostPayoutsTab from '@/components/host/HostPayoutsTab';
+import HostSalesTab from '@/components/host/HostSalesTab';
+import HostBuilderTab from '@/components/host/HostBuilderTab';
 import EditListingModal from '@/components/EditListingModal';
 
 const STATUS_STYLE: Record<string, string> = {
@@ -66,7 +71,7 @@ export default function HostPage() {
   const [subscription, setSubscription] = useState<HostSubscription | null>(null);
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
   const [upgradingTier, setUpgradingTier] = useState<SubscriptionTier | null>(null);
-  const [activeTab, setActiveTab] = useState<'listings' | 'bookings' | 'calendar' | 'roomTypes' | 'pricing' | 'packages' | 'reviews' | 'messages' | 'kyc' | 'earnings' | 'invoices' | 'analytics' | 'transactions' | 'occupancy'>('listings');
+  const [activeTab, setActiveTab] = useState<'listings' | 'bookings' | 'calendar' | 'roomTypes' | 'pricing' | 'packages' | 'reviews' | 'messages' | 'kyc' | 'earnings' | 'invoices' | 'analytics' | 'transactions' | 'occupancy' | 'roomBoard' | 'settlement' | 'payouts' | 'sales' | 'builder'>('listings');
   const [commissionInfo, setCommissionInfo] = useState<{ commissionPercent: number; tier: string } | null>(null);
   const [editingListing, setEditingListing] = useState<Listing | null>(null);
 
@@ -593,12 +598,36 @@ export default function HostPage() {
           Occupancy
         </button>
         <button
+          onClick={() => setActiveTab('roomBoard')}
+          className={`flex-1 py-2 px-4 rounded-lg text-sm font-medium transition whitespace-nowrap ${
+            activeTab === 'roomBoard' ? 'bg-white shadow text-orange-600' : 'text-gray-500 hover:text-gray-700'
+          }`}
+        >
+          Room Board
+        </button>
+        <button
           onClick={() => setActiveTab('transactions')}
           className={`flex-1 py-2 px-4 rounded-lg text-sm font-medium transition whitespace-nowrap ${
             activeTab === 'transactions' ? 'bg-white shadow text-orange-600' : 'text-gray-500 hover:text-gray-700'
           }`}
         >
           Transactions
+        </button>
+        <button
+          onClick={() => setActiveTab('settlement')}
+          className={`flex-1 py-2 px-4 rounded-lg text-sm font-medium transition whitespace-nowrap ${
+            activeTab === 'settlement' ? 'bg-white shadow text-orange-600' : 'text-gray-500 hover:text-gray-700'
+          }`}
+        >
+          Settlement
+        </button>
+        <button
+          onClick={() => setActiveTab('payouts')}
+          className={`flex-1 py-2 px-4 rounded-lg text-sm font-medium transition whitespace-nowrap ${
+            activeTab === 'payouts' ? 'bg-white shadow text-orange-600' : 'text-gray-500 hover:text-gray-700'
+          }`}
+        >
+          Payouts
         </button>
         <button
           onClick={() => setActiveTab('kyc')}
@@ -608,7 +637,26 @@ export default function HostPage() {
         >
           Verification
         </button>
+        <button
+          onClick={() => setActiveTab('sales')}
+          className={`flex-1 py-2 px-4 rounded-lg text-sm font-medium transition whitespace-nowrap ${
+            activeTab === 'sales' ? 'bg-white shadow text-orange-600' : 'text-gray-500 hover:text-gray-700'
+          }`}
+        >
+          Sales
+        </button>
+        <button
+          onClick={() => setActiveTab('builder')}
+          className={`flex-1 py-2 px-4 rounded-lg text-sm font-medium transition whitespace-nowrap ${
+            activeTab === 'builder' ? 'bg-white shadow text-orange-600' : 'text-gray-500 hover:text-gray-700'
+          }`}
+        >
+          Builder
+        </button>
       </div>
+
+      {/* ── Builder Tab ───────────────────────────────── */}
+      {activeTab === 'builder' && <HostBuilderTab />}
 
       {/* ── Bookings Tab ───────────────────────────────── */}
       {activeTab === 'bookings' && <HostBookingsTab token={token} />}
@@ -643,11 +691,25 @@ export default function HostPage() {
       {/* ── Occupancy Tab ────────────────────────────────── */}
       {activeTab === 'occupancy' && <HostOccupancyTab token={token} />}
 
+      {/* ── Room Board Tab ─────────────────────────────── */}
+      {activeTab === 'roomBoard' && <HostRoomOccupancyTab token={token} listings={listings} />}
+
       {/* ── Transactions Tab ──────────────────────────────── */}
       {activeTab === 'transactions' && <HostTransactionsTab token={token} />}
 
+      {/* ── Settlement Tab ──────────────────────────────── */}
+      {activeTab === 'settlement' && listings.length > 0 && (
+        <HostSettlementTab listingId={listings[0].id} />
+      )}
+
+      {/* ── Payouts Tab ──────────────────────────────────── */}
+      {activeTab === 'payouts' && <HostPayoutsTab token={token} />}
+
       {/* ── KYC Tab ─────────────────────────────────────── */}
       {activeTab === 'kyc' && <HostKycTab token={token} />}
+
+      {/* ── Sales Tab (Buy/Sell) ──────────────────────── */}
+      {activeTab === 'sales' && <HostSalesTab token={token} />}
 
       {/* ── Listings Tab ───────────────────────────────── */}
       {activeTab === 'listings' && (<>
@@ -1015,8 +1077,21 @@ export default function HostPage() {
                                   {m.type}
                                 </span>
                               )}
+                              {/* Delete button on hover */}
+                              <button type="button" onClick={async () => {
+                                  if (!confirm('Delete this photo?')) return;
+                                  try {
+                                    await fetch(`${uploadUrl}/api/v1/listings/${listing.id}/media/${m.id}`, {
+                                      method: 'DELETE', headers: getAuthHeaders(),
+                                    });
+                                    setMediaItems(prev => prev.filter(x => x.id !== m.id));
+                                  } catch { alert('Failed to delete'); }
+                                }}
+                                className="absolute top-1 right-1 w-6 h-6 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition">
+                                ✕
+                              </button>
                               {/* Set as cover button on hover */}
-                              {m.type === 'PHOTO' && !m.isPrimary && isDraft && (
+                              {m.type === 'PHOTO' && !m.isPrimary && (
                                 <button type="button" onClick={() => handleSetPrimary(listing.id, m.id)}
                                   disabled={actionLoading === 'set-primary'}
                                   className="absolute bottom-1 right-1 text-[10px] bg-orange-500 text-white px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition font-medium">

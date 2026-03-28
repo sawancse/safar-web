@@ -6,7 +6,7 @@ import type { Listing } from '@/types';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
 
-const POPULAR_CITIES = ['Mumbai', 'Delhi', 'Goa', 'Bangalore', 'Jaipur', 'Udaipur'];
+const POPULAR_CITIES = ['Mumbai', 'Delhi', 'Goa', 'Bangalore', 'Hyderabad', 'Jaipur', 'Udaipur'];
 
 export default function Recommendations() {
   const [listings, setListings] = useState<Listing[]>([]);

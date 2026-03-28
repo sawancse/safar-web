@@ -12,6 +12,10 @@ interface KycData {
   aadhaarVerified: boolean;
   panNumber: string | null;
   panVerified: boolean;
+  aadhaarFrontUrl: string | null;
+  aadhaarBackUrl: string | null;
+  panUrl: string | null;
+  selfieUrl: string | null;
   addressLine1: string | null;
   city: string | null;
   state: string | null;
@@ -92,6 +96,11 @@ export default function HostKycTab({ token }: { token: string }) {
   const [dob, setDob] = useState('');
   const [aadhaar, setAadhaar] = useState('');
   const [pan, setPan] = useState('');
+  const [aadhaarFrontUrl, setAadhaarFrontUrl] = useState('');
+  const [aadhaarBackUrl, setAadhaarBackUrl] = useState('');
+  const [panUrl, setPanUrl] = useState('');
+  const [selfieUrl, setSelfieUrl] = useState('');
+  const [uploadingDoc, setUploadingDoc] = useState('');
   const [addr1, setAddr1] = useState('');
   const [addr2, setAddr2] = useState('');
   const [city, setCity] = useState('');
@@ -121,6 +130,10 @@ export default function HostKycTab({ token }: { token: string }) {
       if (data.bankAccountName) setAccountName(data.bankAccountName);
       if (data.bankIfsc) setIfsc(data.bankIfsc);
       if (data.gstin) setGstin(data.gstin);
+      if (data.aadhaarFrontUrl) setAadhaarFrontUrl(data.aadhaarFrontUrl);
+      if (data.aadhaarBackUrl) setAadhaarBackUrl(data.aadhaarBackUrl);
+      if (data.panUrl) setPanUrl(data.panUrl);
+      if (data.selfieUrl) setSelfieUrl(data.selfieUrl);
       if (data.businessName) setBizName(data.businessName);
       if (data.businessType) setBizType(data.businessType);
     }).catch(() => {}).finally(() => setLoading(false));
@@ -315,6 +328,56 @@ export default function HostKycTab({ token }: { token: string }) {
               )}
             </div>
           </div>
+          {/* Document Uploads */}
+          <div className="mt-4 pt-4 border-t">
+            <p className="text-sm font-semibold text-gray-800 mb-3">Upload Documents <span className="text-red-500">*</span></p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {[
+                { label: 'Aadhaar Front', key: 'aadhaar-front', url: aadhaarFrontUrl, setUrl: setAadhaarFrontUrl },
+                { label: 'Aadhaar Back', key: 'aadhaar-back', url: aadhaarBackUrl, setUrl: setAadhaarBackUrl },
+                { label: 'PAN Card', key: 'pan-card', url: panUrl, setUrl: setPanUrl },
+                { label: 'Selfie with ID', key: 'selfie', url: selfieUrl, setUrl: setSelfieUrl },
+              ].map(doc => (
+                <div key={doc.key} className="border rounded-lg p-3">
+                  <label className="block text-xs font-medium text-gray-600 mb-2">{doc.label}</label>
+                  {doc.url ? (
+                    <div className="relative">
+                      <img src={doc.url} alt={doc.label} className="w-full h-28 object-cover rounded-lg" />
+                      {!isVerified && (
+                        <button type="button" onClick={() => doc.setUrl('')}
+                          className="absolute top-1 right-1 bg-red-500 text-white rounded-full w-5 h-5 text-xs flex items-center justify-center">×</button>
+                      )}
+                      <p className="text-[10px] text-green-600 mt-1">✓ Uploaded</p>
+                    </div>
+                  ) : (
+                    <label className={`flex flex-col items-center justify-center h-28 border-2 border-dashed rounded-lg cursor-pointer transition
+                      ${uploadingDoc === doc.key ? 'border-orange-400 bg-orange-50' : 'border-gray-300 hover:border-orange-400 hover:bg-orange-50'}`}>
+                      <span className="text-2xl text-gray-400 mb-1">{uploadingDoc === doc.key ? '⏳' : '📄'}</span>
+                      <span className="text-xs text-gray-500">{uploadingDoc === doc.key ? 'Uploading...' : 'Click to upload'}</span>
+                      <input type="file" accept="image/*" className="hidden" disabled={isVerified || uploadingDoc !== ''}
+                        onChange={async (e) => {
+                          const file = e.target.files?.[0];
+                          if (!file) return;
+                          try {
+                            setUploadingDoc(doc.key);
+                            const url = await api.uploadKycDocument(file, doc.key, token);
+                            doc.setUrl(url);
+                            await api.updateKycDocuments({
+                              ...(doc.key === 'aadhaar-front' && { aadhaarFrontUrl: url }),
+                              ...(doc.key === 'aadhaar-back' && { aadhaarBackUrl: url }),
+                              ...(doc.key === 'pan-card' && { panUrl: url }),
+                              ...(doc.key === 'selfie' && { selfieUrl: url }),
+                            }, token);
+                          } catch { setError('Upload failed. Please try again.'); }
+                          finally { setUploadingDoc(''); }
+                        }} />
+                    </label>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+
           {!isVerified && !identityDone && (
             <button onClick={saveIdentity} disabled={saving || !name || aadhaar.length !== 12 || pan.length !== 10}
               className="mt-4 bg-orange-500 hover:bg-orange-600 text-white font-semibold px-6 py-2.5 rounded-xl text-sm disabled:opacity-50 transition">

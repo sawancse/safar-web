@@ -40,7 +40,11 @@ const QUICK_QUESTIONS = [
 ];
 
 function formatJoinDate(iso: string): string {
-  return new Date(iso).toLocaleDateString('en-IN', { month: 'long', year: 'numeric' });
+  if (!iso) return 'Recently';
+  const d = new Date(iso);
+  // Guard against epoch (Jan 1970) or invalid dates
+  if (isNaN(d.getTime()) || d.getFullYear() < 2020) return 'Recently';
+  return d.toLocaleDateString('en-IN', { month: 'long', year: 'numeric' });
 }
 
 function formatResponseTime(minutes?: number): string {
