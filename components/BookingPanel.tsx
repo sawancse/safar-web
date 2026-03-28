@@ -128,31 +128,46 @@ export default function BookingPanel({ listing, selectedRoomType, roomSelections
     : 0;
 
   let basePaise: number;
-  const roomMultiplier = hasMultiRoomSelection ? 1 : rooms; // multi-room already includes count
+  const roomMultiplier = hasMultiRoomSelection ? 1 : rooms;
   if (isMonthly) {
-    basePaise = (displayPrice * pgFullMonths + pgProratedPaise) * roomMultiplier;
+    // Monthly: price IS the monthly rent, not per-night
+    // For 1 month = displayPrice, for partial months = prorated
+    const months = Math.max(1, pgFullMonths + (pgRemainingDays > 0 ? 1 : 0));
+    if (pgRemainingDays > 0 && pgFullMonths >= 1) {
+      basePaise = (displayPrice * pgFullMonths + pgProratedPaise) * roomMultiplier;
+    } else {
+      // Exactly N months or less than 1 month
+      basePaise = displayPrice * Math.max(1, pgFullMonths) * roomMultiplier;
+    }
   } else if (isHourly) {
     basePaise = displayPrice * hours * roomMultiplier;
   } else {
     basePaise = displayPrice * nights * roomMultiplier;
   }
 
-  const duration = isMonthly ? pgFullMonths : isHourly ? hours : nights;
+  const duration = isMonthly ? Math.max(1, pgFullMonths) : isHourly ? hours : nights;
 
   // Discount calculation
   let discountPercent = 0;
   let discountLabel = '';
-  if (!isCommercial && nights >= 28 && listing.monthlyDiscountPercent) {
+  if (!isCommercial && !isMonthly && nights >= 28 && listing.monthlyDiscountPercent) {
     discountPercent = listing.monthlyDiscountPercent;
     discountLabel = 'Monthly discount';
-  } else if (!isCommercial && nights >= 7 && listing.weeklyDiscountPercent) {
+  } else if (!isCommercial && !isMonthly && nights >= 7 && listing.weeklyDiscountPercent) {
     discountPercent = listing.weeklyDiscountPercent;
     discountLabel = 'Weekly discount';
   }
   const discountAmount = Math.round(basePaise * discountPercent / 100);
   const discountedBase = basePaise - discountAmount;
 
-  const gstPaise = listing.gstApplicable ? Math.round(discountedBase * 0.18) : 0;
+  // GST: Only for commercial properties. Residential rent is GST-exempt in India.
+  const gstPaise = (isCommercial || listing.gstApplicable) ? Math.round(discountedBase * 0.18) : 0;
+
+  // Maintenance charges (monthly rentals only, shown separately)
+  const maintenancePaise = isMonthly && (listing.maintenanceChargePaise ?? 0) > 0 && !(listing.maintenanceIncluded)
+    ? (listing.maintenanceChargePaise ?? 0) * Math.max(1, pgFullMonths)
+    : 0;
+
   const totalPaise = discountedBase + gstPaise;
 
   const canBook = isCommercial
@@ -421,12 +436,13 @@ export default function BookingPanel({ listing, selectedRoomType, roomSelections
       {/* Price breakdown */}
       {duration > 0 && (
         <div className="mt-4 space-y-2 text-sm">
+          {/* Rent line */}
           <div className="flex justify-between text-gray-600">
             <span>
               {isMonthly ? (
                 <>
-                  {formatPaise(displayPrice)} x {pgFullMonths} month{pgFullMonths !== 1 ? 's' : ''}
-                  {pgRemainingDays > 0 && <> + {pgRemainingDays} day{pgRemainingDays !== 1 ? 's' : ''}</>}
+                  Rent: {formatPaise(displayPrice)}/month
+                  {pgFullMonths > 1 && <> x {pgFullMonths} months</>}
                   {effectiveRooms > 1 ? ` x ${effectiveRooms} rooms` : ''}
                 </>
               ) : (
@@ -438,13 +454,28 @@ export default function BookingPanel({ listing, selectedRoomType, roomSelections
             </span>
             <span>{formatPaise(basePaise)}</span>
           </div>
-          {isMonthly && pgRemainingDays > 0 && (
+          {isMonthly && pgRemainingDays > 0 && pgFullMonths >= 1 && (
             <div className="flex justify-between text-xs text-gray-400">
-              <span>({pgRemainingDays} days prorated)</span>
+              <span>+ {pgRemainingDays} days prorated</span>
               <span>{formatPaise(pgProratedPaise)}</span>
             </div>
           )}
 
+          {/* Maintenance (monthly only, if extra) */}
+          {maintenancePaise > 0 && (
+            <div className="flex justify-between text-gray-500">
+              <span>Maintenance ({Math.max(1, pgFullMonths)} mo × {formatPaise(listing.maintenanceChargePaise ?? 0)})</span>
+              <span>{formatPaise(maintenancePaise)}</span>
+            </div>
+          )}
+          {isMonthly && (listing.maintenanceIncluded) && (
+            <div className="flex justify-between text-green-600 text-xs">
+              <span>Maintenance included in rent</span>
+              <span>₹0</span>
+            </div>
+          )}
+
+          {/* Discount */}
           {discountPercent > 0 && (
             <div className="flex justify-between text-green-600">
               <span>{discountLabel} ({discountPercent}%)</span>
@@ -452,6 +483,7 @@ export default function BookingPanel({ listing, selectedRoomType, roomSelections
             </div>
           )}
 
+          {/* GST — only commercial */}
           {gstPaise > 0 && (
             <div className="flex justify-between text-gray-400">
               <span>GST (18%)</span>
@@ -459,9 +491,17 @@ export default function BookingPanel({ listing, selectedRoomType, roomSelections
             </div>
           )}
 
+          {/* No GST note for residential */}
+          {isMonthly && !isCommercial && !listing.gstApplicable && (
+            <div className="text-[10px] text-gray-400">
+              Residential rent is GST-exempt
+            </div>
+          )}
+
+          {/* Total */}
           <div className="flex justify-between font-bold border-t pt-2 text-base">
-            <span>Total</span>
-            <span>{formatPaise(totalPaise)}</span>
+            <span>Total {isMonthly ? 'Rent' : ''}</span>
+            <span>{formatPaise(totalPaise + maintenancePaise)}</span>
           </div>
 
           {(listing.securityDepositPaise ?? 0) > 0 && (

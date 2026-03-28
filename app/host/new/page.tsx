@@ -706,7 +706,7 @@ export default function NewListingWizard() {
 
           {/* Commission Preview */}
           {data.basePricePaise > 0 && (
-            <PricingCalculator basePricePaise={data.basePricePaise} tier="STARTER" editable={false} />
+            <PricingCalculator basePricePaise={data.basePricePaise} tier="STARTER" pricingUnit={data.pricingUnit} editable={false} />
           )}
 
           {/* Discount Rules */}
