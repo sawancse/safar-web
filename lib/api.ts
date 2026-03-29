@@ -40,6 +40,38 @@ import type {
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
 
 /**
+ * Singleton refresh guard — prevents concurrent refresh requests.
+ * With refresh token rotation, only one refresh can succeed at a time.
+ */
+let refreshPromise: Promise<boolean> | null = null;
+
+async function doRefreshToken(): Promise<boolean> {
+  const refreshToken = localStorage.getItem('refresh_token');
+  if (!refreshToken) return false;
+  try {
+    const res = await fetch(`${API_URL}/api/v1/auth/refresh`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ refreshToken }),
+    });
+    if (res.ok) {
+      const data = await res.json();
+      localStorage.setItem('access_token', data.accessToken);
+      if (data.refreshToken) localStorage.setItem('refresh_token', data.refreshToken);
+      document.cookie = `access_token=${data.accessToken}; path=/; max-age=${30 * 24 * 60 * 60}; SameSite=Lax`;
+      return true;
+    }
+  } catch { /* network error */ }
+  return false;
+}
+
+async function refreshTokenOnce(): Promise<boolean> {
+  if (refreshPromise) return refreshPromise;
+  refreshPromise = doRefreshToken().finally(() => { refreshPromise = null; });
+  return refreshPromise;
+}
+
+/**
  * Check if JWT token is about to expire (within 2 minutes) and proactively refresh.
  */
 async function ensureFreshToken(options?: RequestInit): Promise<RequestInit | undefined> {
@@ -49,33 +81,19 @@ async function ensureFreshToken(options?: RequestInit): Promise<RequestInit | un
 
   const token = headers.Authorization.replace('Bearer ', '');
   try {
-    // Decode JWT payload (base64)
     const payload = JSON.parse(atob(token.split('.')[1]));
     const expiresAt = payload.exp * 1000;
-    const now = Date.now();
-    // If token expires within 2 minutes, refresh proactively
-    if (expiresAt - now < 120000) {
-      const refreshToken = localStorage.getItem('refresh_token');
-      if (refreshToken) {
-        const res = await fetch(`${API_URL}/api/v1/auth/refresh`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ refreshToken }),
-        });
-        if (res.ok) {
-          const data = await res.json();
-          localStorage.setItem('access_token', data.accessToken);
-          if (data.refreshToken) localStorage.setItem('refresh_token', data.refreshToken);
-          document.cookie = `access_token=${data.accessToken}; path=/; max-age=${30 * 24 * 60 * 60}; SameSite=Lax`;
-          return {
-            ...options,
-            headers: { ...headers, Authorization: `Bearer ${data.accessToken}` },
-          };
-        }
-        // Proactive refresh failed — don't redirect here, let the 401 handler catch it
+    if (expiresAt - Date.now() < 120000) {
+      const ok = await refreshTokenOnce();
+      if (ok) {
+        const newToken = localStorage.getItem('access_token') || token;
+        return {
+          ...options,
+          headers: { ...headers, Authorization: `Bearer ${newToken}` },
+        };
       }
     }
-  } catch { /* token decode failed — let it proceed, 401 handler will catch */ }
+  } catch { /* token decode failed */ }
   return options;
 }
 
@@ -96,41 +114,22 @@ async function apiFetch<T>(path: string, options?: RequestInit): Promise<T> {
   // Auto-refresh token on 401 — only for authenticated endpoints (those with Authorization header)
   const hasAuthHeader = freshOptions?.headers && ('Authorization' in (freshOptions.headers as Record<string, string>));
   if (res.status === 401 && typeof window !== 'undefined' && hasAuthHeader && !path.includes('/auth/')) {
-    const refreshToken = localStorage.getItem('refresh_token');
-    if (refreshToken) {
-      let refreshRes: Response | null = null;
-      try {
-        refreshRes = await fetch(`${API_URL}/api/v1/auth/refresh`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ refreshToken }),
-        });
-      } catch {
-        // Network error on refresh — redirect to login
+    const ok = await refreshTokenOnce();
+    if (ok) {
+      const newToken = localStorage.getItem('access_token') || '';
+      const retryRes = await fetch(`${API_URL}${path}`, {
+        ...freshOptions,
+        headers: { 'Content-Type': 'application/json', ...freshOptions?.headers as Record<string, string>, Authorization: `Bearer ${newToken}` },
+        credentials: 'include',
+      });
+      if (!retryRes.ok) {
+        const text = await retryRes.text().catch(() => 'Unknown error');
+        throw new Error(text || `HTTP ${retryRes.status}`);
       }
-
-      if (refreshRes?.ok) {
-        const data = await refreshRes.json();
-        localStorage.setItem('access_token', data.accessToken);
-        if (data.refreshToken) localStorage.setItem('refresh_token', data.refreshToken);
-        document.cookie = `access_token=${data.accessToken}; path=/; max-age=${30 * 24 * 60 * 60}; SameSite=Lax`;
-        // Retry original request with new token
-        const retryHeaders = { ...freshOptions?.headers } as Record<string, string>;
-        retryHeaders['Authorization'] = `Bearer ${data.accessToken}`;
-        const retryRes = await fetch(`${API_URL}${path}`, {
-          ...freshOptions,
-          headers: { 'Content-Type': 'application/json', ...retryHeaders },
-          credentials: 'include',
-        });
-        if (!retryRes.ok) {
-          const text = await retryRes.text().catch(() => 'Unknown error');
-          throw new Error(text || `HTTP ${retryRes.status}`);
-        }
-        const text = await retryRes.text();
-        return text ? JSON.parse(text) : (undefined as T);
-      }
+      const text = await retryRes.text();
+      return text ? JSON.parse(text) : (undefined as T);
     }
-    // Refresh failed or no refresh token — clear and redirect to login
+    // Refresh failed — clear and redirect to login
     localStorage.removeItem('access_token');
     localStorage.removeItem('refresh_token');
     document.cookie = 'access_token=; path=/; max-age=0';
