@@ -1706,9 +1706,9 @@ export const api = {
     }),
 
   getMyBuilderProjects: (token: string) =>
-    apiFetch<any[]>('/api/v1/builder-projects/my-projects', {
+    apiFetch<any>('/api/v1/builder-projects/my-projects', {
       headers: { Authorization: `Bearer ${token}` },
-    }),
+    }).then((res: any) => res?.content || res || []),
 
   addUnitType: (projectId: string, data: any, token: string) =>
     apiFetch<any>(`/api/v1/builder-projects/${projectId}/unit-types`, {
