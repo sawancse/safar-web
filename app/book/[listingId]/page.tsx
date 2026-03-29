@@ -378,7 +378,7 @@ export default function BookPage() {
                       </div>
                       <div className="text-right">
                         <p className="text-sm font-bold text-orange-600">{sel.c} room{sel.c > 1 ? 's' : ''}</p>
-                        <p className="text-xs text-gray-500">{formatPaise(rt.basePricePaise)}/night each</p>
+                        <p className="text-xs text-gray-500">{formatPaise(rt.basePricePaise)}/{isMonthly ? 'month' : isHourly ? 'hour' : 'night'} each</p>
                       </div>
                     </div>
                   );
@@ -824,7 +824,7 @@ export default function BookPage() {
                   {booking.roomSelections && booking.roomSelections.length > 0 ? (
                     booking.roomSelections.map(rs => (
                       <div key={rs.id} className="flex justify-between text-gray-600">
-                        <span>{rs.count}x {rs.roomTypeName} — {formatPaise(rs.pricePerUnitPaise)}/night</span>
+                        <span>{rs.count}x {rs.roomTypeName} — {formatPaise(rs.pricePerUnitPaise)}/{isMonthly ? 'month' : isHourly ? 'hour' : 'night'}</span>
                         <span>{formatPaise(rs.totalPaise)}</span>
                       </div>
                     ))

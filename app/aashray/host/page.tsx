@@ -108,7 +108,7 @@ export default function AashrayHostPage() {
                   <div className="flex-1 min-w-0">
                     <p className="font-semibold text-sm">{listing.title}</p>
                     <p className="text-xs text-gray-500">{listing.city}, {listing.state}</p>
-                    <p className="text-sm font-bold text-gray-800 mt-1">{formatPaise(listing.basePricePaise)} / night</p>
+                    <p className="text-sm font-bold text-gray-800 mt-1">{formatPaise(listing.basePricePaise)} {listing.pricingUnit === 'MONTH' || listing.type === 'PG' || listing.type === 'COLIVING' ? '/ month' : listing.pricingUnit === 'HOUR' ? '/ hour' : '/ night'}</p>
                   </div>
                   <div className="flex items-center gap-3">
                     {isAashray && (

@@ -280,7 +280,7 @@ export default function AashrayPage() {
                   <div className="p-3">
                     <p className="font-semibold text-sm truncate">{listing.title}</p>
                     <p className="text-xs text-gray-500">{listing.city}, {listing.state}</p>
-                    <p className="text-sm font-bold text-gray-800 mt-1">{formatPaise(listing.basePricePaise)} / night</p>
+                    <p className="text-sm font-bold text-gray-800 mt-1">{formatPaise(listing.basePricePaise)} {listing.pricingUnit === 'MONTH' || listing.type === 'PG' || listing.type === 'COLIVING' ? '/ month' : listing.pricingUnit === 'HOUR' ? '/ hour' : '/ night'}</p>
                     {listing.avgRating != null && listing.avgRating > 0 && (
                       <p className="text-xs text-gray-500 mt-0.5">★ {listing.avgRating.toFixed(1)}</p>
                     )}

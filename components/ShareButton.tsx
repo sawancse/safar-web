@@ -7,19 +7,20 @@ interface Props {
   city: string;
   state: string;
   price: string;
+  priceUnit?: string;
   imageUrl?: string;
   listingId: string;
 }
 
 const BASE_URL = typeof window !== 'undefined' ? window.location.origin : 'https://safar.in';
 
-export default function ShareButton({ title, city, state, price, imageUrl, listingId }: Props) {
+export default function ShareButton({ title, city, state, price, priceUnit = 'night', imageUrl, listingId }: Props) {
   const [open, setOpen] = useState(false);
   const [copied, setCopied] = useState(false);
   const modalRef = useRef<HTMLDivElement>(null);
 
   const shareUrl = `${BASE_URL}/listings/${listingId}?utm_source=share&utm_medium=social`;
-  const shareText = `Check out "${title}" in ${city}, ${state} on Safar — ${price}/night`;
+  const shareText = `Check out "${title}" in ${city}, ${state} on Safar — ${price}/${priceUnit}`;
 
   useEffect(() => {
     function handleClick(e: MouseEvent) {
@@ -139,7 +140,7 @@ export default function ShareButton({ title, city, state, price, imageUrl, listi
               <div className="min-w-0">
                 <p className="font-semibold text-gray-900 text-sm leading-tight">{title}</p>
                 <p className="text-xs text-gray-500 mt-0.5">{city}, {state}</p>
-                <p className="text-xs text-gray-500">{price} / night</p>
+                <p className="text-xs text-gray-500">{price} / {priceUnit}</p>
               </div>
             </div>
 

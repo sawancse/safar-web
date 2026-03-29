@@ -27,7 +27,9 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   try {
     const listing = await api.getListing(params.id);
     const price = formatPaise(listing.basePricePaise);
-    const description = `${listing.type.charAt(0) + listing.type.slice(1).toLowerCase()} in ${listing.city}, ${listing.state} — ${price}/night. ${listing.maxGuests} guests, ${listing.bedrooms ?? 0} bedrooms. ${listing.description?.slice(0, 120) ?? ''}`;
+    const isPgMeta = listing.type === 'PG' || listing.type === 'COLIVING';
+    const unitLabel = listing.pricingUnit === 'HOUR' ? 'hour' : (listing.pricingUnit === 'MONTH' || isPgMeta) ? 'month' : 'night';
+    const description = `${listing.type.charAt(0) + listing.type.slice(1).toLowerCase()} in ${listing.city}, ${listing.state} — ${price}/${unitLabel}. ${listing.maxGuests} guests, ${listing.bedrooms ?? 0} bedrooms. ${listing.description?.slice(0, 120) ?? ''}`;
     const imageUrl = listing.primaryPhotoUrl
       ? (listing.primaryPhotoUrl.startsWith('http') ? listing.primaryPhotoUrl : `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080'}${listing.primaryPhotoUrl}`)
       : undefined;
@@ -138,6 +140,7 @@ export default async function ListingDetailPage({ params }: Props) {
               city={listing.city}
               state={listing.state}
               price={formatPaise(listing.basePricePaise)}
+              priceUnit={perNightLabel.replace('per ', '')}
               imageUrl={listing.primaryPhotoUrl}
               listingId={params.id}
             />

@@ -465,7 +465,7 @@ export default function HostPage() {
           <div className="p-5">
             <h2 className="text-xl font-bold">{listing.title}</h2>
             <p className="text-gray-500 text-sm mt-1">{listing.city}, {listing.state}</p>
-            <p className="text-lg font-semibold mt-2">{formatPaise(listing.basePricePaise)} / night</p>
+            <p className="text-lg font-semibold mt-2">{formatPaise(listing.basePricePaise)} {listing.pricingUnit === 'MONTH' || listing.type === 'PG' || listing.type === 'COLIVING' ? '/ month' : listing.pricingUnit === 'HOUR' ? '/ hour' : '/ night'}</p>
             <div className="flex gap-2 mt-3">
               {photos.length > 0 && <span className="text-xs bg-gray-100 px-2 py-1 rounded">{photos.length} photo{photos.length !== 1 ? 's' : ''}</span>}
               {mediaItems.some((m) => m.type === 'VIDEO') && <span className="text-xs bg-gray-100 px-2 py-1 rounded">Video tour</span>}
@@ -929,7 +929,7 @@ export default function HostPage() {
                       {listing.title}
                     </Link>
                     <p className="text-sm text-gray-500 mt-0.5">{listing.city}, {listing.state}</p>
-                    <p className="text-sm font-semibold mt-1 text-gray-800">{formatPaise(listing.basePricePaise)} / night</p>
+                    <p className="text-sm font-semibold mt-1 text-gray-800">{formatPaise(listing.basePricePaise)} {listing.pricingUnit === 'MONTH' || listing.type === 'PG' || listing.type === 'COLIVING' ? '/ month' : listing.pricingUnit === 'HOUR' ? '/ hour' : '/ night'}</p>
                   </div>
                   <div className="flex items-center gap-3">
                     {/* Aashray badge for VERIFIED listings */}
