@@ -79,7 +79,9 @@ export default function BookingPanel({ listing, selectedRoomType, roomSelections
     : 0;
 
   const isPG = listing.type === 'PG' || listing.type === 'COLIVING';
-  const pricingUnit = listing.pricingUnit || (isCommercial ? 'HOUR' : isPG ? 'MONTH' : 'NIGHT');
+  const rawPricingUnit = listing.pricingUnit || 'NIGHT';
+  const pricingUnit = isCommercial ? (rawPricingUnit === 'NIGHT' ? 'HOUR' : rawPricingUnit)
+    : (rawPricingUnit === 'NIGHT' && isPG) ? 'MONTH' : rawPricingUnit;
   const isMonthly = pricingUnit === 'MONTH';
   const isHourly = pricingUnit === 'HOUR';
 

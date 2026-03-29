@@ -26,6 +26,7 @@ export default function BookPage() {
   const [childrenCount, setChildrenCount] = useState(Number(searchParams.get('children') ?? '0'));
   const [infants, setInfants] = useState(Number(searchParams.get('infants') ?? '0'));
   const [pets, setPets] = useState(Number(searchParams.get('pets') ?? '0'));
+  const [leaseMonths, setLeaseMonths] = useState(Number(searchParams.get('leaseMonths') ?? '1'));
   const existingBookingId = searchParams.get('bookingId');
   const preselectedRoomTypeId = searchParams.get('roomTypeId');
 
@@ -85,6 +86,12 @@ export default function BookPage() {
         : Math.min(l.maxGuests ?? 2, 4);
       const neededRooms = Math.ceil((adults + childrenCount) / perRoom);
       if (neededRooms > rooms) setRooms(Math.min(neededRooms, lTotalRooms));
+      // For monthly listings, auto-set checkOut from checkIn + leaseMonths
+      const isMonthlyListing = (l.pricingUnit === 'MONTH') || l.type === 'PG' || l.type === 'COLIVING';
+      if (isMonthlyListing && checkIn && !searchParams.get('checkOut')) {
+        const d = new Date(checkIn); d.setMonth(d.getMonth() + leaseMonths);
+        setCheckOut(d.toISOString().split('T')[0]);
+      }
       setReady(true);
     }).catch(() => setError('Listing not found'));
 
@@ -126,7 +133,9 @@ export default function BookPage() {
   const isHotel = listing?.type === 'HOTEL' || listing?.type === 'BUDGET_HOTEL';
 
   // ── Pricing unit from listing (source of truth) ──
-  const pricingUnit = listing?.pricingUnit || (isPG ? 'MONTH' : 'NIGHT');
+  // PG/Co-living always uses MONTH even if listing has NIGHT default
+  const rawPricingUnit = listing?.pricingUnit || 'NIGHT';
+  const pricingUnit = (rawPricingUnit === 'NIGHT' && isPG) ? 'MONTH' : rawPricingUnit;
   const isMonthly = pricingUnit === 'MONTH';
   const isHourly = pricingUnit === 'HOUR';
   const isNightly = pricingUnit === 'NIGHT';
@@ -138,8 +147,8 @@ export default function BookPage() {
   const hours = checkIn && checkOut
     ? Math.max(1, Math.ceil((new Date(checkOut).getTime() - new Date(checkIn).getTime()) / 3600000))
     : 0;
-  const fullMonths = isMonthly ? Math.floor(nights / 30) : 0;
-  const remainingDays = isMonthly ? nights % 30 : 0;
+  const fullMonths = isMonthly ? leaseMonths : 0;
+  const remainingDays = 0; // prorated via lease months, no partial days
   const totalGuests = adults + childrenCount;
 
   // Base rate = price per unit (per night / per month / per hour)
@@ -148,15 +157,13 @@ export default function BookPage() {
 
   // Calculate subtotal based on pricing unit
   let roomSubtotalPaise = 0;
-  const proratedDaysPaise = isMonthly && remainingDays > 0 ? Math.round(baseRate * remainingDays / 30) : 0;
   if (hasMultiRoom) {
     // Multi-room: sum each room type × count × duration
     for (const sel of selectedRoomSelections) {
       const rt = roomTypes.find(r => r.id === sel.id);
       const price = rt?.basePricePaise ?? baseRate;
       if (isMonthly) {
-        const prorated = remainingDays > 0 ? Math.round(price * remainingDays / 30) : 0;
-        roomSubtotalPaise += (price * fullMonths + prorated) * sel.c;
+        roomSubtotalPaise += (price * fullMonths) * sel.c;
       } else if (isHourly) {
         roomSubtotalPaise += price * hours * sel.c;
       } else {
@@ -165,7 +172,7 @@ export default function BookPage() {
     }
   } else {
     if (isMonthly) {
-      roomSubtotalPaise = (baseRate * fullMonths + proratedDaysPaise) * rooms;
+      roomSubtotalPaise = (baseRate * fullMonths) * rooms;
     } else if (isHourly) {
       roomSubtotalPaise = baseRate * hours * rooms;
     } else {
@@ -186,12 +193,12 @@ export default function BookPage() {
   const unitLabel = isMonthly ? 'month' : isHourly ? 'hour' : 'night';
   const durationValue = isMonthly ? fullMonths : isHourly ? hours : nights;
   const durationLabel = isMonthly
-    ? `${fullMonths} month${fullMonths !== 1 ? 's' : ''}${remainingDays > 0 ? ` ${remainingDays} day${remainingDays !== 1 ? 's' : ''}` : ''}`
+    ? `${fullMonths} month${fullMonths !== 1 ? 's' : ''}`
     : isHourly
       ? `${hours} hour${hours !== 1 ? 's' : ''}`
       : `${nights} night${nights > 1 ? 's' : ''}`;
 
-  const isFormValid = firstName.trim() && lastName.trim() && email.trim() && phone.trim() && (isHourly ? hours > 0 : nights > 0);
+  const isFormValid = firstName.trim() && lastName.trim() && email.trim() && phone.trim() && (isMonthly ? leaseMonths > 0 : isHourly ? hours > 0 : nights > 0);
 
   const guestLabel = [
     `${adults} adult${adults !== 1 ? 's' : ''}`,
@@ -609,27 +616,58 @@ export default function BookPage() {
               </div>
               {editingDates ? (
                 <div className="space-y-3">
-                  <div className="grid grid-cols-2 gap-2">
-                    <div>
-                      <label className="block text-xs text-gray-500 mb-1">Check-in</label>
-                      <input type="date" className="w-full border rounded-lg px-2.5 py-2 text-sm outline-none focus:border-orange-500"
-                        value={checkIn} min={today}
-                        onChange={(e) => {
-                          setCheckIn(e.target.value);
-                          const minDays = isMonthly ? 30 : 1;
-                          if (!checkOut || e.target.value >= checkOut) {
-                            const d = new Date(e.target.value); d.setDate(d.getDate() + minDays);
+                  {isMonthly ? (
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <label className="block text-xs text-gray-500 mb-1">Move-in date</label>
+                        <input type="date" className="w-full border rounded-lg px-2.5 py-2 text-sm outline-none focus:border-orange-500"
+                          value={checkIn} min={today}
+                          onChange={(e) => {
+                            setCheckIn(e.target.value);
+                            const d = new Date(e.target.value); d.setMonth(d.getMonth() + (leaseMonths || 1));
                             setCheckOut(d.toISOString().split('T')[0]);
-                          }
-                        }} />
+                          }} />
+                      </div>
+                      <div>
+                        <label className="block text-xs text-gray-500 mb-1">Lease duration</label>
+                        <select className="w-full border rounded-lg px-2.5 py-2 text-sm outline-none focus:border-orange-500"
+                          value={leaseMonths}
+                          onChange={(e) => {
+                            const m = Number(e.target.value);
+                            setLeaseMonths(m);
+                            if (checkIn) {
+                              const d = new Date(checkIn); d.setMonth(d.getMonth() + m);
+                              setCheckOut(d.toISOString().split('T')[0]);
+                            }
+                          }}>
+                          {[1,2,3,6,11,12].map(m => (
+                            <option key={m} value={m}>{m} month{m > 1 ? 's' : ''}</option>
+                          ))}
+                        </select>
+                      </div>
                     </div>
-                    <div>
-                      <label className="block text-xs text-gray-500 mb-1">Check-out</label>
-                      <input type="date" className="w-full border rounded-lg px-2.5 py-2 text-sm outline-none focus:border-orange-500"
-                        value={checkOut} min={checkIn || today}
-                        onChange={(e) => setCheckOut(e.target.value)} />
+                  ) : (
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <label className="block text-xs text-gray-500 mb-1">Check-in</label>
+                        <input type="date" className="w-full border rounded-lg px-2.5 py-2 text-sm outline-none focus:border-orange-500"
+                          value={checkIn} min={today}
+                          onChange={(e) => {
+                            setCheckIn(e.target.value);
+                            if (!checkOut || e.target.value >= checkOut) {
+                              const d = new Date(e.target.value); d.setDate(d.getDate() + 1);
+                              setCheckOut(d.toISOString().split('T')[0]);
+                            }
+                          }} />
+                      </div>
+                      <div>
+                        <label className="block text-xs text-gray-500 mb-1">Check-out</label>
+                        <input type="date" className="w-full border rounded-lg px-2.5 py-2 text-sm outline-none focus:border-orange-500"
+                          value={checkOut} min={checkIn || today}
+                          onChange={(e) => setCheckOut(e.target.value)} />
+                      </div>
                     </div>
-                  </div>
+                  )}
                 </div>
               ) : (
                 <div className="space-y-1.5 text-sm">
@@ -886,9 +924,8 @@ export default function BookPage() {
                       let lineTotal = 0;
                       let lineDuration = '';
                       if (isMonthly) {
-                        const prorated = remainingDays > 0 ? Math.round(price * remainingDays / 30) : 0;
-                        lineTotal = (price * fullMonths + prorated) * sel.c;
-                        lineDuration = `${fullMonths} month${fullMonths !== 1 ? 's' : ''}${remainingDays > 0 ? ` + ${remainingDays} day${remainingDays !== 1 ? 's' : ''}` : ''}`;
+                        lineTotal = (price * fullMonths) * sel.c;
+                        lineDuration = `${fullMonths} month${fullMonths !== 1 ? 's' : ''}`;
                       } else if (isHourly) {
                         lineTotal = price * sel.c * hours;
                         lineDuration = `${hours} hour${hours !== 1 ? 's' : ''}`;
@@ -909,7 +946,6 @@ export default function BookPage() {
                         {isMonthly ? (
                           <>
                             {formatPaise(baseRate)} x {fullMonths} month{fullMonths !== 1 ? 's' : ''}
-                            {remainingDays > 0 && <> + {remainingDays} day{remainingDays !== 1 ? 's' : ''}</>}
                             {rooms > 1 ? ` x ${rooms} rooms` : ''}
                           </>
                         ) : isHourly ? (
