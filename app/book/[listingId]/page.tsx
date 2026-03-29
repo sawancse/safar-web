@@ -177,9 +177,9 @@ export default function BookPage() {
   const cleaningFeePaise = isMonthly ? 0 : (listing?.cleaningFeePaise ?? 0);
   const maintenancePaise = isMonthly && !(listing?.maintenanceIncluded) ? ((listing?.maintenanceChargePaise ?? 0) * Math.max(1, fullMonths)) : 0;
   const insurancePaise = listing?.insuranceEnabled ? (listing?.insuranceAmountPaise ?? 0) : 0;
-  // GST: only for commercial, NOT residential rent
+  // GST: only for commercial stays, NOT residential rent (monthly or otherwise)
   const isCommercial = listing?.type === 'COMMERCIAL';
-  const gstPaise = (isCommercial || listing?.gstApplicable) && !isMonthly ? Math.round(roomSubtotalPaise * 0.18) : 0;
+  const gstPaise = isCommercial && !isMonthly ? Math.round(roomSubtotalPaise * 0.18) : 0;
   const totalPaise = roomSubtotalPaise + cleaningFeePaise + gstPaise + maintenancePaise + insurancePaise;
 
   // Unit labels

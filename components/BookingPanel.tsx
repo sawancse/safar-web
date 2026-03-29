@@ -161,7 +161,7 @@ export default function BookingPanel({ listing, selectedRoomType, roomSelections
   const discountedBase = basePaise - discountAmount;
 
   // GST: Only for commercial properties. Residential rent is GST-exempt in India.
-  const gstPaise = (isCommercial || listing.gstApplicable) ? Math.round(discountedBase * 0.18) : 0;
+  const gstPaise = isCommercial && !isMonthly ? Math.round(discountedBase * 0.18) : 0;
 
   // Maintenance charges (monthly rentals only, shown separately)
   const maintenancePaise = isMonthly && (listing.maintenanceChargePaise ?? 0) > 0 && !(listing.maintenanceIncluded)
