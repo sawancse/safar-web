@@ -263,6 +263,7 @@ export interface Booking {
   noticePeriodDays?: number;
   securityDepositPaise?: number;
   securityDepositStatus?: string;
+  pricingUnit?: 'NIGHT' | 'HOUR' | 'MONTH';
   inclusionsTotalPaise?: number;
   roomSelections?: {
     id: string;

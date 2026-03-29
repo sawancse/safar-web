@@ -596,7 +596,7 @@ export default function BookingPanel({ listing, selectedRoomType, roomSelections
             <p className="text-[10px] text-gray-400 mt-1">Minimum lease: {listing.minLeaseMonths} month{(listing.minLeaseMonths ?? 0) > 1 ? 's' : ''}</p>
           )}
 
-          {!isCommercial && effectiveRooms > 1 && (
+          {!isCommercial && !isMonthly && effectiveRooms > 1 && nights > 0 && (
             <p className="text-xs text-gray-400 text-right">
               {formatPaise(Math.round(totalPaise / nights))} avg/night for {effectiveRooms} rooms
             </p>
@@ -625,7 +625,9 @@ export default function BookingPanel({ listing, selectedRoomType, roomSelections
           ) : (
             <>
               <span className="text-xs bg-gray-100 text-gray-600 px-2.5 py-1 rounded-full">
-                {nights} night{nights > 1 ? 's' : ''}
+                {isMonthly
+                  ? `${Math.max(1, pgFullMonths)} month${pgFullMonths > 1 ? 's' : ''}${pgRemainingDays > 0 ? ` ${pgRemainingDays}d` : ''}`
+                  : `${nights} night${nights > 1 ? 's' : ''}`}
               </span>
               <span className="text-xs bg-gray-100 text-gray-600 px-2.5 py-1 rounded-full">
                 {effectiveRooms} room{effectiveRooms > 1 ? 's' : ''}

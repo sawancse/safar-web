@@ -293,6 +293,19 @@ export default function HostBookingsTab({ token: initialToken }: { token: string
             const status = STATUS_BADGE[b.status] ?? { bg: 'bg-gray-100 text-gray-600', label: b.status };
             const listing = listings[b.listingId];
             const nights = b.nights || daysBetween(b.checkIn, b.checkOut);
+            const bPricingUnit = b.pricingUnit || listing?.pricingUnit || 'NIGHT';
+            const bIsMonthly = bPricingUnit === 'MONTH';
+            const bIsHourly = bPricingUnit === 'HOUR';
+            const bFullMonths = bIsMonthly ? Math.floor(nights / 30) : 0;
+            const bRemainingDays = bIsMonthly ? nights % 30 : 0;
+            const durationLabel = bIsMonthly
+              ? `${Math.max(1, bFullMonths)} month${bFullMonths > 1 ? 's' : ''}${bRemainingDays > 0 ? ` ${bRemainingDays} day${bRemainingDays !== 1 ? 's' : ''}` : ''}`
+              : bIsHourly
+                ? `${nights} hour${nights > 1 ? 's' : ''}`
+                : `${nights} night${nights > 1 ? 's' : ''}`;
+            const perUnitPaise = bIsMonthly
+              ? (bFullMonths > 0 ? Math.round(b.baseAmountPaise / (bFullMonths + bRemainingDays / 30)) : b.baseAmountPaise)
+              : nights > 0 ? Math.round(b.baseAmountPaise / nights) : b.baseAmountPaise;
             const perNightPaise = nights > 0 ? Math.round(b.baseAmountPaise / nights) : b.baseAmountPaise;
             const hostPayout = b.hostEarningsPaise ?? b.hostPayoutPaise ?? b.baseAmountPaise;
             const effectiveRate = b.hostPayoutPaise && b.totalAmountPaise > 0
@@ -351,7 +364,7 @@ export default function HostBookingsTab({ token: initialToken }: { token: string
                     </div>
                     <div className="bg-gray-50 rounded-lg p-2.5">
                       <p className="text-xs text-gray-400 mb-0.5">Duration</p>
-                      <p className="font-semibold text-gray-800">{nights} night{nights > 1 ? 's' : ''}</p>
+                      <p className="font-semibold text-gray-800">{durationLabel}</p>
                     </div>
                     <div className="bg-gray-50 rounded-lg p-2.5">
                       <p className="text-xs text-gray-400 mb-0.5">Guests</p>
@@ -380,7 +393,12 @@ export default function HostBookingsTab({ token: initialToken }: { token: string
                 {isExpanded && (
                   <div className="border-t bg-gray-50/50 px-5 py-4 space-y-2 text-sm">
                     <div className="flex justify-between text-gray-600">
-                      <span>{formatPaise(perNightPaise)} x {nights} night{nights > 1 ? 's' : ''}</span>
+                      <span>
+                        {bIsMonthly
+                          ? <>Rent: {formatPaise(perUnitPaise)}/month x {durationLabel}</>
+                          : <>{formatPaise(perNightPaise)} x {durationLabel}</>
+                        }
+                      </span>
                       <span>{formatPaise(b.baseAmountPaise)}</span>
                     </div>
                     {(b.cleaningFeePaise ?? 0) > 0 && (
