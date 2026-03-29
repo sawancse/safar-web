@@ -48,6 +48,9 @@ export default function EditListingModal({ listing, onClose, onSaved, token }: P
   const [childrenAllowed, setChildrenAllowed] = useState(listing.childrenAllowed !== false);
   const [longTermMonthlyPaise, setLongTermMonthlyPaise] = useState(listing.longTermMonthlyPaise || 0);
   const [breakfastIncluded, setBreakfastIncluded] = useState(listing.breakfastIncluded || false);
+  const [securityDepositPaise, setSecurityDepositPaise] = useState(listing.securityDepositPaise || 0);
+  const [depositType, setDepositType] = useState(listing.depositType || 'REFUNDABLE');
+  const [depositTerms, setDepositTerms] = useState(listing.depositTerms || '');
   // Location fields
   const [addressLine1, setAddressLine1] = useState(listing.addressLine1 || '');
   const [city, setCity] = useState(listing.city || '');
@@ -75,6 +78,9 @@ export default function EditListingModal({ listing, onClose, onSaved, token }: P
         lat: lat || null, lng: lng || null,
         // Rental fields
         // Insurance
+        securityDepositPaise: securityDepositPaise > 0 ? securityDepositPaise : null,
+        depositType: securityDepositPaise > 0 ? depositType : null,
+        depositTerms: depositTerms || null,
         insuranceEnabled,
         insuranceAmountPaise: insuranceEnabled && insuranceAmountPaise > 0 ? insuranceAmountPaise : null,
         insuranceType: insuranceEnabled ? insuranceType : null,
@@ -411,6 +417,32 @@ export default function EditListingModal({ listing, onClose, onSaved, token }: P
                   </div>
                 </div>
               )}
+
+              {/* Security Deposit */}
+              <div className="border-t pt-3 mt-2">
+                <label className="block text-sm font-medium text-gray-700 mb-2">Security Deposit</label>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-medium text-gray-500 mb-1">Amount (₹)</label>
+                    <input type="number" min={0} value={securityDepositPaise > 0 ? securityDepositPaise / 100 : ''}
+                      onChange={e => setSecurityDepositPaise(Math.round(Number(e.target.value) * 100))}
+                      className="w-full border rounded-lg px-3 py-2 text-sm" placeholder="e.g. 5000" />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-500 mb-1">Deposit Type</label>
+                    <select value={depositType} onChange={e => setDepositType(e.target.value)}
+                      className="w-full border rounded-lg px-3 py-2 text-sm">
+                      <option value="REFUNDABLE">Fully Refundable</option>
+                      <option value="PARTIAL_REFUNDABLE">Partially Refundable</option>
+                      <option value="NON_REFUNDABLE">Non-Refundable</option>
+                    </select>
+                  </div>
+                </div>
+                <input type="text" value={depositTerms}
+                  onChange={e => setDepositTerms(e.target.value)}
+                  className="w-full border rounded-lg px-3 py-2 text-sm mt-2"
+                  placeholder="Deposit terms (e.g. Refunded within 7 days after checkout minus damages)" />
+              </div>
             </div>
           )}
 
