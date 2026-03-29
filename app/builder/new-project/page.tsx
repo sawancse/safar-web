@@ -255,9 +255,10 @@ export default function BuilderNewProjectPage() {
       const created = await api.createBuilderProject(projectData, token);
       const projectId = created.id;
 
-      // Add unit types
+      // Add unit types (re-read token in case it was refreshed during create)
       for (const unit of unitTypes) {
         if (!unit.name.trim()) continue;
+        const freshToken = localStorage.getItem('access_token') || token;
         const unitData: any = {
           name: unit.name,
           bhk: Number(unit.bhk),
@@ -272,7 +273,7 @@ export default function BuilderNewProjectPage() {
           furnishing: unit.furnishing || undefined,
           floorPlanUrl: unit.floorPlanPreview || undefined,
         };
-        await api.addUnitType(projectId, unitData, token);
+        await api.addUnitType(projectId, unitData, freshToken);
       }
 
       router.push(`/projects/${projectId}`);

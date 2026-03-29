@@ -1706,7 +1706,7 @@ export const api = {
     }),
 
   getMyBuilderProjects: (token: string) =>
-    apiFetch<any[]>('/api/v1/builder-projects/my', {
+    apiFetch<any[]>('/api/v1/builder-projects/my-projects', {
       headers: { Authorization: `Bearer ${token}` },
     }),
 
