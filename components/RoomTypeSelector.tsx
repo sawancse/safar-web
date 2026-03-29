@@ -126,6 +126,11 @@ export default function RoomTypeSelector({ roomTypes, perNightLabel, listingId, 
                     <span className={`text-[11px] px-1.5 py-0.5 rounded ${rt.count <= 3 ? 'bg-red-50 text-red-600' : 'bg-blue-50 text-blue-600'}`}>
                       {rt.availableCount ?? rt.count} available
                     </span>
+                    {rt.securityDepositPaise != null && rt.securityDepositPaise > 0 && (
+                      <span className="text-[11px] bg-amber-50 text-amber-700 px-1.5 py-0.5 rounded">
+                        Deposit: {formatPaise(rt.securityDepositPaise)}
+                      </span>
+                    )}
                   </div>
 
                   {/* Inclusions */}

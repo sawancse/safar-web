@@ -33,6 +33,12 @@ interface Props {
   listings: Listing[];
 }
 
+const DEPOSIT_TYPES = [
+  { value: 'REFUNDABLE', label: 'Fully Refundable' },
+  { value: 'PARTIAL_REFUNDABLE', label: 'Partially Refundable' },
+  { value: 'NON_REFUNDABLE', label: 'Non-Refundable' },
+];
+
 interface RoomTypeFormData {
   name: string;
   description: string;
@@ -46,6 +52,8 @@ interface RoomTypeFormData {
   stayMode: string;
   sharingType: string;
   roomVariant: string;
+  securityDepositRupees: string;
+  depositType: string;
   primaryPhotoUrl: string;
   photoUrls: string[];
 }
@@ -63,6 +71,8 @@ const EMPTY_FORM: RoomTypeFormData = {
   stayMode: 'NIGHTLY',
   sharingType: '',
   roomVariant: '',
+  securityDepositRupees: '',
+  depositType: 'REFUNDABLE',
   primaryPhotoUrl: '',
   photoUrls: [],
 };
@@ -139,6 +149,8 @@ export default function HostRoomTypesTab({ token, listings }: Props) {
       stayMode: rt.stayMode || 'NIGHTLY',
       sharingType: rt.sharingType || '',
       roomVariant: rt.roomVariant || '',
+      securityDepositRupees: rt.securityDepositPaise ? String(rt.securityDepositPaise / 100) : '',
+      depositType: rt.depositType || 'REFUNDABLE',
       primaryPhotoUrl: rt.primaryPhotoUrl || '',
       photoUrls: rt.photoUrls || [],
     });
@@ -184,6 +196,8 @@ export default function HostRoomTypesTab({ token, listings }: Props) {
         stayMode: form.stayMode || null,
         sharingType: form.sharingType || null,
         roomVariant: form.roomVariant || null,
+        securityDepositPaise: form.securityDepositRupees ? Math.round(Number(form.securityDepositRupees) * 100) : null,
+        depositType: form.depositType || null,
         primaryPhotoUrl: form.primaryPhotoUrl || null,
         photoUrls: form.photoUrls.length > 0 ? form.photoUrls : null,
       };
@@ -358,6 +372,15 @@ export default function HostRoomTypesTab({ token, listings }: Props) {
                   <div>
                     <span className="text-gray-400">Area:</span>{' '}
                     <span className="font-medium">{rt.areaSqft} sq ft</span>
+                  </div>
+                )}
+                {rt.securityDepositPaise != null && rt.securityDepositPaise > 0 && (
+                  <div>
+                    <span className="text-gray-400">Deposit:</span>{' '}
+                    <span className="font-medium">{formatPaise(rt.securityDepositPaise)}</span>
+                    {rt.depositType && rt.depositType !== 'REFUNDABLE' && (
+                      <span className="text-xs text-orange-500 ml-1">({rt.depositType.replace('_', ' ').toLowerCase()})</span>
+                    )}
                   </div>
                 )}
               </div>
@@ -570,6 +593,35 @@ export default function HostRoomTypesTab({ token, listings }: Props) {
                         <option value="">Select...</option>
                         {ROOM_VARIANTS.map((rv) => (
                           <option key={rv.value} value={rv.value}>{rv.label}</option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+                )}
+
+                {/* Security Deposit (PG/Co-living) */}
+                {isPgType && (
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Security Deposit (INR)</label>
+                      <input
+                        type="number"
+                        min="0"
+                        value={form.securityDepositRupees}
+                        onChange={(e) => setForm((f) => ({ ...f, securityDepositRupees: e.target.value }))}
+                        placeholder="e.g. 8000"
+                        className="w-full border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Deposit Type</label>
+                      <select
+                        value={form.depositType}
+                        onChange={(e) => setForm((f) => ({ ...f, depositType: e.target.value }))}
+                        className="w-full border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                      >
+                        {DEPOSIT_TYPES.map((dt) => (
+                          <option key={dt.value} value={dt.value}>{dt.label}</option>
                         ))}
                       </select>
                     </div>

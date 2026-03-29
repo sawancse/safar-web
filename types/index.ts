@@ -165,6 +165,8 @@ export interface RoomType {
   roomVariant?: 'AC' | 'NON_AC' | 'FURNISHED' | 'SEMI_FURNISHED';
   totalBeds?: number;
   occupiedBeds?: number;
+  securityDepositPaise?: number;
+  depositType?: 'REFUNDABLE' | 'PARTIAL_REFUNDABLE' | 'NON_REFUNDABLE';
   primaryPhotoUrl?: string;
   photoUrls?: string[];
   inclusions?: RoomTypeInclusion[];
