@@ -218,9 +218,9 @@ export default function ProjectDetailPage() {
       const token = typeof window !== 'undefined' ? localStorage.getItem('access_token') : null;
       await (api as any).createInquiry({
         builderProjectId: id,
-        name: inquiryName,
-        phone: inquiryPhone,
-        email: inquiryEmail,
+        buyerName: inquiryName,
+        buyerPhone: inquiryPhone,
+        buyerEmail: inquiryEmail,
         message: inquiryMessage,
       }, token);
       setInquirySuccess(true);
