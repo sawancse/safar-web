@@ -883,10 +883,22 @@ export default function BookPage() {
                     selectedRoomSelections.map(sel => {
                       const rt = roomTypes.find(r => r.id === sel.id);
                       const price = rt?.basePricePaise ?? 0;
-                      const lineTotal = price * sel.c * nights;
+                      let lineTotal = 0;
+                      let lineDuration = '';
+                      if (isMonthly) {
+                        const prorated = remainingDays > 0 ? Math.round(price * remainingDays / 30) : 0;
+                        lineTotal = (price * fullMonths + prorated) * sel.c;
+                        lineDuration = `${fullMonths} month${fullMonths !== 1 ? 's' : ''}${remainingDays > 0 ? ` + ${remainingDays} day${remainingDays !== 1 ? 's' : ''}` : ''}`;
+                      } else if (isHourly) {
+                        lineTotal = price * sel.c * hours;
+                        lineDuration = `${hours} hour${hours !== 1 ? 's' : ''}`;
+                      } else {
+                        lineTotal = price * sel.c * nights;
+                        lineDuration = `${nights} night${nights > 1 ? 's' : ''}`;
+                      }
                       return (
                         <div key={sel.id} className="flex justify-between text-gray-600">
-                          <span>{sel.c}x {rt?.name ?? 'Room'} — {formatPaise(price)} x {nights} night{nights > 1 ? 's' : ''}</span>
+                          <span>{sel.c}x {rt?.name ?? 'Room'} — {formatPaise(price)} x {lineDuration}</span>
                           <span>{formatPaise(lineTotal)}</span>
                         </div>
                       );
@@ -978,9 +990,9 @@ export default function BookPage() {
                   Notice period: {listing.noticePeriodDays} days
                 </p>
               )}
-              {!booking && rooms > 1 && !isPG && (
+              {!booking && rooms > 1 && !isPG && !isMonthly && (
                 <p className="text-xs text-gray-400 text-right">
-                  {formatPaise(Math.round(totalPaise / nights))} avg per night for {rooms} rooms
+                  {formatPaise(Math.round(totalPaise / (isHourly ? hours : nights)))} avg per {unitLabel} for {rooms} rooms
                 </p>
               )}
               {securityDepositPaise > 0 ? (
