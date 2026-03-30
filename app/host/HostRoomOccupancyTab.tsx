@@ -51,7 +51,7 @@ export default function HostRoomOccupancyTab({ token, listings }: { token: strin
 
   // Filter PG/hostel listings only
   const pgListings = listings.filter(l =>
-    ['PG', 'HOSTEL', 'CO_LIVING', 'DORMITORY'].includes(l.type)
+    ['PG', 'COLIVING', 'HOSTEL_DORM', 'HOTEL', 'BUDGET_HOTEL'].includes(l.type)
   );
 
   useEffect(() => {
