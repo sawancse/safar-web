@@ -110,20 +110,35 @@ export default function EventBookingPage() {
     setSubmitting(true);
     setError('');
     try {
+      const addOnsJson = JSON.stringify({
+        decoration: selectedAddons.has('decoration'),
+        cake: selectedAddons.has('cake'),
+        crockery: selectedAddons.has('crockery'),
+        appliances: selectedAddons.has('appliances'),
+        tableSetup: selectedAddons.has('table_setup'),
+        liveCounters: [...selectedCounters],
+        extraStaff, staffCount: extraStaff ? staffCount : 0,
+        vegNonVeg,
+      });
       await api.createEventBooking({
         chefId: chefId || undefined,
-        eventType, eventDate, eventTime, durationHours, guestCount,
-        venueAddress, city, pincode, cuisineType, vegNonVeg, specialRequests,
-        customerName, customerPhone,
-        addOns: {
-          decoration: selectedAddons.has('decoration'),
-          cake: selectedAddons.has('cake'),
-          crockery: selectedAddons.has('crockery'),
-          appliances: selectedAddons.has('appliances'),
-          tableSetup: selectedAddons.has('table_setup'),
-          liveCounters: [...selectedCounters],
-          extraStaff, staffCount: extraStaff ? staffCount : 0,
-        },
+        eventType,
+        eventDate,
+        eventTime,
+        durationHours,
+        guestCount,
+        venueAddress,
+        city,
+        pincode,
+        cuisinePreferences: cuisineType,
+        decorationRequired: selectedAddons.has('decoration'),
+        cakeRequired: selectedAddons.has('cake'),
+        staffRequired: extraStaff,
+        staffCount: extraStaff ? staffCount : 0,
+        specialRequests,
+        customerName,
+        customerPhone,
+        menuDescription: addOnsJson,
       }, token);
       router.push('/cooks/my-bookings');
     } catch (err: any) {
