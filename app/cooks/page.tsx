@@ -312,18 +312,18 @@ export default function CooksPage() {
           <h2 className="text-2xl font-bold text-gray-900 text-center mb-10">How It Works</h2>
           <div className="grid grid-cols-1 sm:grid-cols-4 gap-8">
             {[
-              { step: '1', title: 'Choose Service', desc: 'Daily cook, chef for a night, or event catering', icon: '📋' },
-              { step: '2', title: 'Pick Your Cook', desc: 'Browse verified profiles, menus & reviews', icon: '👨‍🍳' },
-              { step: '3', title: 'Book & Customize', desc: 'Select menu, date, and add-ons', icon: '📅' },
-              { step: '4', title: 'Enjoy!', desc: 'Chef arrives, cooks & serves at your place', icon: '🍽️' },
+              { step: '1', title: 'Choose Service', desc: 'Daily cook, chef for a night, or event catering', icon: '📋', href: '#chefs' },
+              { step: '2', title: 'Pick Your Cook', desc: 'Browse verified profiles, menus & reviews', icon: '👨‍🍳', href: '#chefs' },
+              { step: '3', title: 'Book & Customize', desc: 'Select menu, date, and add-ons', icon: '📅', href: '/cooks/events' },
+              { step: '4', title: 'Enjoy!', desc: 'Chef arrives, cooks & serves at your place', icon: '🍽️', href: '/cooks/my-bookings' },
             ].map(s => (
-              <div key={s.step} className="text-center">
-                <div className="w-16 h-16 bg-orange-100 rounded-2xl flex items-center justify-center text-3xl mx-auto mb-3">
+              <Link key={s.step} href={s.href} className="text-center group">
+                <div className="w-16 h-16 bg-orange-100 rounded-2xl flex items-center justify-center text-3xl mx-auto mb-3 group-hover:bg-orange-200 group-hover:scale-110 transition-all">
                   {s.icon}
                 </div>
-                <h3 className="font-bold text-gray-900">{s.title}</h3>
+                <h3 className="font-bold text-gray-900 group-hover:text-orange-600 transition">{s.title}</h3>
                 <p className="text-sm text-gray-500 mt-1">{s.desc}</p>
-              </div>
+              </Link>
             ))}
           </div>
         </div>
