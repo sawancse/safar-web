@@ -217,19 +217,6 @@ export default function AccountPage() {
       <div className="flex flex-col lg:flex-row gap-8">
         {/* Sidebar */}
         <div className="lg:w-64 shrink-0">
-          {/* Avatar card */}
-          <div className="border rounded-2xl p-5 mb-4 text-center">
-            {avatarSrc ? (
-              <img src={avatarSrc} alt={profile.name} className="w-16 h-16 rounded-full object-cover mx-auto mb-3" />
-            ) : (
-              <div className="w-16 h-16 rounded-full bg-orange-500 text-white flex items-center justify-center text-xl font-bold mx-auto mb-3">
-                {initials}
-              </div>
-            )}
-            <p className="font-semibold text-sm">{profile.name || 'Traveller'}</p>
-            <p className="text-xs text-gray-400 capitalize">{(profile.role || 'guest').toLowerCase()}</p>
-          </div>
-
           {/* Nav */}
           <nav className="border rounded-2xl overflow-hidden">
             {SIDEBAR_ITEMS.map((item) => (
