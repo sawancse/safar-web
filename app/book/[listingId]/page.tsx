@@ -187,7 +187,7 @@ export default function BookPage() {
   // GST: only for commercial stays, NOT residential rent (monthly or otherwise)
   const isCommercial = listing?.type === 'COMMERCIAL';
   const gstPaise = isCommercial && !isMonthly ? Math.round(roomSubtotalPaise * 0.18) : 0;
-  const totalPaise = roomSubtotalPaise + cleaningFeePaise + gstPaise + maintenancePaise + insurancePaise;
+  const totalPaise = roomSubtotalPaise + cleaningFeePaise + gstPaise + maintenancePaise + insurancePaise + securityDepositPaise;
 
   // Unit labels
   const unitLabel = isMonthly ? 'month' : isHourly ? 'hour' : 'night';
@@ -198,7 +198,10 @@ export default function BookPage() {
       ? `${hours} hour${hours !== 1 ? 's' : ''}`
       : `${nights} night${nights > 1 ? 's' : ''}`;
 
-  const isFormValid = firstName.trim() && lastName.trim() && email.trim() && phone.trim() && (isMonthly ? leaseMonths > 0 : isHourly ? hours > 0 : nights > 0);
+  // Room type is required for PG/hotel listings that have room types defined
+  const needsRoomType = roomTypes.length > 0 && selectedRoomSelections.length === 0;
+  const roomTypeSelected = !needsRoomType || selectedRoomType != null;
+  const isFormValid = firstName.trim() && lastName.trim() && email.trim() && phone.trim() && (isMonthly ? leaseMonths > 0 : isHourly ? hours > 0 : nights > 0) && roomTypeSelected;
 
   const guestLabel = [
     `${adults} adult${adults !== 1 ? 's' : ''}`,
@@ -551,6 +554,9 @@ export default function BookPage() {
           {error && <div className="bg-red-50 text-red-600 rounded-xl px-4 py-3 text-sm">{error}</div>}
 
           {/* Action button */}
+          {needsRoomType && !selectedRoomType && (
+            <p className="text-xs text-red-500 font-medium text-center mb-2">Please select a room type above to continue</p>
+          )}
           {!booking ? (
             <button onClick={handleCreateBooking} disabled={loading || !isFormValid}
               className="w-full bg-orange-500 hover:bg-orange-600 text-white font-semibold py-3 rounded-xl disabled:opacity-50 transition">
@@ -1003,20 +1009,15 @@ export default function BookPage() {
                     <p className="text-[10px] text-gray-400">Residential rent is GST-exempt</p>
                   )}
                   <div className="flex justify-between font-bold text-base border-t pt-2">
-                    <span>Estimated {isMonthly ? 'Rent' : 'Total'}</span>
+                    <span>Total Payable</span>
                     <span>{formatPaise(totalPaise)}</span>
                   </div>
                   {securityDepositPaise > 0 && (
-                    <div className="mt-2 p-2.5 bg-amber-50 border border-amber-200 rounded-lg">
-                      <div className="flex justify-between text-sm">
-                        <span className="text-amber-800 font-medium">Security Deposit</span>
-                        <span className="text-amber-800 font-bold">{formatPaise(securityDepositPaise)}</span>
-                      </div>
-                      <p className="text-[10px] text-amber-600 mt-0.5">
-                        {listing?.depositType === 'REFUNDABLE' ? 'Fully refundable at move-out' :
-                         listing?.depositType === 'PARTIAL_REFUNDABLE' ? 'Partially refundable (minus damages)' : 'Non-refundable'}
-                      </p>
-                    </div>
+                    <p className="text-[10px] text-gray-400 mt-1">
+                      Includes {formatPaise(securityDepositPaise)} security deposit
+                      ({listing?.depositType === 'REFUNDABLE' ? 'fully refundable at move-out' :
+                        listing?.depositType === 'PARTIAL_REFUNDABLE' ? 'partially refundable' : 'non-refundable'})
+                    </p>
                   )}
                 </>
               )}

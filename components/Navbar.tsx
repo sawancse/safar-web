@@ -47,7 +47,13 @@ export default function Navbar() {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
+  const [isImpersonated, setIsImpersonated] = useState(false);
+  useEffect(() => {
+    setIsImpersonated(localStorage.getItem('impersonated') === 'true');
+  }, [pathname]);
+
   function handleLogout() {
+    const wasImpersonated = localStorage.getItem('impersonated') === 'true';
     localStorage.removeItem('access_token');
     localStorage.removeItem('refresh_token');
     localStorage.removeItem('user_id');
@@ -56,11 +62,16 @@ export default function Navbar() {
     localStorage.removeItem('user_avatar');
     localStorage.removeItem('last_login_phone');
     localStorage.removeItem('last_login_email');
+    localStorage.removeItem('impersonated');
     document.cookie = 'access_token=; path=/; max-age=0';
     setIsLoggedIn(false);
     setMenuOpen(false);
     setUserMenuOpen(false);
-    router.push('/');
+    if (wasImpersonated) {
+      window.close(); // close the impersonation tab
+    } else {
+      router.push('/');
+    }
   }
 
   const initials = userName
@@ -112,6 +123,13 @@ export default function Navbar() {
   );
 
   return (
+    <>
+    {isImpersonated && (
+      <div className="bg-red-600 text-white text-center text-xs py-1.5 font-semibold tracking-wide">
+        Admin Support Mode — Viewing as {userName || 'Host'}
+        <button onClick={handleLogout} className="ml-4 underline hover:no-underline">Exit</button>
+      </div>
+    )}
     <nav className={`sticky top-0 z-50 border-b shadow-sm ${isInHostMode ? 'bg-gray-900' : 'bg-white'}`}>
       <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
         {/* Logo */}
@@ -480,5 +498,6 @@ export default function Navbar() {
         </div>
       )}
     </nav>
+    </>
   );
 }

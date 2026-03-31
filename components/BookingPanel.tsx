@@ -174,7 +174,8 @@ export default function BookingPanel({ listing, selectedRoomType, roomSelections
   const insurancePaise = listing.insuranceEnabled && (listing.insuranceAmountPaise ?? 0) > 0
     ? (listing.insuranceAmountPaise ?? 0) : 0;
 
-  const totalPaise = discountedBase + gstPaise + insurancePaise;
+  const depositPaise = listing.securityDepositPaise ?? 0;
+  const totalPaise = discountedBase + gstPaise + insurancePaise + depositPaise + maintenancePaise;
 
   const canBook = isCommercial
     ? (bookingDate && hours >= minHours)
@@ -559,6 +560,14 @@ export default function BookingPanel({ listing, selectedRoomType, roomSelections
             </div>
           )}
 
+          {/* Security deposit */}
+          {depositPaise > 0 && (
+            <div className="flex justify-between text-gray-500">
+              <span>Security deposit</span>
+              <span>{formatPaise(depositPaise)}</span>
+            </div>
+          )}
+
           {/* No GST note for residential */}
           {isMonthly && !isCommercial && !listing.gstApplicable && (
             <div className="text-[10px] text-gray-400">
@@ -568,23 +577,16 @@ export default function BookingPanel({ listing, selectedRoomType, roomSelections
 
           {/* Total */}
           <div className="flex justify-between font-bold border-t pt-2 text-base">
-            <span>Total {isMonthly ? 'Rent' : ''}</span>
-            <span>{formatPaise(totalPaise + maintenancePaise)}</span>
+            <span>Total Payable</span>
+            <span>{formatPaise(totalPaise)}</span>
           </div>
 
-          {(listing.securityDepositPaise ?? 0) > 0 && (
-            <div className="mt-2 p-2.5 bg-amber-50 border border-amber-200 rounded-lg">
-              <div className="flex justify-between text-sm">
-                <span className="text-amber-800 font-medium">Security Deposit</span>
-                <span className="text-amber-800 font-bold">{formatPaise(listing.securityDepositPaise ?? 0)}</span>
-              </div>
-              <p className="text-[10px] text-amber-600 mt-0.5">
-                {listing.depositType === 'REFUNDABLE' ? 'Fully refundable at checkout' :
-                 listing.depositType === 'PARTIAL_REFUNDABLE' ? 'Partially refundable (minus damages)' :
-                 'Non-refundable'}
-                {listing.depositTerms ? ` · ${listing.depositTerms}` : ''}
-              </p>
-            </div>
+          {depositPaise > 0 && (
+            <p className="text-[10px] text-gray-400 mt-1">
+              Includes {formatPaise(depositPaise)} security deposit
+              ({listing.depositType === 'REFUNDABLE' ? 'fully refundable at checkout' :
+                listing.depositType === 'PARTIAL_REFUNDABLE' ? 'partially refundable' : 'non-refundable'})
+            </p>
           )}
 
           {(listing.maintenanceChargePaise ?? 0) > 0 && (

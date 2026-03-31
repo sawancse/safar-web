@@ -319,17 +319,19 @@ export default function HostBookingsTab({ token: initialToken }: { token: string
                 <div className="p-5">
                   <div className="flex items-start justify-between gap-3 mb-4">
                     <div className="flex-1 min-w-0">
-                      {/* Listing name */}
-                      {listing ? (
-                        <Link href={`/listings/${b.listingId}`}
-                          className="text-sm font-semibold text-orange-600 hover:underline truncate block">
-                          {listing.title}
-                        </Link>
-                      ) : (
-                        <p className="text-sm font-semibold text-gray-600 truncate">Listing</p>
+                      {/* Property name */}
+                      <Link href={`/listings/${b.listingId}`}
+                        className="text-sm font-semibold text-orange-600 hover:underline truncate block">
+                        {listing?.title || b.listingTitle || 'Unknown Property'}
+                      </Link>
+                      {/* Room type (if applicable) */}
+                      {b.roomTypeName && (
+                        <p className="text-xs text-gray-500 mt-0.5">{b.roomTypeName}{b.roomsCount && b.roomsCount > 1 ? ` x${b.roomsCount}` : ''}</p>
                       )}
-                      {/* Booking ref */}
-                      <p className="text-xs font-mono text-gray-400 mt-0.5">#{b.bookingRef}</p>
+                      {/* Booking ref + creation date */}
+                      <p className="text-xs font-mono text-gray-400 mt-0.5">
+                        #{b.bookingRef} &middot; Booked {fmtDateFull(b.createdAt)}
+                      </p>
                     </div>
                     <span className={`text-xs font-semibold px-2.5 py-1 rounded-full whitespace-nowrap ${status.bg}`}>
                       {status.label}
@@ -419,6 +421,12 @@ export default function HostBookingsTab({ token: initialToken }: { token: string
                         <span>{formatPaise(b.insuranceAmountPaise)}</span>
                       </div>
                     )}
+                    {(b.securityDepositPaise ?? 0) > 0 && (
+                      <div className="flex justify-between text-gray-600">
+                        <span>Security deposit</span>
+                        <span>{formatPaise(b.securityDepositPaise!)}</span>
+                      </div>
+                    )}
                     <div className="flex justify-between text-gray-600 border-t pt-2">
                       <span>Guest pays</span>
                       <span className="font-semibold">{formatPaise(b.totalAmountPaise)}</span>
@@ -451,9 +459,6 @@ export default function HostBookingsTab({ token: initialToken }: { token: string
                         <span>{formatPaise(hostPayout)}</span>
                       </div>
                     )}
-                    <p className="text-xs text-gray-400 pt-1">
-                      Booked {fmtDateFull(b.createdAt)}
-                    </p>
                   </div>
                 )}
 

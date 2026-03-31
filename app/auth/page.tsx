@@ -132,6 +132,28 @@ export default function AuthPage() {
   const [pendingAuth, setPendingAuth] = useState<any>(null);
   const [failedAttempts, setFailedAttempts] = useState(0);
 
+  // -- Admin impersonation: handle tokens from admin portal --
+  useEffect(() => {
+    if (searchParams.get('impersonate') === 'true') {
+      const accessToken = searchParams.get('token');
+      const refreshToken = searchParams.get('refreshToken');
+      const userId = searchParams.get('userId');
+      const userName = searchParams.get('name');
+      const role = searchParams.get('role');
+      if (accessToken && refreshToken && userId) {
+        localStorage.setItem('access_token', accessToken);
+        localStorage.setItem('refresh_token', refreshToken);
+        localStorage.setItem('user_id', userId);
+        localStorage.setItem('user_role', role || 'HOST');
+        localStorage.setItem('user_name', userName || '');
+        localStorage.setItem('impersonated', 'true');
+        document.cookie = `access_token=${accessToken}; path=/; max-age=${30 * 24 * 60 * 60}; SameSite=Lax`;
+        router.push('/host');
+        return;
+      }
+    }
+  }, [searchParams, router]);
+
   // -- Check trusted device on mount --
   const [checkingDevice, setCheckingDevice] = useState(false);
 
