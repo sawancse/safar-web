@@ -1679,7 +1679,7 @@ export const api = {
   /* ── Builder Projects ────────────────────────────────────── */
 
   searchBuilderProjects: (params: Record<string, string>) =>
-    apiFetch<any>(`/api/v1/builder-projects/search?${new URLSearchParams(params)}`),
+    apiFetch<any>(`/api/v1/search/builder-projects?${new URLSearchParams(params)}`),
 
   getBuilderProject: (id: string) =>
     apiFetch<any>(`/api/v1/builder-projects/${id}`),
