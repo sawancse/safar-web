@@ -606,6 +606,56 @@ export const api = {
       headers: { Authorization: `Bearer ${token}` },
     }),
 
+  /* ── Donations (Aashray) ──────────────────────────────────── */
+  createDonation: (data: {
+    amountPaise: number;
+    frequency?: string;
+    donorName?: string;
+    donorEmail?: string;
+    donorPhone?: string;
+    donorPan?: string;
+    dedicatedTo?: string;
+    dedicationMessage?: string;
+    campaignCode?: string;
+  }, token?: string) =>
+    apiFetch<{
+      donationRef: string;
+      razorpayOrderId: string | null;
+      razorpaySubscriptionId: string | null;
+      amountPaise: number;
+      currency: string;
+      razorpayKeyId: string;
+      frequency: string;
+    }>('/api/v1/donations', {
+      method: 'POST',
+      body: JSON.stringify(data),
+      ...(token ? { headers: { Authorization: `Bearer ${token}` } } : {}),
+    }),
+
+  verifyDonation: (data: {
+    razorpayOrderId: string;
+    razorpayPaymentId: string;
+    razorpaySignature: string;
+  }, token?: string) =>
+    apiFetch<any>('/api/v1/donations/verify', {
+      method: 'POST',
+      body: JSON.stringify(data),
+      ...(token ? { headers: { Authorization: `Bearer ${token}` } } : {}),
+    }),
+
+  getDonationStats: () =>
+    apiFetch<{
+      totalRaisedPaise: number;
+      goalPaise: number;
+      totalDonors: number;
+      familiesHoused: number;
+      monthlyDonors: number;
+      progressPercent: number;
+      activeCampaign: string | null;
+      campaignTagline: string | null;
+      recentDonors: { name: string; amountPaise: number; city: string | null; minutesAgo: number }[];
+    }>('/api/v1/donations/stats'),
+
   /* ── Reviews ──────────────────────────────────────────────── */
   getListingReviews: async (listingId: string): Promise<Review[]> => {
     const raw = await apiFetch<any>(`/api/v1/reviews/listing/${listingId}?size=50&sort=createdAt,desc`);
