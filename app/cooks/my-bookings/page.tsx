@@ -6,6 +6,7 @@ import { api } from '@/lib/api';
 import { formatPaise } from '@/lib/utils';
 
 const STATUS_COLORS: Record<string, string> = {
+  PENDING_PAYMENT: 'bg-amber-100 text-amber-700',
   PENDING: 'bg-yellow-100 text-yellow-700',
   CONFIRMED: 'bg-blue-100 text-blue-700',
   IN_PROGRESS: 'bg-purple-100 text-purple-700',
@@ -18,6 +19,12 @@ const STATUS_COLORS: Record<string, string> = {
   INQUIRY: 'bg-yellow-100 text-yellow-700',
   QUOTED: 'bg-blue-100 text-blue-700',
   ADVANCE_PAID: 'bg-indigo-100 text-indigo-700',
+};
+
+const PAYMENT_STATUS_LABELS: Record<string, { label: string; color: string }> = {
+  UNPAID: { label: 'Unpaid', color: 'text-red-600' },
+  ADVANCE_PAID: { label: '10% Advance Paid', color: 'text-green-600' },
+  FULLY_PAID: { label: 'Fully Paid', color: 'text-green-700' },
 };
 
 export default function MyChefBookingsPage() {
@@ -93,7 +100,9 @@ export default function MyChefBookingsPage() {
             <div className="space-y-4">
               {bookings.length === 0 ? (
                 <p className="text-center text-gray-400 py-12">No bookings yet</p>
-              ) : bookings.map(b => (
+              ) : bookings.map(b => {
+                const ps = PAYMENT_STATUS_LABELS[b.paymentStatus] || PAYMENT_STATUS_LABELS['UNPAID'];
+                return (
                 <div key={b.id} className="border rounded-xl p-4">
                   <div className="flex items-start justify-between">
                     <div>
@@ -102,12 +111,32 @@ export default function MyChefBookingsPage() {
                       <p className="text-xs text-gray-500">{b.mealType} | {b.guestsCount} guests | {b.address}</p>
                     </div>
                     <div className="text-right">
-                      <span className={`text-xs px-2 py-1 rounded-full font-medium ${STATUS_COLORS[b.status] || 'bg-gray-100'}`}>{b.status}</span>
+                      <span className={`text-xs px-2 py-1 rounded-full font-medium ${STATUS_COLORS[b.status] || 'bg-gray-100'}`}>
+                        {b.status === 'PENDING_PAYMENT' ? 'Awaiting Payment' : b.status}
+                      </span>
                       {b.totalAmountPaise > 0 && <p className="text-sm font-bold mt-1">{formatPaise(b.totalAmountPaise)}</p>}
                     </div>
                   </div>
+                  {/* Payment breakdown */}
+                  {b.totalAmountPaise > 0 && b.advanceAmountPaise > 0 && (
+                    <div className="mt-2 bg-gray-50 rounded-lg px-3 py-2 flex items-center justify-between text-xs">
+                      <div className="flex gap-4">
+                        <span className={`font-medium ${ps.color}`}>{ps.label}</span>
+                        {b.paymentStatus === 'ADVANCE_PAID' && (
+                          <span className="text-gray-500">Advance: {formatPaise(b.advanceAmountPaise)}</span>
+                        )}
+                      </div>
+                      {b.balanceAmountPaise > 0 && b.paymentStatus !== 'FULLY_PAID' && (
+                        <span className="text-orange-600 font-medium">Balance due: {formatPaise(b.balanceAmountPaise)}</span>
+                      )}
+                    </div>
+                  )}
                   <div className="flex gap-2 mt-3">
-                    {b.status === 'PENDING' && (
+                    {b.status === 'PENDING_PAYMENT' && (
+                      <button onClick={() => router.push(`/cooks/book?chefId=${b.chefId}&type=DAILY&resumeBookingId=${b.id}`)}
+                        className="text-xs text-green-600 border border-green-200 px-3 py-1 rounded-lg hover:bg-green-50">Complete Payment</button>
+                    )}
+                    {(b.status === 'PENDING' || b.status === 'PENDING_PAYMENT') && (
                       <button onClick={() => handleCancel(b.id)} className="text-xs text-red-600 border border-red-200 px-3 py-1 rounded-lg hover:bg-red-50">Cancel</button>
                     )}
                     {b.status === 'COMPLETED' && !b.ratingGiven && (
@@ -117,7 +146,8 @@ export default function MyChefBookingsPage() {
                     {b.ratingGiven && <span className="text-xs text-gray-500">{'★'.repeat(b.ratingGiven)} Rated</span>}
                   </div>
                 </div>
-              ))}
+                );
+              })}
             </div>
           )}
 

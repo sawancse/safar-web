@@ -272,18 +272,10 @@ export default function HostPage() {
     if (!confirm('Unpublish this listing? It will go back to DRAFT and you\'ll need to re-verify to go live again.')) return;
     setActionLoading(listingId);
     try {
-      const res = await fetch(`${uploadUrl}/api/v1/listings/${listingId}/unpublish`, {
-        method: 'POST', headers: getAuthHeaders(),
-      });
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
-        alert(err.detail || err.message || 'Failed to unpublish');
-        return;
-      }
-      const updated = await res.json();
+      const updated = await api.unpublishListing(listingId, localStorage.getItem('access_token') || token);
       setListings((prev) => prev.map((l) => (l.id === listingId ? updated : l)));
-    } catch {
-      alert('Failed to unpublish listing');
+    } catch (e: any) {
+      alert(e.message || 'Failed to unpublish listing');
     } finally {
       setActionLoading(null);
     }
@@ -292,18 +284,10 @@ export default function HostPage() {
   async function handleSubmitForVerification(listingId: string) {
     setActionLoading(listingId);
     try {
-      const res = await fetch(`${uploadUrl}/api/v1/listings/${listingId}/submit`, {
-        method: 'POST', headers: getAuthHeaders(),
-      });
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
-        alert(err.detail || err.message || 'Failed to submit');
-        return;
-      }
-      const updated = await res.json();
+      const updated = await api.submitForVerification(listingId, localStorage.getItem('access_token') || token);
       setListings((prev) => prev.map((l) => (l.id === listingId ? updated : l)));
-    } catch {
-      alert('Failed to submit for verification');
+    } catch (e: any) {
+      alert(e.message || 'Failed to submit for verification');
     } finally {
       setActionLoading(null);
     }

@@ -33,77 +33,95 @@ const AMENITY_ICONS: Record<string, string> = {
 
 interface UnitType {
   id: string;
+  projectId?: string;
   name: string;
   bhk: number;
-  areaSqft: number;
   carpetAreaSqft?: number;
+  builtUpAreaSqft?: number;
+  superBuiltUpAreaSqft?: number;
   basePricePaise: number;
   floorRisePaise?: number;
   facingPremiumPaise?: number;
+  premiumFloorsFrom?: number;
   totalUnits: number;
   availableUnits?: number;
   bathrooms?: number;
   balconies?: number;
   furnishing?: string;
   floorPlanUrl?: string;
+  unitLayoutUrl?: string;
+  photos?: string[];
+  pricePerSqftPaise?: number;
 }
 
 interface ConstructionUpdate {
   id: string;
+  projectId?: string;
   title: string;
   description?: string;
   progressPercent: number;
-  photoUrls?: string[];
+  photos?: string[];
   createdAt: string;
 }
 
 interface BuilderProject {
   id: string;
+  builderId?: string;
   projectName: string;
   tagline?: string;
   description?: string;
   builderName: string;
   builderLogoUrl?: string;
-  builderVerified?: boolean;
+  verified?: boolean;
   city: string;
   state?: string;
   locality?: string;
   address?: string;
   pincode?: string;
-  latitude?: number;
-  longitude?: number;
+  lat?: number;
+  lng?: number;
   minPricePaise: number;
   maxPricePaise: number;
   minBhk: number;
   maxBhk: number;
+  minAreaSqft?: number;
+  maxAreaSqft?: number;
   possessionDate?: string;
   launchDate?: string;
-  constructionProgress: number;
+  constructionProgressPercent: number;
   projectStatus: string;
   reraId?: string;
   reraVerified?: boolean;
   totalTowers?: number;
   totalUnits?: number;
-  totalFloors?: number;
+  totalFloorsMax?: number;
   availableUnits?: number;
-  landAreaAcres?: number;
+  landAreaSqft?: number;
+  projectAreaSqft?: number;
   amenities?: string[];
   bankApprovals?: string[];
-  photoUrls?: string[];
-  primaryPhotoUrl?: string;
+  photos?: string[];
   masterPlanUrl?: string;
   brochureUrl?: string;
-  walkthroughVideoUrl?: string;
+  walkthroughUrl?: string;
   paymentPlansJson?: string;
+  status?: string;
+  viewsCount?: number;
+  inquiriesCount?: number;
+  unitTypes?: UnitType[];
 }
 
 interface PriceBreakdown {
-  basePrice: number;
-  floorRise: number;
-  facingPremium: number;
-  totalPrice: number;
-  pricePerSqft: number;
-  emiEstimate: number;
+  unitTypeName?: string;
+  bhk?: number;
+  basePricePaise: number;
+  floor?: number;
+  floorRisePaise: number;
+  preferredFacing?: boolean;
+  facingPremiumPaise: number;
+  totalPricePaise: number;
+  pricePerSqftPaise: number;
+  estimatedEmiPaise: number;
 }
 
 interface SimilarProject {
@@ -117,7 +135,7 @@ interface SimilarProject {
   minBhk: number;
   maxBhk: number;
   primaryPhotoUrl?: string;
-  constructionProgress: number;
+  constructionProgressPercent: number;
 }
 
 export default function ProjectDetailPage() {
@@ -139,7 +157,7 @@ export default function ProjectDetailPage() {
   /* Price calculator */
   const [calcUnitTypeId, setCalcUnitTypeId] = useState('');
   const [calcFloor, setCalcFloor] = useState('5');
-  const [calcFacing, setCalcFacing] = useState('East');
+  const [calcPreferredFacing, setCalcPreferredFacing] = useState(false);
   const [priceBreakdown, setPriceBreakdown] = useState<PriceBreakdown | null>(null);
   const [calcLoading, setCalcLoading] = useState(false);
 
@@ -165,6 +183,10 @@ export default function ProjectDetailPage() {
       try {
         const proj = await api.getBuilderProject(id);
         setProject(proj);
+        // Use embedded unitTypes from project response as initial data
+        if (proj.unitTypes && proj.unitTypes.length > 0) {
+          setUnitTypes(proj.unitTypes);
+        }
       } catch {
         setError(true);
       } finally {
@@ -174,8 +196,10 @@ export default function ProjectDetailPage() {
     (async () => {
       try {
         const types = await api.getUnitTypes(id);
-        setUnitTypes(types || []);
-      } catch { setUnitTypes([]); }
+        if (types && types.length > 0) {
+          setUnitTypes(types);
+        }
+      } catch { /* fallback to unitTypes from project response */ }
     })();
     (async () => {
       try {
@@ -202,7 +226,7 @@ export default function ProjectDetailPage() {
     if (!calcUnitTypeId) return;
     setCalcLoading(true);
     try {
-      const res = await api.calculateUnitPrice(calcUnitTypeId, Number(calcFloor) || 1, calcFacing);
+      const res = await api.calculateUnitPrice(calcUnitTypeId, Number(calcFloor) || 1, calcPreferredFacing);
       setPriceBreakdown(res);
     } catch {
       alert('Failed to calculate price. Please try again.');
@@ -231,7 +255,7 @@ export default function ProjectDetailPage() {
     }
   }
 
-  const photos = project?.photoUrls || (project?.primaryPhotoUrl ? [project.primaryPhotoUrl] : []);
+  const photos = project?.photos || [];
   const paymentPlans = useMemo(() => {
     if (!project?.paymentPlansJson) return [];
     try { return JSON.parse(project.paymentPlansJson); } catch { return []; }
@@ -357,7 +381,7 @@ export default function ProjectDetailPage() {
                 <div>
                   <div className="flex items-center gap-2">
                     <span className="font-medium text-gray-700">{project.builderName}</span>
-                    {project.builderVerified && (
+                    {project.verified && (
                       <span className="bg-blue-100 text-blue-700 text-xs px-2 py-0.5 rounded-full font-medium flex items-center gap-1">
                         <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
                           <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
@@ -408,9 +432,9 @@ export default function ProjectDetailPage() {
                 { label: 'Towers', value: project.totalTowers || '-', icon: '🏢' },
                 { label: 'Total Units', value: project.totalUnits || '-', icon: '🏠' },
                 { label: 'Available', value: project.availableUnits ?? '-', icon: '✅' },
-                { label: 'Floors', value: project.totalFloors || '-', icon: '📐' },
+                { label: 'Floors', value: project.totalFloorsMax || '-', icon: '📐' },
                 { label: 'Possession', value: project.possessionDate ? new Date(project.possessionDate).toLocaleDateString('en-IN', { month: 'short', year: 'numeric' }) : '-', icon: '📅' },
-                { label: 'Progress', value: `${project.constructionProgress}%`, icon: '🏗️' },
+                { label: 'Progress', value: `${project.constructionProgressPercent}%`, icon: '🏗️' },
               ].map(stat => (
                 <div key={stat.label} className="bg-white rounded-xl p-3 text-center shadow-sm border border-gray-100">
                   <div className="text-xl mb-1">{stat.icon}</div>
@@ -426,12 +450,12 @@ export default function ProjectDetailPage() {
               <div className="relative">
                 <div className="flex items-center justify-between mb-2">
                   <span className="text-sm text-gray-500">Overall Completion</span>
-                  <span className="text-2xl font-bold text-orange-600">{project.constructionProgress}%</span>
+                  <span className="text-2xl font-bold text-orange-600">{project.constructionProgressPercent}%</span>
                 </div>
                 <div className="w-full bg-gray-200 rounded-full h-4">
                   <div
                     className="bg-gradient-to-r from-orange-400 via-orange-500 to-orange-600 h-4 rounded-full transition-all duration-1000 ease-out relative overflow-hidden"
-                    style={{ width: `${project.constructionProgress}%` }}
+                    style={{ width: `${project.constructionProgressPercent}%` }}
                   >
                     <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent animate-pulse" />
                   </div>
@@ -473,7 +497,7 @@ export default function ProjectDetailPage() {
                       <div className="flex items-center gap-3 text-sm text-gray-500 mb-2">
                         <span>{unit.bhk} BHK</span>
                         <span className="w-1 h-1 bg-gray-300 rounded-full" />
-                        <span>{unit.areaSqft} sqft</span>
+                        <span>{unit.carpetAreaSqft || unit.builtUpAreaSqft || unit.superBuiltUpAreaSqft || '-'} sqft</span>
                         {unit.bathrooms && (
                           <>
                             <span className="w-1 h-1 bg-gray-300 rounded-full" />
@@ -544,7 +568,7 @@ export default function ProjectDetailPage() {
                       className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-orange-400"
                     >
                       {unitTypes.map(u => (
-                        <option key={u.id} value={u.id}>{u.name} ({u.bhk} BHK - {u.areaSqft} sqft)</option>
+                        <option key={u.id} value={u.id}>{u.name} ({u.bhk} BHK - {u.carpetAreaSqft || u.builtUpAreaSqft || u.superBuiltUpAreaSqft || '-'} sqft)</option>
                       ))}
                     </select>
                   </div>
@@ -559,20 +583,17 @@ export default function ProjectDetailPage() {
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-gray-500 mb-1">Preferred Facing</label>
-                    <div className="flex flex-wrap gap-2 mt-1">
-                      {['East', 'West', 'North', 'South'].map(f => (
-                        <label key={f} className="flex items-center gap-1.5 cursor-pointer">
-                          <input
-                            type="radio"
-                            name="facing"
-                            checked={calcFacing === f}
-                            onChange={() => setCalcFacing(f)}
-                            className="accent-orange-500"
-                          />
-                          <span className="text-sm text-gray-700">{f}</span>
-                        </label>
-                      ))}
+                    <label className="block text-xs font-medium text-gray-500 mb-1">Preferred Facing Premium</label>
+                    <div className="flex items-center gap-2 mt-2">
+                      <label className="flex items-center gap-2 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={calcPreferredFacing}
+                          onChange={e => setCalcPreferredFacing(e.target.checked)}
+                          className="accent-orange-500 w-4 h-4"
+                        />
+                        <span className="text-sm text-gray-700">Add facing premium</span>
+                      </label>
                     </div>
                   </div>
                 </div>
@@ -590,27 +611,27 @@ export default function ProjectDetailPage() {
                     <div className="space-y-2 text-sm">
                       <div className="flex justify-between">
                         <span className="text-gray-600">Base Price</span>
-                        <span className="font-medium">{formatSalePrice(priceBreakdown.basePrice)}</span>
+                        <span className="font-medium">{formatSalePrice(priceBreakdown.basePricePaise)}</span>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-gray-600">Floor Rise Premium</span>
-                        <span className="font-medium">{formatINR(priceBreakdown.floorRise)}</span>
+                        <span className="font-medium">{formatINR(priceBreakdown.floorRisePaise)}</span>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-gray-600">Facing Premium</span>
-                        <span className="font-medium">{formatINR(priceBreakdown.facingPremium)}</span>
+                        <span className="font-medium">{formatINR(priceBreakdown.facingPremiumPaise)}</span>
                       </div>
                       <div className="border-t border-orange-200 pt-2 flex justify-between">
                         <span className="text-gray-900 font-semibold">Total Price</span>
-                        <span className="text-lg font-bold text-orange-600">{formatSalePrice(priceBreakdown.totalPrice)}</span>
+                        <span className="text-lg font-bold text-orange-600">{formatSalePrice(priceBreakdown.totalPricePaise)}</span>
                       </div>
                       <div className="flex justify-between text-gray-500">
                         <span>Price per sqft</span>
-                        <span>{formatINR(priceBreakdown.pricePerSqft)}/sqft</span>
+                        <span>{formatINR(priceBreakdown.pricePerSqftPaise)}/sqft</span>
                       </div>
                       <div className="flex justify-between text-gray-500">
                         <span>EMI Estimate (20yr @8.5%)</span>
-                        <span className="font-medium text-gray-700">{formatINR(priceBreakdown.emiEstimate)}/mo</span>
+                        <span className="font-medium text-gray-700">{formatINR(priceBreakdown.estimatedEmiPaise)}/mo</span>
                       </div>
                     </div>
                   </div>
@@ -707,9 +728,9 @@ export default function ProjectDetailPage() {
                           {new Date(update.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })}
                         </p>
                         {update.description && <p className="text-sm text-gray-600 mb-2">{update.description}</p>}
-                        {update.photoUrls && update.photoUrls.length > 0 && (
+                        {update.photos && update.photos.length > 0 && (
                           <div className="flex gap-2 overflow-x-auto">
-                            {update.photoUrls.map((url, pIdx) => (
+                            {update.photos.map((url, pIdx) => (
                               <img
                                 key={pIdx}
                                 src={url}
@@ -749,7 +770,7 @@ export default function ProjectDetailPage() {
             )}
 
             {/* ── Brochure & Walkthrough ── */}
-            {(project.brochureUrl || project.walkthroughVideoUrl) && (
+            {(project.brochureUrl || project.walkthroughUrl) && (
               <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
                 <h2 className="text-lg font-semibold text-gray-900 mb-4">Downloads & Media</h2>
                 <div className="flex flex-wrap gap-3">
@@ -766,9 +787,9 @@ export default function ProjectDetailPage() {
                       Download Brochure
                     </a>
                   )}
-                  {project.walkthroughVideoUrl && (
+                  {project.walkthroughUrl && (
                     <a
-                      href={project.walkthroughVideoUrl}
+                      href={project.walkthroughUrl}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="inline-flex items-center gap-2 px-5 py-2.5 border border-orange-200 text-orange-600 rounded-lg hover:bg-orange-50 transition-colors font-medium text-sm"
@@ -873,7 +894,7 @@ export default function ProjectDetailPage() {
                   )}
                   <div>
                     <h3 className="font-semibold text-gray-900">{project.builderName}</h3>
-                    {project.builderVerified && (
+                    {project.verified && (
                       <span className="text-xs text-blue-600">Verified Builder</span>
                     )}
                   </div>

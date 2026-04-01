@@ -9,7 +9,8 @@ interface Props {
   bookingId: string;
   amountPaise: number;
   token: string;
-  onSuccess: (paymentId: string) => void;
+  description?: string;
+  onSuccess: (paymentId: string, orderId?: string) => void;
 }
 
 declare global {
@@ -18,7 +19,7 @@ declare global {
   }
 }
 
-export default function RazorpayButton({ bookingId, amountPaise, token, onSuccess }: Props) {
+export default function RazorpayButton({ bookingId, amountPaise, token, description, onSuccess }: Props) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -56,7 +57,7 @@ export default function RazorpayButton({ bookingId, amountPaise, token, onSucces
         amount: order.amountPaise,
         currency: 'INR',
         name: 'Safar',
-        description: 'Property Booking',
+        description: description || 'Property Booking',
         order_id: order.razorpayOrderId,
         handler: async function (response: any) {
           try {
@@ -69,7 +70,7 @@ export default function RazorpayButton({ bookingId, amountPaise, token, onSucces
               },
               token
             );
-            onSuccess(response.razorpay_payment_id);
+            onSuccess(response.razorpay_payment_id, response.razorpay_order_id);
           } catch {
             setError('Payment verification failed. Please contact support.');
           }

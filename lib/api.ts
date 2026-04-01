@@ -727,6 +727,39 @@ export const api = {
       headers: { Authorization: `Bearer ${token}` },
     }),
 
+  submitForVerification: (id: string, token: string) =>
+    apiFetch<Listing>(`/api/v1/listings/${id}/submit`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}` },
+    }),
+
+  unpublishListing: (id: string, token: string) =>
+    apiFetch<Listing>(`/api/v1/listings/${id}/unpublish`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}` },
+    }),
+
+  pauseListing: (id: string, token: string) =>
+    apiFetch<Listing>(`/api/v1/listings/${id}/pause`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}` },
+    }),
+
+  archiveListing: (id: string, token: string, reason?: string, note?: string) =>
+    apiFetch<Listing>(`/api/v1/listings/${id}/archive?${new URLSearchParams({
+      ...(reason ? { reason } : {}),
+      ...(note ? { note } : {}),
+    })}`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}` },
+    }),
+
+  restoreListing: (id: string, token: string) =>
+    apiFetch<Listing>(`/api/v1/listings/${id}/restore`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}` },
+    }),
+
   toggleAashray: (id: string, body: { aashrayReady: boolean; aashrayDiscountPercent?: number; longTermMonthlyPaise?: number; minStayDays?: number }, token: string) =>
     apiFetch<Listing>(`/api/v1/listings/${id}/aashray`, {
       method: 'POST',
@@ -1708,6 +1741,12 @@ export const api = {
       headers: { Authorization: `Bearer ${token}` },
     }),
 
+  confirmChefBookingPayment: (id: string, razorpayOrderId: string, razorpayPaymentId: string, token: string) =>
+    apiFetch<any>(`/api/v1/chef-bookings/${id}/confirm-payment?razorpayOrderId=${encodeURIComponent(razorpayOrderId)}&razorpayPaymentId=${encodeURIComponent(razorpayPaymentId)}`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}` },
+    }),
+
   /* ── Builder Projects ────────────────────────────────────── */
 
   searchBuilderProjects: (params: Record<string, string>) =>
@@ -1751,8 +1790,8 @@ export const api = {
   getUnitTypes: (projectId: string) =>
     apiFetch<any[]>(`/api/v1/builder-projects/${projectId}/unit-types`),
 
-  calculateUnitPrice: (unitTypeId: string, floor: number, preferredFacing: string) =>
-    apiFetch<any>(`/api/v1/builder-projects/unit-types/${unitTypeId}/calculate-price?floor=${floor}&facing=${encodeURIComponent(preferredFacing)}`),
+  calculateUnitPrice: (unitTypeId: string, floor: number, preferredFacing: boolean) =>
+    apiFetch<any>(`/api/v1/builder-projects/unit-types/${unitTypeId}/calculate-price?floor=${floor}&preferredFacing=${preferredFacing}`),
 
   addConstructionUpdate: (projectId: string, data: any, token: string) =>
     apiFetch<any>(`/api/v1/builder-projects/${projectId}/construction-updates`, {

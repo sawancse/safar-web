@@ -76,7 +76,7 @@ interface BuilderProject {
   minBhk: number;
   maxBhk: number;
   possessionDate?: string;
-  constructionProgress: number;
+  constructionProgressPercent: number;
   projectStatus: string;
   reraId?: string;
   reraVerified?: boolean;
@@ -85,6 +85,7 @@ interface BuilderProject {
   availableUnits?: number;
   primaryPhotoUrl?: string;
   amenities?: string[];
+  verified?: boolean;
   createdAt?: string;
 }
 
@@ -386,12 +387,12 @@ export default function ProjectsListingPage() {
                   <div className="mb-3">
                     <div className="flex items-center justify-between mb-1">
                       <span className="text-xs text-gray-500">Construction Progress</span>
-                      <span className="text-xs font-semibold text-orange-600">{project.constructionProgress}%</span>
+                      <span className="text-xs font-semibold text-orange-600">{project.constructionProgressPercent}%</span>
                     </div>
                     <div className="w-full bg-gray-200 rounded-full h-2">
                       <div
                         className="bg-gradient-to-r from-orange-400 to-orange-600 h-2 rounded-full transition-all duration-500"
-                        style={{ width: `${project.constructionProgress}%` }}
+                        style={{ width: `${project.constructionProgressPercent}%` }}
                       />
                     </div>
                   </div>
