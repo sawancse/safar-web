@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { api } from '@/lib/api';
 
 const ORG_TYPES = [
   { value: 'NGO', label: 'Non-Governmental Organization', icon: '🏛️' },
@@ -29,23 +30,14 @@ export default function NgoRegistrationPage() {
     setSubmitting(true);
     setError('');
     try {
-      const token = localStorage.getItem('access_token');
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
-      const res = await fetch(`${apiUrl}/api/v1/aashray/organizations`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        },
-        body: JSON.stringify({
-          name, type,
-          unhcrPartnerCode: unhcrCode || null,
-          contactEmail: email,
-          contactPhone: phone || null,
-          budgetPaise: Math.round(Number(budgetLakhs) * 10000000) || 0,
-        }),
-      });
-      if (!res.ok) throw new Error(await res.text().catch(() => 'Registration failed'));
+      const token = localStorage.getItem('access_token') || '';
+      await api.registerNgoOrganization({
+        name, type,
+        unhcrPartnerCode: unhcrCode || null,
+        contactEmail: email,
+        contactPhone: phone || null,
+        budgetPaise: Math.round(Number(budgetLakhs) * 10000000) || 0,
+      }, token);
       setSuccess(true);
     } catch (e: any) {
       setError(e.message);

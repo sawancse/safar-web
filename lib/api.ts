@@ -767,6 +767,13 @@ export const api = {
       headers: { Authorization: `Bearer ${token}` },
     }),
 
+  registerNgoOrganization: (data: { name: string; type: string; unhcrPartnerCode?: string | null; contactEmail: string; contactPhone?: string | null; budgetPaise: number }, token: string) =>
+    apiFetch<any>(`/api/v1/aashray/organizations`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+      headers: { Authorization: `Bearer ${token}` },
+    }),
+
   /* ── Host KYC ─────────────────────────────────────────────── */
   getKyc: (token: string) =>
     apiFetch<any>('/api/v1/users/me/kyc', {
