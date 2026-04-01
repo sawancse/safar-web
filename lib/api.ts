@@ -353,12 +353,44 @@ export const api = {
   uploadAvatar: async (file: File, token: string) => {
     const formData = new FormData();
     formData.append('file', file);
-    const res = await fetch(`${API_URL}/api/v1/users/me/avatar`, {
+
+    // Proactively refresh token if about to expire
+    let currentToken = token;
+    try {
+      const payload = JSON.parse(atob(token.split('.')[1]));
+      if (payload.exp * 1000 - Date.now() < 120000) {
+        const refreshed = await refreshTokenOnce();
+        if (refreshed) {
+          currentToken = localStorage.getItem('access_token') || token;
+        }
+      }
+    } catch { /* token decode failed, use as-is */ }
+
+    let res = await fetch(`${API_URL}/api/v1/users/me/avatar`, {
       method: 'POST',
-      headers: { Authorization: `Bearer ${token}` },
+      headers: { Authorization: `Bearer ${currentToken}` },
       body: formData,
+      credentials: 'include',
     });
-    if (!res.ok) throw new Error('Upload failed');
+
+    // Retry once on 401 after refreshing token
+    if (res.status === 401) {
+      const refreshed = await refreshTokenOnce();
+      if (refreshed) {
+        currentToken = localStorage.getItem('access_token') || token;
+        res = await fetch(`${API_URL}/api/v1/users/me/avatar`, {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${currentToken}` },
+          body: formData,
+          credentials: 'include',
+        });
+      }
+    }
+
+    if (!res.ok) {
+      const errorText = await res.text().catch(() => '');
+      throw new Error(errorText || `Upload failed (${res.status})`);
+    }
     return res.json() as Promise<{ avatarUrl: string }>;
   },
 

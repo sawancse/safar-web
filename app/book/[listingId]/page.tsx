@@ -180,7 +180,9 @@ export default function BookPage() {
     }
   }
 
-  const securityDepositPaise = listing?.securityDepositPaise ?? 0;
+  // PG/Co-living: deposit is per bed (per adult), multiply by adults count
+  const perBedDeposit = listing?.securityDepositPaise ?? 0;
+  const securityDepositPaise = isPG && adults > 1 ? perBedDeposit * adults : perBedDeposit;
   const cleaningFeePaise = isMonthly ? 0 : (listing?.cleaningFeePaise ?? 0);
   const maintenancePaise = isMonthly && !(listing?.maintenanceIncluded) ? ((listing?.maintenanceChargePaise ?? 0) * Math.max(1, fullMonths)) : 0;
   const insurancePaise = listing?.insuranceEnabled ? (listing?.insuranceAmountPaise ?? 0) : 0;
@@ -977,7 +979,7 @@ export default function BookPage() {
                   )}
                   {securityDepositPaise > 0 && (
                     <div className="flex justify-between text-gray-600">
-                      <span>Security deposit</span>
+                      <span>Security deposit{isPG && adults > 1 ? ` (${formatPaise(perBedDeposit)} x ${adults} beds)` : ''}</span>
                       <span>{formatPaise(securityDepositPaise)}</span>
                     </div>
                   )}

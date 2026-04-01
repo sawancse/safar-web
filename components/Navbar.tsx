@@ -445,6 +445,31 @@ export default function Navbar() {
                 </Link>
               ))}
 
+              {/* Services section for logged-in users */}
+              {!isInHostMode && (
+                <div className="border-t mt-2 pt-2">
+                  <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide pt-1 pb-1">Services</p>
+                  <Link href="/cooks" className="flex items-center gap-3 py-2 text-gray-700 hover:text-orange-500" onClick={() => setMenuOpen(false)}>
+                    <span className="w-5 text-center">{'\u{1F468}\u{200D}\u{1F373}'}</span> Safar Cooks
+                  </Link>
+                  <Link href="/experiences" className="flex items-center gap-3 py-2 text-gray-700 hover:text-orange-500" onClick={() => setMenuOpen(false)}>
+                    <span className="w-5 text-center">{'\u{2728}'}</span> Experiences
+                  </Link>
+                  <Link href="/medical" className="flex items-center gap-3 py-2 text-gray-700 hover:text-orange-500" onClick={() => setMenuOpen(false)}>
+                    <span className="w-5 text-center">{'\u{1F3E5}'}</span> Medical Stays
+                  </Link>
+                  <Link href="/aashray" className="flex items-center gap-3 py-2 text-teal-700 hover:text-teal-600 font-medium" onClick={() => setMenuOpen(false)}>
+                    <span className="w-5 text-center">{'\u{1F3E0}'}</span> Aashray
+                  </Link>
+                  <Link href="/buy" className="flex items-center gap-3 py-2 text-gray-700 hover:text-orange-500" onClick={() => setMenuOpen(false)}>
+                    <span className="w-5 text-center">{'\u{1F3E1}'}</span> Buy / Sell
+                  </Link>
+                  <Link href="/projects" className="flex items-center gap-3 py-2 text-gray-700 hover:text-orange-500" onClick={() => setMenuOpen(false)}>
+                    <span className="w-5 text-center">{'\u{1F3D7}'}</span> New Projects
+                  </Link>
+                </div>
+              )}
+
               <div className="border-t mt-2 pt-2">
                 <Link
                   href={isHost ? switchHref : '/host'}

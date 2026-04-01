@@ -174,7 +174,9 @@ export default function BookingPanel({ listing, selectedRoomType, roomSelections
   const insurancePaise = listing.insuranceEnabled && (listing.insuranceAmountPaise ?? 0) > 0
     ? (listing.insuranceAmountPaise ?? 0) : 0;
 
-  const depositPaise = listing.securityDepositPaise ?? 0;
+  // PG/Co-living: deposit is per bed (per adult), multiply by adults count
+  const perBedDeposit = listing.securityDepositPaise ?? 0;
+  const depositPaise = isPG && guestCounts.adults > 1 ? perBedDeposit * guestCounts.adults : perBedDeposit;
   const totalPaise = discountedBase + gstPaise + insurancePaise + depositPaise + maintenancePaise;
 
   const canBook = isCommercial
@@ -563,7 +565,7 @@ export default function BookingPanel({ listing, selectedRoomType, roomSelections
           {/* Security deposit */}
           {depositPaise > 0 && (
             <div className="flex justify-between text-gray-500">
-              <span>Security deposit</span>
+              <span>Security deposit{isPG && guestCounts.adults > 1 ? ` (${formatPaise(perBedDeposit)} x ${guestCounts.adults} beds)` : ''}</span>
               <span>{formatPaise(depositPaise)}</span>
             </div>
           )}
