@@ -99,14 +99,12 @@ export default function EventBookingPage() {
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const t = localStorage.getItem('access_token');
-      if (!t) { router.push('/auth?redirect=/cooks/events'); return; }
-      setToken(t);
+      if (t) setToken(t);
     }
-  }, [router]);
+  }, []);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!token) return;
     setSubmitting(true);
     setError('');
     try {
@@ -139,7 +137,7 @@ export default function EventBookingPage() {
         customerName,
         customerPhone,
         menuDescription: addOnsJson,
-      }, token);
+      }, token || undefined);
       router.push('/cooks/my-bookings');
     } catch (err: any) {
       setError(err?.message || 'Failed to submit. Please try again.');

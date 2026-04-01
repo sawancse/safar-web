@@ -102,7 +102,7 @@ export default function BookCookPage() {
           durationHours, guestCount: guestsCount, venueAddress: address,
           city, locality, pincode, menuDescription, cuisinePreferences,
           specialRequests, customerName, customerPhone, customerEmail,
-        }, t);
+        }, t || undefined);
         setSuccess('Event inquiry submitted! The cook will send you a quote.');
       }
     } catch (err: any) {

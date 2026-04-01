@@ -1724,10 +1724,10 @@ export const api = {
       headers: { Authorization: `Bearer ${token}` },
     }),
 
-  createEventBooking: (data: any, token: string) =>
+  createEventBooking: (data: any, token?: string) =>
     apiFetch<any>('/api/v1/chef-events', {
       method: 'POST',
-      headers: { Authorization: `Bearer ${token}` },
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
       body: JSON.stringify(data),
     }),
 
