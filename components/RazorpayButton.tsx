@@ -61,6 +61,7 @@ export default function RazorpayButton({ bookingId, amountPaise, token, descript
         order_id: order.razorpayOrderId,
         handler: async function (response: any) {
           try {
+            const freshToken = localStorage.getItem('access_token') || token;
             await api.verifyPayment(
               {
                 bookingId,
@@ -68,7 +69,7 @@ export default function RazorpayButton({ bookingId, amountPaise, token, descript
                 razorpayPaymentId: response.razorpay_payment_id,
                 razorpaySignature: response.razorpay_signature,
               },
-              token
+              freshToken
             );
             onSuccess(response.razorpay_payment_id, response.razorpay_order_id);
           } catch {
