@@ -1755,6 +1755,11 @@ export const api = {
   getMenuItems: (menuId: string) =>
     apiFetch<any[]>(`/api/v1/chefs/menus/${menuId}/items`),
 
+  getMyChefProfile: (token: string) =>
+    apiFetch<any>('/api/v1/chefs/me', {
+      headers: { Authorization: `Bearer ${token}` },
+    }),
+
   registerChef: (data: any, token: string) =>
     apiFetch<any>('/api/v1/chefs', {
       method: 'POST',

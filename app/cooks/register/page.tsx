@@ -51,6 +51,20 @@ export default function RegisterCookPage() {
   const [languages, setLanguages] = useState('Hindi, English');
   const [eventMinPax, setEventMinPax] = useState(20);
   const [eventMaxPax, setEventMaxPax] = useState(200);
+  const [existingProfile, setExistingProfile] = useState<any>(null);
+  const [checkingProfile, setCheckingProfile] = useState(true);
+
+  // Check if user already has a chef profile
+  useEffect(() => {
+    const token = localStorage.getItem('access_token');
+    if (!token) { setCheckingProfile(false); return; }
+    api.getMyChefProfile(token)
+      .then((profile: any) => {
+        if (profile && profile.id) setExistingProfile(profile);
+      })
+      .catch(() => {})
+      .finally(() => setCheckingProfile(false));
+  }, []);
 
   // Fetch localities when city changes
   useEffect(() => {
@@ -117,16 +131,48 @@ export default function RegisterCookPage() {
       <h1 className="text-2xl font-bold text-gray-900 mb-2">Register as a Cook</h1>
       <p className="text-gray-500 mb-6">Join Safar Cooks and start earning by cooking for guests</p>
 
-      {error && <div className="bg-red-50 text-red-600 text-sm rounded-lg px-4 py-2 mb-4">{error}</div>}
+      {checkingProfile && (
+        <div className="text-center py-12 text-gray-400">Checking profile...</div>
+      )}
+
+      {existingProfile && !checkingProfile && (
+        <div className="bg-green-50 border border-green-200 rounded-2xl p-6 text-center">
+          <div className="text-4xl mb-3">👨‍🍳</div>
+          <h2 className="text-xl font-bold text-gray-900 mb-2">You're already registered!</h2>
+          <p className="text-gray-500 text-sm mb-1">
+            <span className="font-semibold">{existingProfile.name}</span> — {existingProfile.city}
+          </p>
+          <p className="text-xs text-gray-400 mb-4">
+            Status: <span className={`font-semibold ${existingProfile.status === 'VERIFIED' ? 'text-green-600' : 'text-amber-600'}`}>
+              {existingProfile.status}
+            </span>
+            {existingProfile.cuisines && ` · ${existingProfile.cuisines}`}
+          </p>
+          <div className="flex gap-3 justify-center">
+            <a href={`/cooks/${existingProfile.id}`}
+              className="bg-orange-500 hover:bg-orange-600 text-white font-semibold px-6 py-2.5 rounded-xl transition text-sm">
+              View My Profile
+            </a>
+            <a href="/cooks/my-bookings"
+              className="border border-gray-300 text-gray-700 font-semibold px-6 py-2.5 rounded-xl hover:bg-gray-50 transition text-sm">
+              My Bookings
+            </a>
+          </div>
+        </div>
+      )}
+
+      {error && !existingProfile && <div className="bg-red-50 text-red-600 text-sm rounded-lg px-4 py-2 mb-4">{error}</div>}
 
       {/* Step indicator */}
-      <div className="flex gap-2 mb-6">
-        {[1, 2, 3].map(s => (
-          <div key={s} className={`flex-1 h-1.5 rounded-full transition ${s <= step ? 'bg-orange-500' : 'bg-gray-200'}`} />
-        ))}
-      </div>
+      {!existingProfile && !checkingProfile && (
+        <div className="flex gap-2 mb-6">
+          {[1, 2, 3].map(s => (
+            <div key={s} className={`flex-1 h-1.5 rounded-full transition ${s <= step ? 'bg-orange-500' : 'bg-gray-200'}`} />
+          ))}
+        </div>
+      )}
 
-      {step === 1 && (
+      {!existingProfile && !checkingProfile && step === 1 && (
         <div className="space-y-4">
           <h2 className="text-lg font-semibold">Basic Info</h2>
           <div className="grid grid-cols-2 gap-4">
@@ -187,7 +233,7 @@ export default function RegisterCookPage() {
         </div>
       )}
 
-      {step === 2 && (
+      {!existingProfile && !checkingProfile && step === 2 && (
         <div className="space-y-4">
           <h2 className="text-lg font-semibold">Location & Cuisines</h2>
           <div className="grid grid-cols-3 gap-4">
@@ -294,7 +340,7 @@ export default function RegisterCookPage() {
         </div>
       )}
 
-      {step === 3 && (
+      {!existingProfile && !checkingProfile && step === 3 && (
         <div className="space-y-4">
           <h2 className="text-lg font-semibold">Pricing</h2>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
