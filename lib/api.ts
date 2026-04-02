@@ -656,6 +656,18 @@ export const api = {
       recentDonors: { name: string; amountPaise: number; city: string | null; minutesAgo: number }[];
     }>('/api/v1/donations/stats'),
 
+  getDonationLeaderboard: () =>
+    apiFetch<{
+      topDonors: { name: string; totalPaise: number; donationCount: number; tier: string }[];
+      topCities: { city: string; totalPaise: number; donors: number }[];
+      period: string;
+    }>('/api/v1/donations/leaderboard'),
+
+  getMyDonations: (token: string, page = 0, size = 20) =>
+    apiFetch<any>(`/api/v1/donations/my?page=${page}&size=${size}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    }),
+
   /* ── Reviews ──────────────────────────────────────────────── */
   getListingReviews: async (listingId: string): Promise<Review[]> => {
     const raw = await apiFetch<any>(`/api/v1/reviews/listing/${listingId}?size=50&sort=createdAt,desc`);
