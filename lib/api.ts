@@ -892,14 +892,15 @@ export const api = {
     }),
 
   /* ── Experiences ──────────────────────────────────────────── */
-  getExperiences: (params?: { city?: string; category?: string }) => {
+  getExperiences: async (params?: { city?: string; category?: string }) => {
     const qs = new URLSearchParams();
     if (params?.city) qs.set('city', params.city);
     if (params?.category) qs.set('category', params.category);
     const query = qs.toString();
-    return apiFetch<Experience[]>(
+    const page = await apiFetch<{ content: Experience[] }>(
       `/api/v1/experiences${query ? `?${query}` : ''}`
     );
+    return page?.content ?? [];
   },
 
   getExperience: (id: string) =>
@@ -1819,6 +1820,27 @@ export const api = {
     apiFetch<any>(`/api/v1/chef-bookings/${id}/confirm-payment?razorpayOrderId=${encodeURIComponent(razorpayOrderId)}&razorpayPaymentId=${encodeURIComponent(razorpayPaymentId)}`, {
       method: 'POST',
       headers: { Authorization: `Bearer ${token}` },
+    }),
+
+  modifyChefBooking: (id: string, data: any, token: string) =>
+    apiFetch<any>(`/api/v1/chef-bookings/${id}`, {
+      method: 'PUT',
+      headers: { Authorization: `Bearer ${token}` },
+      body: JSON.stringify(data),
+    }),
+
+  modifyEventBooking: (id: string, data: any, token: string) =>
+    apiFetch<any>(`/api/v1/chef-events/${id}`, {
+      method: 'PUT',
+      headers: { Authorization: `Bearer ${token}` },
+      body: JSON.stringify(data),
+    }),
+
+  modifySubscription: (id: string, data: any, token: string) =>
+    apiFetch<any>(`/api/v1/chef-subscriptions/${id}`, {
+      method: 'PUT',
+      headers: { Authorization: `Bearer ${token}` },
+      body: JSON.stringify(data),
     }),
 
   /* ── Event Pricing ────────────────────────────────────────── */

@@ -27,6 +27,10 @@ const PAYMENT_STATUS_LABELS: Record<string, { label: string; color: string }> = 
   FULLY_PAID: { label: 'Fully Paid', color: 'text-green-700' },
 };
 
+const MODIFIABLE_BOOKING = ['PENDING_PAYMENT', 'PENDING'];
+const MODIFIABLE_EVENT = ['INQUIRY', 'QUOTED'];
+const MODIFIABLE_SUB = ['ACTIVE'];
+
 export default function MyChefBookingsPage() {
   const router = useRouter();
   const [bookings, setBookings] = useState<any[]>([]);
@@ -37,6 +41,9 @@ export default function MyChefBookingsPage() {
   const [ratingModal, setRatingModal] = useState<{ id: string; type: string } | null>(null);
   const [rating, setRating] = useState(5);
   const [reviewComment, setReviewComment] = useState('');
+  const [editModal, setEditModal] = useState<{ item: any; type: 'booking' | 'event' | 'subscription' } | null>(null);
+  const [editForm, setEditForm] = useState<any>({});
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     const token = localStorage.getItem('access_token');
@@ -68,6 +75,61 @@ export default function MyChefBookingsPage() {
     setRatingModal(null);
     setRating(5);
     setReviewComment('');
+  }
+
+  function openEdit(item: any, type: 'booking' | 'event' | 'subscription') {
+    setEditForm(
+      type === 'booking' ? {
+        serviceDate: item.serviceDate || '', serviceTime: item.serviceTime || '',
+        guestsCount: item.guestsCount || '', specialRequests: item.specialRequests || '',
+        address: item.address || '', city: item.city || '', pincode: item.pincode || '',
+      } : type === 'event' ? {
+        eventDate: item.eventDate || '', eventTime: item.eventTime || '',
+        guestCount: item.guestCount || '', durationHours: item.durationHours || '',
+        venueAddress: item.venueAddress || '', city: item.city || '', pincode: item.pincode || '',
+        menuDescription: item.menuDescription || '', specialRequests: item.specialRequests || '',
+      } : {
+        mealsPerDay: item.mealsPerDay || '', mealTypes: item.mealTypes || '',
+        schedule: item.schedule || '', address: item.address || '', city: item.city || '',
+        pincode: item.pincode || '', specialRequests: item.specialRequests || '',
+        dietaryPreferences: item.dietaryPreferences || '',
+      }
+    );
+    setEditModal({ item, type });
+  }
+
+  async function handleSaveEdit() {
+    if (!editModal) return;
+    setSaving(true);
+    const token = localStorage.getItem('access_token')!;
+    const { item, type } = editModal;
+
+    // Build payload with only changed fields
+    const payload: any = {};
+    Object.entries(editForm).forEach(([k, v]) => {
+      if (v !== '' && v !== null && v !== undefined) {
+        payload[k] = ['guestsCount', 'guestCount', 'durationHours', 'mealsPerDay'].includes(k) ? Number(v) : v;
+      }
+    });
+
+    try {
+      let updated;
+      if (type === 'booking') {
+        updated = await api.modifyChefBooking(item.id, payload, token);
+        setBookings(prev => prev.map(b => b.id === item.id ? updated : b));
+      } else if (type === 'event') {
+        updated = await api.modifyEventBooking(item.id, payload, token);
+        setEvents(prev => prev.map(e => e.id === item.id ? updated : e));
+      } else {
+        updated = await api.modifySubscription(item.id, payload, token);
+        setSubscriptions(prev => prev.map(s => s.id === item.id ? updated : s));
+      }
+      setEditModal(null);
+    } catch (err: any) {
+      alert(err.message || 'Failed to modify booking');
+    } finally {
+      setSaving(false);
+    }
   }
 
   const tabs = [
@@ -132,6 +194,10 @@ export default function MyChefBookingsPage() {
                     </div>
                   )}
                   <div className="flex gap-2 mt-3">
+                    {MODIFIABLE_BOOKING.includes(b.status) && (
+                      <button onClick={() => openEdit(b, 'booking')}
+                        className="text-xs text-blue-600 border border-blue-200 px-3 py-1 rounded-lg hover:bg-blue-50">Modify</button>
+                    )}
                     {b.status === 'PENDING_PAYMENT' && (
                       <button onClick={() => router.push(`/cooks/book?chefId=${b.chefId}&type=DAILY&resumeBookingId=${b.id}`)}
                         className="text-xs text-green-600 border border-green-200 px-3 py-1 rounded-lg hover:bg-green-50">Complete Payment</button>
@@ -169,6 +235,12 @@ export default function MyChefBookingsPage() {
                       <p className="text-sm font-bold mt-1">{formatPaise(s.monthlyRatePaise)}/mo</p>
                     </div>
                   </div>
+                  {MODIFIABLE_SUB.includes(s.status) && (
+                    <div className="flex gap-2 mt-3">
+                      <button onClick={() => openEdit(s, 'subscription')}
+                        className="text-xs text-blue-600 border border-blue-200 px-3 py-1 rounded-lg hover:bg-blue-50">Modify</button>
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
@@ -192,6 +264,12 @@ export default function MyChefBookingsPage() {
                       {e.totalAmountPaise > 0 && <p className="text-sm font-bold mt-1">{formatPaise(e.totalAmountPaise)}</p>}
                     </div>
                   </div>
+                  {MODIFIABLE_EVENT.includes(e.status) && (
+                    <div className="flex gap-2 mt-3">
+                      <button onClick={() => openEdit(e, 'event')}
+                        className="text-xs text-blue-600 border border-blue-200 px-3 py-1 rounded-lg hover:bg-blue-50">Modify</button>
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
@@ -218,6 +296,92 @@ export default function MyChefBookingsPage() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Edit Modal */}
+      {editModal && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={() => setEditModal(null)}>
+          <div className="bg-white rounded-2xl p-6 max-w-md w-full max-h-[80vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+            <h3 className="text-lg font-bold mb-4">
+              Modify {editModal.type === 'booking' ? 'Booking' : editModal.type === 'event' ? 'Event' : 'Subscription'}
+            </h3>
+            {editModal.type === 'event' && editModal.item.status === 'QUOTED' && (
+              <p className="text-xs text-amber-600 bg-amber-50 p-2 rounded-lg mb-4">
+                Modifying a quoted event will reset it to INQUIRY status for the chef to re-quote.
+              </p>
+            )}
+            <div className="space-y-3">
+              {editModal.type === 'booking' && (
+                <>
+                  <Field label="Service Date" type="date" value={editForm.serviceDate} onChange={(v: string) => setEditForm({...editForm, serviceDate: v})} />
+                  <Field label="Service Time" value={editForm.serviceTime} onChange={(v: string) => setEditForm({...editForm, serviceTime: v})} placeholder="e.g. 12:00 PM" />
+                  <Field label="Guests" type="number" value={editForm.guestsCount} onChange={(v: string) => setEditForm({...editForm, guestsCount: v})} />
+                  <Field label="Special Requests" value={editForm.specialRequests} onChange={(v: string) => setEditForm({...editForm, specialRequests: v})} textarea />
+                  <Field label="Address" value={editForm.address} onChange={(v: string) => setEditForm({...editForm, address: v})} />
+                  <div className="grid grid-cols-2 gap-3">
+                    <Field label="City" value={editForm.city} onChange={(v: string) => setEditForm({...editForm, city: v})} />
+                    <Field label="Pincode" value={editForm.pincode} onChange={(v: string) => setEditForm({...editForm, pincode: v})} />
+                  </div>
+                </>
+              )}
+              {editModal.type === 'event' && (
+                <>
+                  <Field label="Event Date" type="date" value={editForm.eventDate} onChange={(v: string) => setEditForm({...editForm, eventDate: v})} />
+                  <Field label="Event Time" value={editForm.eventTime} onChange={(v: string) => setEditForm({...editForm, eventTime: v})} placeholder="e.g. 7:00 PM" />
+                  <div className="grid grid-cols-2 gap-3">
+                    <Field label="Guests" type="number" value={editForm.guestCount} onChange={(v: string) => setEditForm({...editForm, guestCount: v})} />
+                    <Field label="Duration (hrs)" type="number" value={editForm.durationHours} onChange={(v: string) => setEditForm({...editForm, durationHours: v})} />
+                  </div>
+                  <Field label="Venue Address" value={editForm.venueAddress} onChange={(v: string) => setEditForm({...editForm, venueAddress: v})} />
+                  <div className="grid grid-cols-2 gap-3">
+                    <Field label="City" value={editForm.city} onChange={(v: string) => setEditForm({...editForm, city: v})} />
+                    <Field label="Pincode" value={editForm.pincode} onChange={(v: string) => setEditForm({...editForm, pincode: v})} />
+                  </div>
+                  <Field label="Menu Description" value={editForm.menuDescription} onChange={(v: string) => setEditForm({...editForm, menuDescription: v})} textarea />
+                  <Field label="Special Requests" value={editForm.specialRequests} onChange={(v: string) => setEditForm({...editForm, specialRequests: v})} textarea />
+                </>
+              )}
+              {editModal.type === 'subscription' && (
+                <>
+                  <Field label="Meals per Day" type="number" value={editForm.mealsPerDay} onChange={(v: string) => setEditForm({...editForm, mealsPerDay: v})} />
+                  <Field label="Meal Types" value={editForm.mealTypes} onChange={(v: string) => setEditForm({...editForm, mealTypes: v})} placeholder="e.g. Lunch, Dinner" />
+                  <Field label="Schedule" value={editForm.schedule} onChange={(v: string) => setEditForm({...editForm, schedule: v})} placeholder="e.g. Mon-Sat" />
+                  <Field label="Dietary Preferences" value={editForm.dietaryPreferences} onChange={(v: string) => setEditForm({...editForm, dietaryPreferences: v})} />
+                  <Field label="Address" value={editForm.address} onChange={(v: string) => setEditForm({...editForm, address: v})} />
+                  <div className="grid grid-cols-2 gap-3">
+                    <Field label="City" value={editForm.city} onChange={(v: string) => setEditForm({...editForm, city: v})} />
+                    <Field label="Pincode" value={editForm.pincode} onChange={(v: string) => setEditForm({...editForm, pincode: v})} />
+                  </div>
+                  <Field label="Special Requests" value={editForm.specialRequests} onChange={(v: string) => setEditForm({...editForm, specialRequests: v})} textarea />
+                </>
+              )}
+            </div>
+            <div className="flex gap-3 mt-6">
+              <button onClick={() => setEditModal(null)} className="flex-1 border rounded-lg py-2 text-sm font-medium">Cancel</button>
+              <button onClick={handleSaveEdit} disabled={saving}
+                className="flex-1 bg-orange-500 text-white rounded-lg py-2 text-sm font-semibold disabled:opacity-50">
+                {saving ? 'Saving...' : 'Save Changes'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function Field({ label, value, onChange, type = 'text', placeholder, textarea }: {
+  label: string; value: string; onChange: (v: string) => void;
+  type?: string; placeholder?: string; textarea?: boolean;
+}) {
+  const cls = "w-full border rounded-lg px-3 py-2 text-sm focus:ring-1 focus:ring-orange-300 focus:border-orange-400 outline-none";
+  return (
+    <div>
+      <label className="text-xs font-medium text-gray-600 mb-1 block">{label}</label>
+      {textarea ? (
+        <textarea value={value} onChange={e => onChange(e.target.value)} className={cls} rows={2} placeholder={placeholder} />
+      ) : (
+        <input type={type} value={value} onChange={e => onChange(e.target.value)} className={cls} placeholder={placeholder} />
       )}
     </div>
   );
