@@ -541,17 +541,21 @@ export type ExperienceCategory = 'CULINARY' | 'CULTURAL' | 'WELLNESS' | 'ADVENTU
 
 export interface Experience {
   id: string;
+  hostId: string;
   title: string;
   description: string;
   category: ExperienceCategory;
   city: string;
+  locationName?: string;
   pricePaise: number;
   durationMinutes: number;
+  maxGuests: number;
+  languagesSpoken: string;
+  mediaUrls: string;
+  status: string;
   avgRating?: number;
   reviewCount?: number;
   hostName: string;
-  imageUrl?: string;
-  maxParticipants: number;
   createdAt: string;
 }
 
