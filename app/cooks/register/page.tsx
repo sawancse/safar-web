@@ -1,10 +1,27 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { api } from '@/lib/api';
 
 const CUISINES = ['SOUTH_INDIAN', 'NORTH_INDIAN', 'BENGALI', 'MAHARASHTRIAN', 'GUJARATI', 'PUNJABI', 'HYDERABADI', 'KERALA', 'CHINESE', 'CONTINENTAL', 'MUGHLAI', 'STREET_FOOD', 'DESSERTS', 'VEGAN', 'JAIN'];
+
+const CITY_STATES: Record<string, string> = {
+  'mumbai': 'Maharashtra', 'pune': 'Maharashtra', 'nashik': 'Maharashtra', 'nagpur': 'Maharashtra',
+  'delhi': 'Delhi', 'new delhi': 'Delhi', 'noida': 'Uttar Pradesh', 'gurgaon': 'Haryana', 'gurugram': 'Haryana',
+  'bangalore': 'Karnataka', 'bengaluru': 'Karnataka', 'mysore': 'Karnataka', 'mysuru': 'Karnataka',
+  'hyderabad': 'Telangana', 'secunderabad': 'Telangana', 'warangal': 'Telangana',
+  'chennai': 'Tamil Nadu', 'coimbatore': 'Tamil Nadu', 'madurai': 'Tamil Nadu',
+  'kolkata': 'West Bengal', 'howrah': 'West Bengal',
+  'ahmedabad': 'Gujarat', 'surat': 'Gujarat', 'vadodara': 'Gujarat', 'rajkot': 'Gujarat',
+  'jaipur': 'Rajasthan', 'udaipur': 'Rajasthan', 'jodhpur': 'Rajasthan',
+  'lucknow': 'Uttar Pradesh', 'kanpur': 'Uttar Pradesh', 'varanasi': 'Uttar Pradesh', 'agra': 'Uttar Pradesh',
+  'chandigarh': 'Chandigarh', 'bhopal': 'Madhya Pradesh', 'indore': 'Madhya Pradesh',
+  'kochi': 'Kerala', 'thiruvananthapuram': 'Kerala', 'trivandrum': 'Kerala',
+  'goa': 'Goa', 'panaji': 'Goa', 'guwahati': 'Assam', 'patna': 'Bihar',
+  'ranchi': 'Jharkhand', 'bhubaneswar': 'Odisha', 'visakhapatnam': 'Andhra Pradesh', 'vijayawada': 'Andhra Pradesh',
+  'dehradun': 'Uttarakhand', 'shimla': 'Himachal Pradesh', 'dharamshala': 'Himachal Pradesh',
+};
 
 export default function RegisterCookPage() {
   const router = useRouter();
@@ -24,12 +41,54 @@ export default function RegisterCookPage() {
   const [selectedCuisines, setSelectedCuisines] = useState<string[]>([]);
   const [specialties, setSpecialties] = useState('');
   const [localities, setLocalities] = useState('');
+  const [selectedLocalities, setSelectedLocalities] = useState<string[]>([]);
+  const [availableLocalities, setAvailableLocalities] = useState<string[]>([]);
+  const [localitySearch, setLocalitySearch] = useState('');
+  const [loadingLocalities, setLoadingLocalities] = useState(false);
   const [dailyRatePaise, setDailyRatePaise] = useState(0);
   const [monthlyRatePaise, setMonthlyRatePaise] = useState(0);
   const [eventMinPlatePaise, setEventMinPlatePaise] = useState(0);
   const [languages, setLanguages] = useState('Hindi, English');
   const [eventMinPax, setEventMinPax] = useState(20);
   const [eventMaxPax, setEventMaxPax] = useState(200);
+
+  // Fetch localities when city changes
+  useEffect(() => {
+    if (!city || city.length < 3) { setAvailableLocalities([]); return; }
+    setLoadingLocalities(true);
+    api.getLocalitiesByCity(city)
+      .then((data: any) => {
+        const names = Array.isArray(data)
+          ? data.map((l: any) => l.name || l.locality || l).filter(Boolean)
+          : [];
+        setAvailableLocalities(names);
+      })
+      .catch(() => setAvailableLocalities([]))
+      .finally(() => setLoadingLocalities(false));
+  }, [city]);
+
+  // Keep localities string in sync with selectedLocalities
+  useEffect(() => {
+    setLocalities(selectedLocalities.join(', '));
+  }, [selectedLocalities]);
+
+  function toggleLocality(loc: string) {
+    setSelectedLocalities(prev =>
+      prev.includes(loc) ? prev.filter(l => l !== loc) : [...prev, loc]
+    );
+  }
+
+  function addCustomLocality() {
+    const trimmed = localitySearch.trim();
+    if (trimmed && !selectedLocalities.includes(trimmed)) {
+      setSelectedLocalities(prev => [...prev, trimmed]);
+    }
+    setLocalitySearch('');
+  }
+
+  const filteredLocalities = availableLocalities.filter(l =>
+    l.toLowerCase().includes(localitySearch.toLowerCase()) && !selectedLocalities.includes(l)
+  );
 
   function toggleCuisine(c: string) {
     setSelectedCuisines(prev => prev.includes(c) ? prev.filter(x => x !== c) : [...prev, c]);
@@ -134,7 +193,12 @@ export default function RegisterCookPage() {
           <div className="grid grid-cols-3 gap-4">
             <div>
               <label className="block text-xs font-medium text-gray-600 mb-1">City *</label>
-              <input value={city} onChange={e => setCity(e.target.value)}
+              <input value={city} onChange={e => {
+                  const val = e.target.value;
+                  setCity(val);
+                  const mapped = CITY_STATES[val.toLowerCase().trim()];
+                  if (mapped) setState(mapped);
+                }}
                 className="w-full border rounded-lg px-3 py-2.5 text-sm" placeholder="Mumbai" />
             </div>
             <div>
@@ -150,8 +214,58 @@ export default function RegisterCookPage() {
           </div>
           <div>
             <label className="block text-xs font-medium text-gray-600 mb-1">Serving Areas</label>
-            <input value={localities} onChange={e => setLocalities(e.target.value)}
-              className="w-full border rounded-lg px-3 py-2.5 text-sm" placeholder="Bandra, Andheri, Juhu..." />
+            {/* Selected localities as chips */}
+            {selectedLocalities.length > 0 && (
+              <div className="flex flex-wrap gap-1.5 mb-2">
+                {selectedLocalities.map(loc => (
+                  <span key={loc} className="inline-flex items-center gap-1 bg-orange-50 text-orange-700 text-xs font-medium px-2.5 py-1 rounded-full border border-orange-200">
+                    {loc}
+                    <button type="button" onClick={() => toggleLocality(loc)} className="text-orange-400 hover:text-orange-600 ml-0.5">&times;</button>
+                  </span>
+                ))}
+              </div>
+            )}
+            {/* Search/add input */}
+            <div className="relative">
+              <input
+                value={localitySearch}
+                onChange={e => setLocalitySearch(e.target.value)}
+                onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addCustomLocality(); } }}
+                className="w-full border rounded-lg px-3 py-2.5 text-sm"
+                placeholder={availableLocalities.length > 0 ? 'Search or type a locality...' : city ? 'Type locality names...' : 'Enter city first'}
+              />
+              {loadingLocalities && (
+                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-400">Loading...</span>
+              )}
+            </div>
+            {/* Dropdown with available localities */}
+            {localitySearch && filteredLocalities.length > 0 && (
+              <div className="mt-1 border rounded-lg bg-white shadow-lg max-h-40 overflow-y-auto">
+                {filteredLocalities.slice(0, 15).map(loc => (
+                  <button key={loc} type="button" onClick={() => { toggleLocality(loc); setLocalitySearch(''); }}
+                    className="w-full text-left px-3 py-2 text-sm hover:bg-orange-50 transition">
+                    {loc}
+                  </button>
+                ))}
+              </div>
+            )}
+            {/* Show all available localities as selectable pills when no search */}
+            {!localitySearch && availableLocalities.length > 0 && (
+              <div className="flex flex-wrap gap-1.5 mt-2">
+                {availableLocalities.filter(l => !selectedLocalities.includes(l)).slice(0, 20).map(loc => (
+                  <button key={loc} type="button" onClick={() => toggleLocality(loc)}
+                    className="px-2.5 py-1 rounded-full text-xs border border-gray-200 text-gray-600 hover:border-orange-400 hover:bg-orange-50 transition">
+                    + {loc}
+                  </button>
+                ))}
+                {availableLocalities.length > 20 && (
+                  <span className="text-xs text-gray-400 self-center">+{availableLocalities.length - 20} more — search to find</span>
+                )}
+              </div>
+            )}
+            {city && availableLocalities.length === 0 && !loadingLocalities && (
+              <p className="text-xs text-gray-400 mt-1">No pre-loaded localities for {city}. Type and press Enter to add manually.</p>
+            )}
           </div>
           <div>
             <label className="block text-xs font-medium text-gray-600 mb-2">Cuisines *</label>
