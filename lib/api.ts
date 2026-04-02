@@ -1804,6 +1804,11 @@ export const api = {
       headers: { Authorization: `Bearer ${token}` },
     }),
 
+  /* ── Event Pricing ────────────────────────────────────────── */
+
+  getEventPricing: (chefId?: string) =>
+    apiFetch<any[]>(`/api/v1/chef-events/pricing${chefId ? '?chefId=' + chefId : ''}`),
+
   /* ── Builder Projects ────────────────────────────────────── */
 
   searchBuilderProjects: (params: Record<string, string>) =>

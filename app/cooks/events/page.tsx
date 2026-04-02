@@ -30,7 +30,8 @@ const CUISINE_OPTIONS = [
   'Thai', 'Mexican', 'Ghar ka Khaana', 'Street Food', 'Jain', 'Navratri Special',
 ];
 
-const LIVE_COUNTERS = [
+// Fallbacks used while API loads or if it fails
+const FALLBACK_COUNTERS = [
   { key: 'dosa', label: 'Live Dosa Counter', icon: '🥞', paise: 300000 },
   { key: 'pasta', label: 'Live Pasta Counter', icon: '🍝', paise: 350000 },
   { key: 'bbq', label: 'Live BBQ Counter', icon: '🔥', paise: 500000 },
@@ -38,13 +39,24 @@ const LIVE_COUNTERS = [
   { key: 'tandoor', label: 'Live Tandoor Counter', icon: '🫓', paise: 400000 },
 ];
 
-const ADDONS = [
+const FALLBACK_ADDONS = [
   { key: 'decoration', label: 'Event Decoration', desc: 'Balloons, banners, table setting & theme decor', icon: '🎈', paise: 500000 },
   { key: 'cake', label: 'Designer Cake', desc: 'Custom theme cake (1-2 kg)', icon: '🎂', paise: 200000 },
   { key: 'crockery', label: 'Crockery Rental', desc: 'Plates, glasses, cutlery, serving bowls', icon: '🍽️', paise: 80000 },
   { key: 'appliances', label: 'Appliance Rental', desc: 'Chafing dishes, gas stoves, induction', icon: '🔌', paise: 50000 },
   { key: 'table_setup', label: 'Fine Dine Table Setup', desc: 'Premium tablecloth, candles, flowers', icon: '🕯️', paise: 80000 },
 ];
+
+interface PricingItem {
+  category: string;
+  itemKey: string;
+  label: string;
+  description?: string;
+  icon?: string;
+  pricePaise: number;
+  priceType: string;
+  available?: boolean;
+}
 
 export default function EventBookingPage() {
   const searchParams = useSearchParams();
@@ -80,13 +92,38 @@ export default function EventBookingPage() {
   const [extraStaff, setExtraStaff] = useState(false);
   const [staffCount, setStaffCount] = useState(2);
 
+  // Dynamic pricing from API
+  const [pricingItems, setPricingItems] = useState<PricingItem[]>([]);
+  const [pricingLoaded, setPricingLoaded] = useState(false);
+
+  useEffect(() => {
+    api.getEventPricing(chefId || undefined)
+      .then((items: any[]) => {
+        setPricingItems(items);
+        setPricingLoaded(true);
+      })
+      .catch(() => setPricingLoaded(false));
+  }, [chefId]);
+
+  // Derive pricing arrays from API or fallbacks
+  const LIVE_COUNTERS = pricingLoaded
+    ? pricingItems.filter(i => i.category === 'LIVE_COUNTER' && i.available !== false).map(i => ({ key: i.itemKey, label: i.label, icon: i.icon || '', paise: i.pricePaise }))
+    : FALLBACK_COUNTERS;
+  const ADDONS = pricingLoaded
+    ? pricingItems.filter(i => i.category === 'ADDON' && i.available !== false).map(i => ({ key: i.itemKey, label: i.label, desc: i.description || '', icon: i.icon || '', paise: i.pricePaise }))
+    : FALLBACK_ADDONS;
+
+  const perPlatePaise = pricingItems.find(i => i.itemKey === 'per_plate')?.pricePaise ?? 30000;
+  const staffRatePaise = pricingItems.find(i => i.itemKey === 'staff')?.pricePaise ?? 150000;
+  const platformFeePct = (pricingItems.find(i => i.itemKey === 'platform_fee_pct')?.pricePaise ?? 1000) / 10000; // basis points → fraction
+
   // Price estimate
-  const foodPaise = guestCount * 30000;
+  const foodPaise = guestCount * perPlatePaise;
   const countersPaise = [...selectedCounters].reduce((sum, k) => sum + (LIVE_COUNTERS.find(c => c.key === k)?.paise ?? 0), 0);
   const addonsPaise = [...selectedAddons].reduce((sum, k) => sum + (ADDONS.find(a => a.key === k)?.paise ?? 0), 0);
-  const staffPaise = extraStaff ? staffCount * 150000 : 0;
+  const staffPaise = extraStaff ? staffCount * staffRatePaise : 0;
   const subtotalPaise = foodPaise + countersPaise + addonsPaise + staffPaise;
-  const platformFeePaise = Math.round(subtotalPaise * 0.1);
+  const platformFeePaise = Math.round(subtotalPaise * platformFeePct);
   const totalPaise = subtotalPaise + platformFeePaise;
 
   const toggleAddon = (key: string) => {
@@ -359,7 +396,7 @@ export default function EventBookingPage() {
                             <span className="text-sm font-medium text-gray-900">Extra Serving Staff</span>
                             <p className="text-xs text-gray-500">Waiters for serving & cleanup</p>
                           </div>
-                          <span className="text-sm font-semibold text-gray-600">+{formatPaise(150000)}/person</span>
+                          <span className="text-sm font-semibold text-gray-600">+{formatPaise(staffRatePaise)}/person</span>
                         </label>
                         {extraStaff && (
                           <div className="mt-3 ml-11 flex items-center gap-3">
@@ -465,7 +502,7 @@ export default function EventBookingPage() {
               <h3 className="font-bold text-gray-900 mb-4">Price Estimate</h3>
               <div className="space-y-2.5 text-sm">
                 <div className="flex justify-between">
-                  <span className="text-gray-600">Food ({guestCount} x {formatPaise(30000)})</span>
+                  <span className="text-gray-600">Food ({guestCount} x {formatPaise(perPlatePaise)})</span>
                   <span className="font-medium">{formatPaise(foodPaise)}</span>
                 </div>
                 {[...selectedCounters].map(k => {
@@ -488,7 +525,7 @@ export default function EventBookingPage() {
                 })}
                 {extraStaff && (
                   <div className="flex justify-between">
-                    <span className="text-gray-600">Staff ({staffCount}x {formatPaise(150000)})</span>
+                    <span className="text-gray-600">Staff ({staffCount}x {formatPaise(staffRatePaise)})</span>
                     <span className="font-medium">{formatPaise(staffPaise)}</span>
                   </div>
                 )}
