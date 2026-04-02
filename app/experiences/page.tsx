@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { api } from '@/lib/api';
 import { formatPaise } from '@/lib/utils';
 import type { Experience, ExperienceCategory } from '@/types';
@@ -119,9 +120,10 @@ export default function ExperiencesPage() {
       ) : experiences.length > 0 ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
           {experiences.map((exp) => (
-            <div
+            <Link
+              href={`/experiences/${exp.id}`}
               key={exp.id}
-              className="border rounded-2xl overflow-hidden hover:shadow-md transition"
+              className="border rounded-2xl overflow-hidden hover:shadow-md transition block"
             >
               {/* Image placeholder */}
               <div className="h-40 bg-gradient-to-br from-orange-100 to-pink-100 flex items-center justify-center">
@@ -156,7 +158,7 @@ export default function ExperiencesPage() {
                   </span>
                 </div>
               </div>
-            </div>
+            </Link>
           ))}
         </div>
       ) : (

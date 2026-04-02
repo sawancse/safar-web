@@ -539,6 +539,16 @@ export interface MilesHistoryResponse {
 
 export type ExperienceCategory = 'CULINARY' | 'CULTURAL' | 'WELLNESS' | 'ADVENTURE' | 'CREATIVE';
 
+export interface ExperienceSession {
+  id: string;
+  sessionDate: string;
+  startTime: string;
+  endTime: string;
+  availableSpots: number;
+  bookedSpots: number;
+  status: 'OPEN' | 'FULL' | 'CANCELLED';
+}
+
 export interface Experience {
   id: string;
   hostId: string;
@@ -552,10 +562,22 @@ export interface Experience {
   maxGuests: number;
   languagesSpoken: string;
   mediaUrls: string;
+  whatsIncluded?: string;
+  whatsNotIncluded?: string;
+  itinerary?: string;
+  meetingPoint?: string;
+  meetingPointLat?: number;
+  meetingPointLng?: number;
+  accessibility?: string;
+  cancellationPolicy?: string;
+  minAge?: number;
+  isPrivate?: boolean;
+  groupDiscountPct?: number;
   status: string;
   avgRating?: number;
   reviewCount?: number;
   hostName: string;
+  upcomingSessions?: ExperienceSession[];
   createdAt: string;
 }
 

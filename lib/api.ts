@@ -906,6 +906,46 @@ export const api = {
   getExperience: (id: string) =>
     apiFetch<Experience>(`/api/v1/experiences/${id}`),
 
+  getExperienceReviews: (experienceId: string, page = 0, size = 10) =>
+    apiFetch<{ content: Review[]; totalElements: number }>(
+      `/api/v1/reviews/experience/${experienceId}?page=${page}&size=${size}`
+    ),
+
+  getExperienceReviewStats: (experienceId: string) =>
+    apiFetch<ReviewStats>(`/api/v1/reviews/experience/${experienceId}/stats`),
+
+  createExperienceReview: (data: {
+    experienceBookingId: string;
+    experienceId: string;
+    hostId: string;
+    rating: number;
+    comment?: string;
+  }) => apiFetch<Review>('/api/v1/reviews/experience', { method: 'POST', body: JSON.stringify(data) }),
+
+  bookExperience: (data: { sessionId: string; numGuests: number; propertyBookingId?: string }) =>
+    apiFetch('/api/v1/experience-bookings', { method: 'POST', body: JSON.stringify(data) }),
+
+  getMyExperienceBookings: () =>
+    apiFetch<any[]>('/api/v1/experience-bookings'),
+
+  getHostExperiences: () =>
+    apiFetch<Experience[]>('/api/v1/experiences/host'),
+
+  createExperience: (data: any) =>
+    apiFetch<Experience>('/api/v1/experiences', { method: 'POST', body: JSON.stringify(data) }),
+
+  updateExperience: (id: string, data: any) =>
+    apiFetch<Experience>(`/api/v1/experiences/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+
+  updateExperienceStatus: (id: string, status: string) =>
+    apiFetch<Experience>(`/api/v1/experiences/${id}/status`, {
+      method: 'PATCH',
+      body: JSON.stringify({ status }),
+    }),
+
+  addExperienceSession: (experienceId: string, data: { sessionDate: string; startTime: string; endTime: string; availableSpots: number }) =>
+    apiFetch(`/api/v1/experiences/${experienceId}/sessions`, { method: 'POST', body: JSON.stringify(data) }),
+
   /* ── Medical Tourism ──────────────────────────────────────── */
   getMedicalStaySearch: (params?: { city?: string; specialty?: string }) => {
     const qs = new URLSearchParams();

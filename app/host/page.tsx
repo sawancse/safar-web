@@ -25,6 +25,7 @@ import HostSettlementTab from '@/components/host/HostSettlementTab';
 import HostPayoutsTab from '@/components/host/HostPayoutsTab';
 import HostSalesTab from '@/components/host/HostSalesTab';
 import HostBuilderTab from '@/components/host/HostBuilderTab';
+import HostExperiencesTab from './HostExperiencesTab';
 import EditListingModal from '@/components/EditListingModal';
 
 const STATUS_STYLE: Record<string, string> = {
@@ -71,7 +72,7 @@ export default function HostPage() {
   const [subscription, setSubscription] = useState<HostSubscription | null>(null);
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
   const [upgradingTier, setUpgradingTier] = useState<SubscriptionTier | null>(null);
-  const [activeTab, setActiveTab] = useState<'listings' | 'bookings' | 'calendar' | 'roomTypes' | 'pricing' | 'packages' | 'reviews' | 'messages' | 'kyc' | 'earnings' | 'invoices' | 'analytics' | 'transactions' | 'occupancy' | 'roomBoard' | 'settlement' | 'payouts' | 'sales' | 'builder'>('listings');
+  const [activeTab, setActiveTab] = useState<'listings' | 'bookings' | 'calendar' | 'roomTypes' | 'pricing' | 'packages' | 'reviews' | 'messages' | 'kyc' | 'earnings' | 'invoices' | 'analytics' | 'transactions' | 'occupancy' | 'roomBoard' | 'settlement' | 'payouts' | 'sales' | 'builder' | 'experiences'>('listings');
   const [commissionInfo, setCommissionInfo] = useState<{ commissionPercent: number; tier: string } | null>(null);
   const [editingListing, setEditingListing] = useState<Listing | null>(null);
 
@@ -637,10 +638,21 @@ export default function HostPage() {
         >
           Builder
         </button>
+        <button
+          onClick={() => setActiveTab('experiences')}
+          className={`flex-1 py-2 px-4 rounded-lg text-sm font-medium transition whitespace-nowrap ${
+            activeTab === 'experiences' ? 'bg-white shadow text-orange-600' : 'text-gray-500 hover:text-gray-700'
+          }`}
+        >
+          Experiences
+        </button>
       </div>
 
       {/* ── Builder Tab ───────────────────────────────── */}
       {activeTab === 'builder' && <HostBuilderTab />}
+
+      {/* ── Experiences Tab ───────────────────────────── */}
+      {activeTab === 'experiences' && <HostExperiencesTab />}
 
       {/* ── Bookings Tab ───────────────────────────────── */}
       {activeTab === 'bookings' && <HostBookingsTab token={token} />}
