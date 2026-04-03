@@ -290,7 +290,13 @@ export default function EventBookingPage() {
                     </div>
                   </div>
 
-                  <button type="button" onClick={() => setStep(2)}
+                  <button type="button" onClick={() => {
+                      if (!eventDate) { setError('Please select an event date'); return; }
+                      if (!venueAddress.trim()) { setError('Please enter the venue address'); return; }
+                      if (!city.trim()) { setError('Please select a city'); return; }
+                      setError('');
+                      setStep(2);
+                    }}
                     className="w-full py-3 bg-orange-500 text-white rounded-lg font-semibold hover:bg-orange-600 transition">
                     Next: Menu & Add-ons
                   </button>
