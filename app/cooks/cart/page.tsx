@@ -33,24 +33,69 @@ export default function CookCartPage() {
 
     for (const item of cart) {
       try {
-        const booking = await api.bookChef({
-          chefId: item.chefId,
-          serviceType: item.serviceType,
-          mealType: item.mealType || 'LUNCH',
-          serviceDate: item.serviceDate,
-          serviceTime: item.serviceTime,
-          guestsCount: item.guestsCount,
-          numberOfMeals: item.numberOfMeals,
-          menuId: item.menuId || undefined,
-          specialRequests: item.specialRequests || '',
-          address: item.address || '',
-          city: item.city || '',
-          locality: item.locality || '',
-          pincode: item.pincode || '',
-          customerName: '',
-          customerPhone: '',
-        }, token);
-        checkoutResults.push({ itemId: item.id, status: 'success', message: `Booked! Ref: ${booking.bookingRef}`, booking });
+        let booking: any;
+        if (item.serviceType === 'MONTHLY') {
+          booking = await api.createChefSubscription({
+            chefId: item.chefId,
+            plan: item.plan || 'Full Day',
+            mealsPerDay: item.mealsPerDay || 2,
+            mealTypes: item.mealTypes || 'Lunch, Dinner',
+            schedule: item.schedule || 'Mon-Sat',
+            monthlyRatePaise: item.estimatedPricePaise,
+            startDate: item.serviceDate,
+            address: item.address || '',
+            city: item.city || '',
+            locality: item.locality || '',
+            pincode: item.pincode || '',
+            specialRequests: item.specialRequests || '',
+            dietaryPreferences: item.dietaryPreferences || '',
+            customerName: item.customerName || '',
+          }, token);
+          checkoutResults.push({ itemId: item.id, status: 'success', message: `Subscribed! Ref: ${booking.subscriptionRef}`, booking });
+        } else if (item.serviceType === 'EVENT') {
+          booking = await api.createEventBooking({
+            chefId: item.chefId,
+            eventType: item.eventType || 'Party',
+            eventDate: item.serviceDate,
+            eventTime: item.serviceTime || '19:00',
+            durationHours: item.durationHours || 4,
+            guestCount: item.guestsCount,
+            venueAddress: item.venueAddress || item.address || '',
+            city: item.city || '',
+            locality: item.locality || '',
+            pincode: item.pincode || '',
+            menuDescription: item.menuDescription || '',
+            cuisinePreferences: item.cuisinePreferences || '',
+            decorationRequired: item.decorationRequired || false,
+            cakeRequired: item.cakeRequired || false,
+            staffRequired: item.staffRequired || false,
+            staffCount: item.staffCount || 0,
+            specialRequests: item.specialRequests || '',
+            customerName: item.customerName || '',
+            customerPhone: item.customerPhone || '',
+            customerEmail: item.customerEmail || '',
+          }, token);
+          checkoutResults.push({ itemId: item.id, status: 'success', message: `Event inquiry sent! Ref: ${booking.bookingRef}`, booking });
+        } else {
+          booking = await api.bookChef({
+            chefId: item.chefId,
+            serviceType: item.serviceType,
+            mealType: item.mealType || 'LUNCH',
+            serviceDate: item.serviceDate,
+            serviceTime: item.serviceTime,
+            guestsCount: item.guestsCount,
+            numberOfMeals: item.numberOfMeals,
+            menuId: item.menuId || undefined,
+            specialRequests: item.specialRequests || '',
+            address: item.address || '',
+            city: item.city || '',
+            locality: item.locality || '',
+            pincode: item.pincode || '',
+            customerName: item.customerName || '',
+            customerPhone: item.customerPhone || '',
+          }, token);
+          checkoutResults.push({ itemId: item.id, status: 'success', message: `Booked! Ref: ${booking.bookingRef}`, booking });
+        }
       } catch (err: any) {
         checkoutResults.push({ itemId: item.id, status: 'error', message: err.message || 'Failed to book' });
       }
@@ -139,21 +184,41 @@ export default function CookCartPage() {
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
                       <div className="flex items-center gap-2 mb-1">
-                        <span className="text-lg">👨‍🍳</span>
+                        <span className="text-lg">{item.serviceType === 'EVENT' ? '🎪' : item.serviceType === 'MONTHLY' ? '📅' : '👨‍🍳'}</span>
                         <p className="font-semibold text-gray-900">{item.chefName}</p>
-                        <span className="text-xs bg-orange-100 text-orange-600 px-2 py-0.5 rounded-full">{item.serviceType}</span>
+                        <span className={`text-xs px-2 py-0.5 rounded-full ${
+                          item.serviceType === 'EVENT' ? 'bg-purple-100 text-purple-600' :
+                          item.serviceType === 'MONTHLY' ? 'bg-green-100 text-green-600' :
+                          'bg-orange-100 text-orange-600'
+                        }`}>{item.serviceType}</span>
                       </div>
-                      <p className="text-xs text-gray-500">
-                        {item.serviceDate} at {item.serviceTime} | {item.mealType} | {item.guestsCount} guest{item.guestsCount !== 1 ? 's' : ''}
-                        {item.numberOfMeals > 1 ? ` | ${item.numberOfMeals} meals` : ''}
-                      </p>
+                      {item.serviceType === 'DAILY' && (
+                        <p className="text-xs text-gray-500">
+                          {item.serviceDate} at {item.serviceTime} | {item.mealType} | {item.guestsCount} guest{item.guestsCount !== 1 ? 's' : ''}
+                          {item.numberOfMeals > 1 ? ` | ${item.numberOfMeals} meals` : ''}
+                        </p>
+                      )}
+                      {item.serviceType === 'MONTHLY' && (
+                        <p className="text-xs text-gray-500">
+                          Start: {item.serviceDate} | {item.mealsPerDay || 2} meals/day | {item.schedule || 'Mon-Sat'} | {item.mealTypes || 'Lunch, Dinner'}
+                        </p>
+                      )}
+                      {item.serviceType === 'EVENT' && (
+                        <p className="text-xs text-gray-500">
+                          {item.eventType || 'Event'} | {item.serviceDate} at {item.serviceTime} | {item.guestsCount} guests | {item.durationHours || 4}h
+                        </p>
+                      )}
                       {item.menuName && <p className="text-xs text-gray-500">Menu: {item.menuName}</p>}
-                      {item.city && <p className="text-xs text-gray-400">{item.address ? item.address + ', ' : ''}{item.city}</p>}
+                      {item.city && <p className="text-xs text-gray-400">{item.venueAddress || item.address ? (item.venueAddress || item.address) + ', ' : ''}{item.city}</p>}
                       {item.specialRequests && <p className="text-xs text-orange-600 mt-1 italic">"{item.specialRequests}"</p>}
                     </div>
                     <div className="text-right ml-4">
                       <p className="text-lg font-bold text-gray-900">{formatPaise(item.estimatedPricePaise)}</p>
-                      <p className="text-xs text-green-600">Advance: {formatPaise(Math.max(item.estimatedPricePaise * 10 / 100, 100))}</p>
+                      <p className="text-xs text-green-600">
+                        {item.serviceType === 'EVENT' ? `Advance (50%): ${formatPaise(item.estimatedPricePaise * 50 / 100)}` :
+                         item.serviceType === 'MONTHLY' ? 'Monthly recurring' :
+                         `Advance (10%): ${formatPaise(Math.max(item.estimatedPricePaise * 10 / 100, 100))}`}
+                      </p>
                       <button onClick={() => handleRemove(item.id)}
                         className="text-xs text-red-500 hover:text-red-700 mt-2 font-medium">Remove</button>
                     </div>
@@ -170,9 +235,13 @@ export default function CookCartPage() {
                   <p className="text-2xl font-bold text-gray-900">{formatPaise(total)}</p>
                 </div>
                 <div className="text-right">
-                  <p className="text-xs text-gray-500">10% advance per booking</p>
+                  <p className="text-xs text-gray-500">Advance varies by type</p>
                   <p className="text-sm font-semibold text-green-600">
-                    Pay now: {formatPaise(cart.reduce((s, i) => s + Math.max(i.estimatedPricePaise * 10 / 100, 100), 0))}
+                    Est. advance: {formatPaise(cart.reduce((s, i) => {
+                      if (i.serviceType === 'EVENT') return s + i.estimatedPricePaise * 50 / 100;
+                      if (i.serviceType === 'MONTHLY') return s + i.estimatedPricePaise;
+                      return s + Math.max(i.estimatedPricePaise * 10 / 100, 100);
+                    }, 0))}
                   </p>
                 </div>
               </div>
@@ -181,7 +250,7 @@ export default function CookCartPage() {
                 {checking ? 'Booking...' : `Checkout (${cart.length} item${cart.length !== 1 ? 's' : ''})`}
               </button>
               <p className="text-xs text-gray-400 text-center mt-2">
-                Each booking requires 10% advance. Balance paid at time of service.
+                Daily: 10% advance, balance at service | Event: 50% advance | Monthly: full month upfront
               </p>
             </div>
           </>

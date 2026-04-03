@@ -3,7 +3,7 @@ export interface CartItem {
   id: string;
   chefId: string;
   chefName: string;
-  serviceType: 'DAILY' | 'EVENT';
+  serviceType: 'DAILY' | 'MONTHLY' | 'EVENT';
   mealType?: string;
   serviceDate: string;
   serviceTime: string;
@@ -18,6 +18,25 @@ export interface CartItem {
   pincode?: string;
   estimatedPricePaise: number;
   addedAt: string;
+  // Monthly-specific
+  plan?: string;
+  mealsPerDay?: number;
+  mealTypes?: string;
+  schedule?: string;
+  dietaryPreferences?: string;
+  // Event-specific
+  eventType?: string;
+  durationHours?: number;
+  venueAddress?: string;
+  menuDescription?: string;
+  cuisinePreferences?: string;
+  decorationRequired?: boolean;
+  cakeRequired?: boolean;
+  staffRequired?: boolean;
+  staffCount?: number;
+  customerName?: string;
+  customerPhone?: string;
+  customerEmail?: string;
 }
 
 const CART_KEY = 'safar_cook_cart';

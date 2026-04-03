@@ -221,6 +221,17 @@ export default function ChefProfilePage() {
                 className="block bg-green-600 text-white text-sm font-semibold py-2.5 rounded-lg hover:bg-green-700 transition">
                 Subscribe Monthly
               </Link>
+              <button onClick={() => {
+                const start = prompt('Start date (YYYY-MM-DD):');
+                if (!start) return;
+                addToCart({ chefId: chef.id, chefName: chef.name, serviceType: 'MONTHLY',
+                  serviceDate: start, serviceTime: '', guestsCount: 1, numberOfMeals: 1,
+                  plan: 'Full Day', mealsPerDay: 2, mealTypes: 'Lunch, Dinner', schedule: 'Mon-Sat',
+                  estimatedPricePaise: chef.monthlyRatePaise });
+                alert('Monthly plan added to cart!');
+              }} className="block w-full mt-2 border border-green-300 text-green-600 text-xs font-medium py-2 rounded-lg hover:bg-green-50 transition">
+                + Add to Cart
+              </button>
             </div>
           )}
           {chef.eventMinPlatePaise > 0 && (
@@ -233,6 +244,18 @@ export default function ChefProfilePage() {
                 className="block bg-purple-600 text-white text-sm font-semibold py-2.5 rounded-lg hover:bg-purple-700 transition">
                 Get Quote
               </Link>
+              <button onClick={() => {
+                const date = prompt('Event date (YYYY-MM-DD):');
+                if (!date) return;
+                const guests = Number(prompt('Number of guests:', '50') || 50);
+                addToCart({ chefId: chef.id, chefName: chef.name, serviceType: 'EVENT',
+                  serviceDate: date, serviceTime: '19:00', guestsCount: guests, numberOfMeals: 1,
+                  eventType: 'Party', durationHours: 4,
+                  estimatedPricePaise: chef.eventMinPlatePaise * guests });
+                alert('Event added to cart!');
+              }} className="block w-full mt-2 border border-purple-300 text-purple-600 text-xs font-medium py-2 rounded-lg hover:bg-purple-50 transition">
+                + Add to Cart
+              </button>
             </div>
           )}
         </div>
