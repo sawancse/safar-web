@@ -485,10 +485,10 @@ export default function HostPage() {
       </div>
 
       {/* ── Tab Bar ────────────────────────────────────── */}
-      <div className="flex gap-1 mb-6 bg-gray-100 rounded-xl p-1 max-w-5xl overflow-x-auto">
+      <div className="flex gap-1 mb-6 bg-gray-100 rounded-xl p-1 overflow-x-auto scrollbar-thin">
         <button
           onClick={() => setActiveTab('listings')}
-          className={`flex-1 py-2 px-4 rounded-lg text-sm font-medium transition ${
+          className={`flex-shrink-0 py-2 px-4 rounded-lg text-sm font-medium transition whitespace-nowrap ${
             activeTab === 'listings' ? 'bg-white shadow text-orange-600' : 'text-gray-500 hover:text-gray-700'
           }`}
         >
@@ -496,7 +496,7 @@ export default function HostPage() {
         </button>
         <button
           onClick={() => setActiveTab('bookings')}
-          className={`flex-1 py-2 px-4 rounded-lg text-sm font-medium transition ${
+          className={`flex-shrink-0 py-2 px-4 rounded-lg text-sm font-medium transition whitespace-nowrap ${
             activeTab === 'bookings' ? 'bg-white shadow text-orange-600' : 'text-gray-500 hover:text-gray-700'
           }`}
         >
@@ -504,7 +504,7 @@ export default function HostPage() {
         </button>
         <button
           onClick={() => setActiveTab('calendar')}
-          className={`flex-1 py-2 px-4 rounded-lg text-sm font-medium transition ${
+          className={`flex-shrink-0 py-2 px-4 rounded-lg text-sm font-medium transition whitespace-nowrap ${
             activeTab === 'calendar' ? 'bg-white shadow text-orange-600' : 'text-gray-500 hover:text-gray-700'
           }`}
         >
@@ -536,7 +536,7 @@ export default function HostPage() {
         </button>
         <button
           onClick={() => setActiveTab('reviews')}
-          className={`flex-1 py-2 px-4 rounded-lg text-sm font-medium transition ${
+          className={`flex-shrink-0 py-2 px-4 rounded-lg text-sm font-medium transition whitespace-nowrap ${
             activeTab === 'reviews' ? 'bg-white shadow text-orange-600' : 'text-gray-500 hover:text-gray-700'
           }`}
         >
@@ -544,7 +544,7 @@ export default function HostPage() {
         </button>
         <button
           onClick={() => setActiveTab('messages')}
-          className={`flex-1 py-2 px-4 rounded-lg text-sm font-medium transition ${
+          className={`flex-shrink-0 py-2 px-4 rounded-lg text-sm font-medium transition whitespace-nowrap ${
             activeTab === 'messages' ? 'bg-white shadow text-orange-600' : 'text-gray-500 hover:text-gray-700'
           }`}
         >
@@ -552,7 +552,7 @@ export default function HostPage() {
         </button>
         <button
           onClick={() => setActiveTab('earnings')}
-          className={`flex-1 py-2 px-4 rounded-lg text-sm font-medium transition ${
+          className={`flex-shrink-0 py-2 px-4 rounded-lg text-sm font-medium transition whitespace-nowrap ${
             activeTab === 'earnings' ? 'bg-white shadow text-orange-600' : 'text-gray-500 hover:text-gray-700'
           }`}
         >
@@ -560,7 +560,7 @@ export default function HostPage() {
         </button>
         <button
           onClick={() => setActiveTab('invoices')}
-          className={`flex-1 py-2 px-4 rounded-lg text-sm font-medium transition ${
+          className={`flex-shrink-0 py-2 px-4 rounded-lg text-sm font-medium transition whitespace-nowrap ${
             activeTab === 'invoices' ? 'bg-white shadow text-orange-600' : 'text-gray-500 hover:text-gray-700'
           }`}
         >
@@ -616,7 +616,7 @@ export default function HostPage() {
         </button>
         <button
           onClick={() => setActiveTab('kyc')}
-          className={`flex-1 py-2 px-4 rounded-lg text-sm font-medium transition ${
+          className={`flex-shrink-0 py-2 px-4 rounded-lg text-sm font-medium transition whitespace-nowrap ${
             activeTab === 'kyc' ? 'bg-white shadow text-orange-600' : 'text-gray-500 hover:text-gray-700'
           }`}
         >
