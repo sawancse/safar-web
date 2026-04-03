@@ -4,6 +4,7 @@ import RecentSearches from '@/components/RecentSearches';
 import StillInterested from '@/components/StillInterested';
 import Recommendations from '@/components/Recommendations';
 import TrendingListings from '@/components/TrendingListings';
+import { OrganizationJsonLd, WebsiteJsonLd } from '@/components/JsonLd';
 import Link from 'next/link';
 
 const TRUST_BADGES = [
@@ -24,6 +25,8 @@ export default async function HomePage() {
 
   return (
     <>
+      <OrganizationJsonLd />
+      <WebsiteJsonLd />
       {/* ── Hero Section ── */}
       <section className="relative overflow-hidden">
         {/* Background: deep gradient with texture */}
