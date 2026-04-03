@@ -1883,6 +1883,87 @@ export const api = {
       body: JSON.stringify(data),
     }),
 
+  // ── Chef Calendar / Availability ─────────────────────────
+  getChefCalendar: (chefId: string, from: string, to: string) =>
+    apiFetch<any>(`/api/v1/chefs/availability/${chefId}/calendar?from=${from}&to=${to}`),
+
+  blockDate: (date: string, reason: string, token: string) =>
+    apiFetch<any>(`/api/v1/chefs/availability/block?date=${date}&reason=${encodeURIComponent(reason)}`, {
+      method: 'POST', headers: { Authorization: `Bearer ${token}` },
+    }),
+
+  unblockDate: (date: string, token: string) =>
+    apiFetch<any>(`/api/v1/chefs/availability/unblock?date=${date}`, {
+      method: 'DELETE', headers: { Authorization: `Bearer ${token}` },
+    }),
+
+  bulkBlockDates: (dates: string[], reason: string, token: string) =>
+    apiFetch<any>('/api/v1/chefs/availability/block-bulk', {
+      method: 'POST', headers: { Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ dates, reason }),
+    }),
+
+  // ── Chef Photo Gallery ─────────────────────────────────
+  getChefPhotos: (chefId: string) =>
+    apiFetch<any[]>(`/api/v1/chefs/photos/${chefId}`),
+
+  addChefPhoto: (url: string, caption: string, photoType: string, token: string) =>
+    apiFetch<any>(`/api/v1/chefs/photos?url=${encodeURIComponent(url)}&caption=${encodeURIComponent(caption)}&photoType=${photoType}`, {
+      method: 'POST', headers: { Authorization: `Bearer ${token}` },
+    }),
+
+  deleteChefPhoto: (photoId: string, token: string) =>
+    apiFetch<any>(`/api/v1/chefs/photos/${photoId}`, {
+      method: 'DELETE', headers: { Authorization: `Bearer ${token}` },
+    }),
+
+  // ── Cuisine Pricing ────────────────────────────────────
+  getChefCuisinePricing: (chefId: string) =>
+    apiFetch<any[]>(`/api/v1/chefs/cuisine-pricing/${chefId}`),
+
+  setCuisinePricing: (cuisineType: string, pricePerPlatePaise: number, token: string) =>
+    apiFetch<any>(`/api/v1/chefs/cuisine-pricing/${cuisineType}?pricePerPlatePaise=${pricePerPlatePaise}`, {
+      method: 'PUT', headers: { Authorization: `Bearer ${token}` },
+    }),
+
+  deleteCuisinePricing: (cuisineType: string, token: string) =>
+    apiFetch<any>(`/api/v1/chefs/cuisine-pricing/${cuisineType}`, {
+      method: 'DELETE', headers: { Authorization: `Bearer ${token}` },
+    }),
+
+  // ── Chef Referrals ─────────────────────────────────────
+  generateReferralCode: (token: string) =>
+    apiFetch<{ referralCode: string }>('/api/v1/chefs/referrals/generate-code', {
+      method: 'POST', headers: { Authorization: `Bearer ${token}` },
+    }),
+
+  getMyReferrals: (token: string) =>
+    apiFetch<any[]>('/api/v1/chefs/referrals/my', {
+      headers: { Authorization: `Bearer ${token}` },
+    }),
+
+  // ── Live Tracking ──────────────────────────────────────
+  updateChefLocation: (bookingId: string, lat: number, lng: number, etaMinutes: number, token: string) =>
+    apiFetch<any>(`/api/v1/chef-bookings/${bookingId}/location?lat=${lat}&lng=${lng}&etaMinutes=${etaMinutes}`, {
+      method: 'POST', headers: { Authorization: `Bearer ${token}` },
+    }),
+
+  getBookingTracking: (bookingId: string) =>
+    apiFetch<any>(`/api/v1/chef-bookings/${bookingId}/tracking`),
+
+  // ── Invoice / Receipt ──────────────────────────────────
+  getBookingInvoice: (bookingId: string) =>
+    apiFetch<any>(`/api/v1/chef-bookings/${bookingId}/invoice`),
+
+  getEventInvoice: (eventId: string) =>
+    apiFetch<any>(`/api/v1/chef-events/${eventId}/invoice`),
+
+  // ── Rebook ─────────────────────────────────────────────
+  rebookChef: (bookingId: string, newDate: string, newTime: string, token: string) =>
+    apiFetch<any>(`/api/v1/chef-bookings/${bookingId}/rebook?newDate=${newDate}${newTime ? '&newTime=' + encodeURIComponent(newTime) : ''}`, {
+      method: 'POST', headers: { Authorization: `Bearer ${token}` },
+    }),
+
   /* ── Event Pricing ────────────────────────────────────────── */
 
   getEventPricing: (chefId?: string) =>

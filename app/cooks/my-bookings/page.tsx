@@ -210,6 +210,18 @@ export default function MyChefBookingsPage() {
                         className="text-xs text-orange-600 border border-orange-200 px-3 py-1 rounded-lg hover:bg-orange-50">Rate & Review</button>
                     )}
                     {b.ratingGiven && <span className="text-xs text-gray-500">{'★'.repeat(b.ratingGiven)} Rated</span>}
+                    {b.status === 'COMPLETED' && (
+                      <button onClick={async () => { const inv = await api.getBookingInvoice(b.id); window.open(`data:text/html,${encodeURIComponent(renderInvoiceHtml(inv))}`, '_blank'); }}
+                        className="text-xs text-gray-600 border border-gray-200 px-3 py-1 rounded-lg hover:bg-gray-50">Invoice</button>
+                    )}
+                    {b.status === 'COMPLETED' && (
+                      <button onClick={() => { const d = prompt('New date (YYYY-MM-DD):'); if (d) { const token = localStorage.getItem('access_token')!; api.rebookChef(b.id, d, '', token).then(nb => { setBookings(prev => [nb, ...prev]); alert('Rebooked! Ref: ' + nb.bookingRef); }); }}}
+                        className="text-xs text-purple-600 border border-purple-200 px-3 py-1 rounded-lg hover:bg-purple-50">Book Again</button>
+                    )}
+                    {(b.status === 'CONFIRMED' || b.status === 'IN_PROGRESS') && (
+                      <button onClick={async () => { const t = await api.getBookingTracking(b.id); alert(`ETA: ${t.etaMinutes > 0 ? t.etaMinutes + ' min' : 'Not shared yet'}\nLat: ${t.chefLat || '-'}\nLng: ${t.chefLng || '-'}`); }}
+                        className="text-xs text-indigo-600 border border-indigo-200 px-3 py-1 rounded-lg hover:bg-indigo-50">Track Chef</button>
+                    )}
                   </div>
                 </div>
                 );
@@ -264,12 +276,16 @@ export default function MyChefBookingsPage() {
                       {e.totalAmountPaise > 0 && <p className="text-sm font-bold mt-1">{formatPaise(e.totalAmountPaise)}</p>}
                     </div>
                   </div>
-                  {MODIFIABLE_EVENT.includes(e.status) && (
-                    <div className="flex gap-2 mt-3">
+                  <div className="flex gap-2 mt-3">
+                    {MODIFIABLE_EVENT.includes(e.status) && (
                       <button onClick={() => openEdit(e, 'event')}
                         className="text-xs text-blue-600 border border-blue-200 px-3 py-1 rounded-lg hover:bg-blue-50">Modify</button>
-                    </div>
-                  )}
+                    )}
+                    {(e.status === 'COMPLETED' || e.status === 'CONFIRMED' || e.status === 'ADVANCE_PAID') && (
+                      <button onClick={async () => { const inv = await api.getEventInvoice(e.id); window.open(`data:text/html,${encodeURIComponent(renderInvoiceHtml(inv))}`, '_blank'); }}
+                        className="text-xs text-gray-600 border border-gray-200 px-3 py-1 rounded-lg hover:bg-gray-50">Invoice</button>
+                    )}
+                  </div>
                 </div>
               ))}
             </div>
@@ -368,6 +384,35 @@ export default function MyChefBookingsPage() {
       )}
     </div>
   );
+}
+
+function renderInvoiceHtml(inv: any): string {
+  const fmt = (p: number) => '\u20B9' + (p / 100).toLocaleString('en-IN', { minimumFractionDigits: 2 });
+  return `<!DOCTYPE html><html><head><title>Invoice ${inv.invoiceNumber}</title>
+<style>body{font-family:system-ui;max-width:700px;margin:40px auto;padding:20px;color:#333}
+h1{color:#f97316;margin:0}table{width:100%;border-collapse:collapse;margin:16px 0}
+td,th{padding:8px 12px;text-align:left;border-bottom:1px solid #eee}th{background:#f9fafb}
+.total{font-weight:700;font-size:18px}.right{text-align:right}.badge{background:#f97316;color:#fff;padding:2px 8px;border-radius:12px;font-size:12px}
+@media print{button{display:none}}</style></head><body>
+<div style="display:flex;justify-content:space-between;align-items:center">
+<div><h1>Safar</h1><p style="margin:4px 0;color:#888">${inv.company}</p><p style="margin:0;font-size:12px;color:#aaa">GSTIN: ${inv.gstin}</p></div>
+<div style="text-align:right"><h2 style="margin:0">INVOICE</h2><p style="margin:4px 0;font-size:14px">${inv.invoiceNumber}</p>
+<span class="badge">${inv.status}</span></div></div><hr>
+<table><tr><td><strong>Customer:</strong> ${inv.customerName || '-'}</td><td><strong>Chef:</strong> ${inv.chefName || '-'}</td></tr>
+<tr><td><strong>Ref:</strong> ${inv.bookingRef}</td><td><strong>Date:</strong> ${inv.serviceDate || inv.eventDate || '-'}</td></tr>
+<tr><td><strong>Address:</strong> ${inv.address || inv.venueAddress || '-'}, ${inv.city || '-'}</td>
+<td><strong>${inv.type === 'EVENT_BOOKING' ? 'Guests' : 'Guests'}:</strong> ${inv.guestsCount || inv.guestCount || '-'}</td></tr></table>
+<table><tr><th>Item</th><th class="right">Amount</th></tr>
+${inv.foodPaise ? `<tr><td>Food (${inv.guestCount} guests)</td><td class="right">${fmt(inv.foodPaise)}</td></tr>` : ''}
+${inv.decorationPaise > 0 ? `<tr><td>Decoration</td><td class="right">${fmt(inv.decorationPaise)}</td></tr>` : ''}
+${inv.cakePaise > 0 ? `<tr><td>Cake</td><td class="right">${fmt(inv.cakePaise)}</td></tr>` : ''}
+${inv.staffPaise > 0 ? `<tr><td>Staff</td><td class="right">${fmt(inv.staffPaise)}</td></tr>` : ''}
+<tr><td><strong>Total</strong></td><td class="right total">${fmt(inv.totalPaise)}</td></tr>
+<tr><td>Advance Paid</td><td class="right" style="color:green">${fmt(inv.advancePaidPaise)}</td></tr>
+<tr><td><strong>Balance Due</strong></td><td class="right" style="color:#f97316">${fmt(inv.balanceDuePaise)}</td></tr></table>
+<p style="text-align:center;color:#aaa;margin-top:40px;font-size:12px">Thank you for choosing Safar Cooks!</p>
+<button onclick="window.print()" style="margin:20px auto;display:block;padding:8px 24px;background:#f97316;color:#fff;border:none;border-radius:8px;cursor:pointer">Print Invoice</button>
+</body></html>`;
 }
 
 function Field({ label, value, onChange, type = 'text', placeholder, textarea }: {

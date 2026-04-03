@@ -23,19 +23,35 @@ export default function ChefProfilePage() {
   const [menuItems, setMenuItems] = useState<Record<string, any[]>>({});
   const [loading, setLoading] = useState(true);
   const [expandedMenu, setExpandedMenu] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<'about' | 'menus' | 'reviews'>('about');
+  const [activeTab, setActiveTab] = useState<'about' | 'menus' | 'reviews' | 'gallery' | 'calendar'>('about');
+  const [photos, setPhotos] = useState<any[]>([]);
+  const [calendar, setCalendar] = useState<any>(null);
+  const [cuisinePricing, setCuisinePricing] = useState<any[]>([]);
 
   useEffect(() => {
     if (!id) return;
     Promise.all([
       api.getChef(id as string),
       api.getChefMenus(id as string),
-    ]).then(([c, m]) => {
+      api.getChefPhotos(id as string).catch(() => []),
+      api.getChefCuisinePricing(id as string).catch(() => []),
+    ]).then(([c, m, p, cp]) => {
       setChef(c);
       setMenus(m || []);
+      setPhotos(p || []);
+      setCuisinePricing(cp || []);
     }).catch(() => {})
       .finally(() => setLoading(false));
   }, [id]);
+
+  useEffect(() => {
+    if (activeTab === 'calendar' && id && !calendar) {
+      const today = new Date();
+      const from = today.toISOString().slice(0, 10);
+      const to = new Date(today.getTime() + 60 * 86400000).toISOString().slice(0, 10);
+      api.getChefCalendar(id as string, from, to).then(setCalendar).catch(() => {});
+    }
+  }, [activeTab, id]);
 
   async function loadMenuItems(menuId: string) {
     if (menuItems[menuId]) {
@@ -110,6 +126,16 @@ export default function ChefProfilePage() {
                   {chef.verified && (
                     <span className="text-[10px] bg-green-500 text-white px-2.5 py-0.5 rounded-full font-bold uppercase tracking-wide">
                       Pro
+                    </span>
+                  )}
+                  {chef.badge && (
+                    <span className={`text-[10px] px-2.5 py-0.5 rounded-full font-bold uppercase tracking-wide ${
+                      chef.badge === 'TOP_CHEF' ? 'bg-yellow-400 text-yellow-900' :
+                      chef.badge === 'TOP_10' ? 'bg-purple-500 text-white' :
+                      chef.badge === 'RISING_STAR' ? 'bg-blue-500 text-white' :
+                      'bg-gray-500 text-white'
+                    }`}>
+                      {chef.badge.replace(/_/g, ' ')}
                     </span>
                   )}
                   {chef.available ? (
@@ -203,7 +229,7 @@ export default function ChefProfilePage() {
         {/* ── Tabs ── */}
         <div className="mt-8">
           <div className="flex border-b">
-            {(['about', 'menus', 'reviews'] as const).map(tab => (
+            {(['about', 'menus', 'reviews', 'gallery', 'calendar'] as const).map(tab => (
               <button key={tab} onClick={() => setActiveTab(tab)}
                 className={`px-5 py-3 text-sm font-medium border-b-2 transition capitalize
                   ${activeTab === tab ? 'border-orange-500 text-orange-600' : 'border-transparent text-gray-500 hover:text-gray-700'}`}>
@@ -406,6 +432,75 @@ export default function ChefProfilePage() {
                 <p className="text-lg font-semibold text-gray-700">{chef.rating > 0 ? `${chef.rating.toFixed(1)} out of 5` : 'No reviews yet'}</p>
                 <p className="text-sm text-gray-500 mt-1">{chef.reviewCount || 0} verified reviews</p>
               </div>
+            </div>
+          )}
+
+          {/* Gallery */}
+          {activeTab === 'gallery' && (
+            <div className="mt-6">
+              {photos.length === 0 ? (
+                <p className="text-center text-gray-400 py-12">No photos yet</p>
+              ) : (
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                  {photos.map((p: any) => (
+                    <div key={p.id} className="relative group rounded-xl overflow-hidden aspect-square">
+                      <img src={p.url} alt={p.caption || 'Chef photo'} className="w-full h-full object-cover" />
+                      {p.caption && (
+                        <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 to-transparent p-3">
+                          <p className="text-white text-xs">{p.caption}</p>
+                        </div>
+                      )}
+                      <span className="absolute top-2 right-2 bg-white/80 text-xs px-2 py-0.5 rounded-full">{p.photoType}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+              {cuisinePricing.length > 0 && (
+                <div className="mt-6">
+                  <h3 className="text-sm font-semibold text-gray-700 mb-3">Cuisine-based Pricing</h3>
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                    {cuisinePricing.map((cp: any) => (
+                      <div key={cp.id} className="border rounded-lg px-3 py-2 text-center">
+                        <p className="text-xs text-gray-500">{cp.cuisineType.replace(/_/g, ' ')}</p>
+                        <p className="text-sm font-bold text-orange-600">{formatPaise(cp.pricePerPlatePaise)}/plate</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Calendar */}
+          {activeTab === 'calendar' && (
+            <div className="mt-6">
+              {!calendar ? (
+                <p className="text-center text-gray-400 py-12">Loading calendar...</p>
+              ) : (
+                <div>
+                  <div className="flex gap-4 mb-4 text-xs">
+                    <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-red-200 inline-block" /> Blocked</span>
+                    <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-blue-200 inline-block" /> Booked</span>
+                    <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-green-200 inline-block" /> Available</span>
+                  </div>
+                  <div className="grid grid-cols-7 gap-1">
+                    {Array.from({ length: 60 }, (_, i) => {
+                      const d = new Date();
+                      d.setDate(d.getDate() + i);
+                      const ds = d.toISOString().slice(0, 10);
+                      const blocked = calendar.blockedDates?.includes(ds);
+                      const booked = calendar.bookedDates?.includes(ds);
+                      const bg = blocked ? 'bg-red-100 text-red-700' : booked ? 'bg-blue-100 text-blue-700' : 'bg-green-50 text-green-700';
+                      return (
+                        <div key={ds} className={`rounded-lg p-1.5 text-center text-xs ${bg}`}>
+                          <p className="font-medium">{d.getDate()}</p>
+                          <p className="text-[10px]">{d.toLocaleDateString('en', { month: 'short' })}</p>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </div>
