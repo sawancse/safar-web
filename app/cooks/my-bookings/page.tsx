@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { api } from '@/lib/api';
 import { formatPaise } from '@/lib/utils';
 import CityAutocomplete from '@/components/CityAutocomplete';
@@ -142,7 +143,23 @@ export default function MyChefBookingsPage() {
 
   return (
     <div className="max-w-4xl mx-auto px-4 py-8">
-      <h1 className="text-2xl font-bold text-gray-900 mb-6">My Cook Bookings</h1>
+      <div className="flex items-center justify-between mb-6">
+        <h1 className="text-2xl font-bold text-gray-900">My Cook Bookings</h1>
+        <Link href="/cooks/dashboard"
+          className="text-sm bg-orange-50 text-orange-600 border border-orange-200 px-4 py-2 rounded-xl hover:bg-orange-100 transition font-medium">
+          Chef Dashboard →
+        </Link>
+      </div>
+
+      {/* Banner for chefs */}
+      <div className="mb-4 bg-gradient-to-r from-orange-50 to-amber-50 border border-orange-200 rounded-xl px-4 py-3 flex items-center justify-between">
+        <p className="text-sm text-orange-700">
+          Are you a cook? View your <strong>incoming orders</strong> and manage bookings on the Chef Dashboard.
+        </p>
+        <Link href="/cooks/dashboard" className="text-xs bg-orange-500 text-white px-3 py-1.5 rounded-lg font-medium hover:bg-orange-600 transition shrink-0 ml-3">
+          Open Dashboard
+        </Link>
+      </div>
 
       {/* Tabs */}
       <div className="flex gap-2 mb-6 border-b">
