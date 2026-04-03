@@ -1,7 +1,7 @@
 'use client';
 
 import { useSearchParams } from 'next/navigation';
-import { Suspense, useCallback, useMemo } from 'react';
+import { Suspense, useCallback, useMemo, useRef } from 'react';
 import Link from 'next/link';
 
 function CertificateContent() {
@@ -35,6 +35,30 @@ function CertificateContent() {
     );
     window.open(`https://wa.me/?text=${msg}`, '_blank');
   }, [amount]);
+
+  const certRef = useRef<HTMLDivElement>(null);
+
+  const handleDownload = useCallback(async () => {
+    const el = certRef.current;
+    if (!el) return;
+    try {
+      // Dynamic import html2canvas
+      const html2canvas = (await import('html2canvas')).default;
+      const canvas = await html2canvas(el, {
+        scale: 2,
+        useCORS: true,
+        backgroundColor: '#ffffff',
+      });
+      const link = document.createElement('a');
+      link.download = `Safar-Aashray-Certificate-${donationRef}.png`;
+      link.href = canvas.toDataURL('image/png');
+      link.click();
+    } catch {
+      // Fallback: open print dialog for Save as PDF
+      alert('Download failed. Use Print > "Save as PDF" instead.');
+      window.print();
+    }
+  }, [donationRef]);
 
   const handleCopyLink = useCallback(async () => {
     try {
@@ -75,6 +99,15 @@ function CertificateContent() {
           Share on WhatsApp
         </button>
         <button
+          onClick={handleDownload}
+          className="inline-flex items-center gap-2 bg-amber-500 hover:bg-amber-600 text-white font-semibold px-5 py-2.5 rounded-xl transition text-sm"
+        >
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+          </svg>
+          Download Image
+        </button>
+        <button
           onClick={handleCopyLink}
           className="inline-flex items-center gap-2 border border-gray-300 text-gray-700 font-semibold px-5 py-2.5 rounded-xl hover:bg-gray-50 transition text-sm"
         >
@@ -92,7 +125,7 @@ function CertificateContent() {
       </div>
 
       {/* Certificate */}
-      <div className="max-w-4xl mx-auto print:max-w-none" id="certificate">
+      <div className="max-w-4xl mx-auto print:max-w-none" id="certificate" ref={certRef}>
         <div
           className="bg-white rounded-2xl print:rounded-none overflow-hidden shadow-2xl print:shadow-none"
           style={{
@@ -211,7 +244,7 @@ function CertificateContent() {
       {/* Screenshot/download hint — hidden in print */}
       <div className="max-w-4xl mx-auto mt-4 text-center print:hidden">
         <p className="text-sm text-gray-400">
-          Tip: Use Print &rarr; &ldquo;Save as PDF&rdquo; to download, or take a screenshot to share as an image.
+          Tip: Click &ldquo;Download Image&rdquo; for a PNG, or use Print &rarr; &ldquo;Save as PDF&rdquo; for a PDF version.
         </p>
       </div>
 
