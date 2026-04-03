@@ -42,19 +42,18 @@ function CertificateContent() {
     const el = certRef.current;
     if (!el) return;
     try {
-      // Dynamic import html2canvas
       const html2canvas = (await import('html2canvas')).default;
+      const { default: jsPDF } = await import('jspdf');
       const canvas = await html2canvas(el, {
         scale: 2,
         useCORS: true,
         backgroundColor: '#ffffff',
       });
-      const link = document.createElement('a');
-      link.download = `Safar-Aashray-Certificate-${donationRef}.png`;
-      link.href = canvas.toDataURL('image/png');
-      link.click();
+      const imgData = canvas.toDataURL('image/png');
+      const pdf = new jsPDF({ orientation: 'landscape', unit: 'px', format: [canvas.width, canvas.height] });
+      pdf.addImage(imgData, 'PNG', 0, 0, canvas.width, canvas.height);
+      pdf.save(`Safar-Aashray-Certificate-${donationRef}.pdf`);
     } catch {
-      // Fallback: open print dialog for Save as PDF
       alert('Download failed. Use Print > "Save as PDF" instead.');
       window.print();
     }
@@ -105,7 +104,7 @@ function CertificateContent() {
           <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
           </svg>
-          Download Image
+          Download PDF
         </button>
         <button
           onClick={handleCopyLink}
@@ -244,7 +243,7 @@ function CertificateContent() {
       {/* Screenshot/download hint — hidden in print */}
       <div className="max-w-4xl mx-auto mt-4 text-center print:hidden">
         <p className="text-sm text-gray-400">
-          Tip: Click &ldquo;Download Image&rdquo; for a PNG, or use Print &rarr; &ldquo;Save as PDF&rdquo; for a PDF version.
+          Tip: Click &ldquo;Download PDF&rdquo; to save the certificate, or use Print for a paper copy.
         </p>
       </div>
 
