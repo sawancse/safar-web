@@ -365,48 +365,44 @@ export const api = {
       headers: { Authorization: `Bearer ${token}` },
     }),
 
-  uploadAvatar: async (file: File, token: string) => {
-    const formData = new FormData();
-    formData.append('file', file);
+  uploadAvatar: async (file: File, token?: string) => {
+    const currentToken = token || localStorage.getItem('access_token') || '';
 
-    // Proactively refresh token if about to expire
-    let currentToken = token;
-    try {
-      const payload = JSON.parse(atob(token.split('.')[1]));
-      if (payload.exp * 1000 - Date.now() < 120000) {
-        const refreshed = await refreshTokenOnce();
-        if (refreshed) {
-          currentToken = localStorage.getItem('access_token') || token;
-        }
-      }
-    } catch { /* token decode failed, use as-is */ }
-
-    let res = await fetch(`${API_URL}/api/v1/users/me/avatar`, {
+    // Step 1: Get presigned URL from media-service
+    const presignRes = await fetch(`${API_URL}/api/v1/media/upload/avatar-presign?contentType=${encodeURIComponent(file.type)}`, {
       method: 'POST',
       headers: { Authorization: `Bearer ${currentToken}` },
-      body: formData,
       credentials: 'include',
     });
+    if (!presignRes.ok) {
+      throw new Error(`Presign failed (${presignRes.status})`);
+    }
+    const { uploadUrl, publicUrl } = await presignRes.json();
 
-    // Retry once on 401 after refreshing token
-    if (res.status === 401) {
-      const refreshed = await refreshTokenOnce();
-      if (refreshed) {
-        currentToken = localStorage.getItem('access_token') || token;
-        res = await fetch(`${API_URL}/api/v1/users/me/avatar`, {
-          method: 'POST',
-          headers: { Authorization: `Bearer ${currentToken}` },
-          body: formData,
-          credentials: 'include',
-        });
-      }
+    // Step 2: Upload directly to S3
+    const s3Res = await fetch(uploadUrl, {
+      method: 'PUT',
+      headers: { 'Content-Type': file.type },
+      body: file,
+    });
+    if (!s3Res.ok) {
+      throw new Error(`S3 upload failed (${s3Res.status})`);
     }
 
-    if (!res.ok) {
-      const errorText = await res.text().catch(() => '');
-      throw new Error(errorText || `Upload failed (${res.status})`);
+    // Step 3: Save S3 URL to user profile
+    const saveRes = await fetch(`${API_URL}/api/v1/users/me/avatar-url`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${currentToken}`,
+      },
+      body: JSON.stringify({ avatarUrl: publicUrl }),
+      credentials: 'include',
+    });
+    if (!saveRes.ok) {
+      throw new Error(`Save avatar URL failed (${saveRes.status})`);
     }
-    return res.json() as Promise<{ avatarUrl: string }>;
+    return { avatarUrl: publicUrl };
   },
 
   getHostProfile: (hostId: string) =>

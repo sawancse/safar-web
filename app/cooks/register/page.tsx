@@ -148,9 +148,13 @@ export default function RegisterCookPage() {
             </span>
             {existingProfile.cuisines && ` · ${existingProfile.cuisines}`}
           </p>
-          <div className="flex gap-3 justify-center">
-            <a href={`/cooks/${existingProfile.id}`}
+          <div className="flex gap-3 justify-center flex-wrap">
+            <a href="/cooks/dashboard"
               className="bg-orange-500 hover:bg-orange-600 text-white font-semibold px-6 py-2.5 rounded-xl transition text-sm">
+              Chef Dashboard
+            </a>
+            <a href={`/cooks/${existingProfile.id}`}
+              className="border border-gray-300 text-gray-700 font-semibold px-6 py-2.5 rounded-xl hover:bg-gray-50 transition text-sm">
               View My Profile
             </a>
             <a href="/cooks/my-bookings"
