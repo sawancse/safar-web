@@ -58,7 +58,7 @@ export const metadata: Metadata = {
     canonical: 'https://ysafar.com',
   },
   verification: {
-    google: 'pending', // Replace with actual Search Console verification code
+    google: 'ihAn2Blazat810vtBxw4DjN5n1qjSJxh6epX5jryCv8',
   },
 };
 
