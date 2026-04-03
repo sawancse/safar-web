@@ -181,8 +181,8 @@ export default function MyChefBookingsPage() {
                       {b.totalAmountPaise > 0 && <p className="text-sm font-bold mt-1">{formatPaise(b.totalAmountPaise)}</p>}
                     </div>
                   </div>
-                  {/* Payment breakdown */}
-                  {b.totalAmountPaise > 0 && b.advanceAmountPaise > 0 && (
+                  {/* Payment breakdown — hide for cancelled */}
+                  {b.status !== 'CANCELLED' && b.totalAmountPaise > 0 && b.advanceAmountPaise > 0 && (
                     <div className="mt-2 bg-gray-50 rounded-lg px-3 py-2 flex items-center justify-between text-xs">
                       <div className="flex gap-4">
                         <span className={`font-medium ${ps.color}`}>{ps.label}</span>
@@ -193,6 +193,12 @@ export default function MyChefBookingsPage() {
                       {b.balanceAmountPaise > 0 && b.paymentStatus !== 'FULLY_PAID' && (
                         <span className="text-orange-600 font-medium">Balance due: {formatPaise(b.balanceAmountPaise)}</span>
                       )}
+                    </div>
+                  )}
+                  {/* Cancelled reason */}
+                  {b.status === 'CANCELLED' && (
+                    <div className="mt-2 bg-red-50 rounded-lg px-3 py-2 text-xs text-red-600">
+                      {b.cancellationReason || 'This booking was cancelled.'}
                     </div>
                   )}
                   <div className="flex gap-2 mt-3">
@@ -207,6 +213,18 @@ export default function MyChefBookingsPage() {
                     {(b.status === 'PENDING' || b.status === 'PENDING_PAYMENT') && (
                       <button onClick={() => handleCancel(b.id)} className="text-xs text-red-600 border border-red-200 px-3 py-1 rounded-lg hover:bg-red-50">Cancel</button>
                     )}
+                    {b.status === 'CANCELLED' && (
+                      <button onClick={() => {
+                        const d = prompt('Pick a new date to rebook (YYYY-MM-DD):');
+                        if (!d) return;
+                        const token = localStorage.getItem('access_token')!;
+                        api.rebookChef(b.id, d, b.serviceTime || '12:00', token)
+                          .then(nb => { setBookings(prev => [nb, ...prev]); alert('Rebooked successfully! Ref: ' + nb.bookingRef + '\nPlease complete payment.'); })
+                          .catch((err: any) => alert(err.message || 'Rebook failed'));
+                      }} className="text-xs text-orange-600 bg-orange-50 border border-orange-200 px-3 py-1 rounded-lg hover:bg-orange-100 font-medium">
+                        Rebook This Cook
+                      </button>
+                    )}
                     {b.status === 'COMPLETED' && !b.ratingGiven && (
                       <button onClick={() => setRatingModal({ id: b.id, type: 'booking' })}
                         className="text-xs text-orange-600 border border-orange-200 px-3 py-1 rounded-lg hover:bg-orange-50">Rate & Review</button>
@@ -219,6 +237,10 @@ export default function MyChefBookingsPage() {
                     {b.status === 'COMPLETED' && (
                       <button onClick={() => { const d = prompt('New date (YYYY-MM-DD):'); if (d) { const token = localStorage.getItem('access_token')!; api.rebookChef(b.id, d, '', token).then(nb => { setBookings(prev => [nb, ...prev]); alert('Rebooked! Ref: ' + nb.bookingRef); }); }}}
                         className="text-xs text-purple-600 border border-purple-200 px-3 py-1 rounded-lg hover:bg-purple-50">Book Again</button>
+                    )}
+                    {b.status === 'CANCELLED' && (
+                      <button onClick={() => router.push(`/cooks/${b.chefId}`)}
+                        className="text-xs text-gray-600 border border-gray-200 px-3 py-1 rounded-lg hover:bg-gray-50">View Chef</button>
                     )}
                     {(b.status === 'CONFIRMED' || b.status === 'IN_PROGRESS') && (
                       <button onClick={async () => { const t = await api.getBookingTracking(b.id); alert(`ETA: ${t.etaMinutes > 0 ? t.etaMinutes + ' min' : 'Not shared yet'}\nLat: ${t.chefLat || '-'}\nLng: ${t.chefLng || '-'}`); }}
