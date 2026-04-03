@@ -230,6 +230,11 @@ export interface Booking {
   bookingRef: string;
   listingId: string;
   listingTitle?: string;
+  listingCity?: string;
+  listingType?: string;
+  listingPhotoUrl?: string;
+  hostName?: string;
+  listingAddress?: string;
   guestId: string;
   hostId: string;
   checkIn: string;

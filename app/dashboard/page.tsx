@@ -284,127 +284,156 @@ export default function DashboardPage() {
             const s = STATUS_LABEL[booking.status] ?? { label: booking.status, color: 'bg-gray-100 text-gray-600' };
             const canCancel = ['PENDING_PAYMENT', 'CONFIRMED'].includes(booking.status);
 
+            const TYPE_ICONS: Record<string, string> = {
+              HOME: '🏠', APARTMENT: '🏢', VILLA: '🏡', PG: '🛏️', COLIVING: '🏘️',
+              HOTEL: '🏨', BUDGET_HOTEL: '🏨', HOSTEL_DORM: '🛌', FARMHOUSE: '🌾',
+              COMMERCIAL: '🏗️', COTTAGE: '🛖', HOUSEBOAT: '⛵',
+            };
+            const typeIcon = TYPE_ICONS[booking.listingType || ''] || '🏠';
+            const typeLabel = booking.listingType?.replace(/_/g, ' ') || 'Stay';
+            const unitLabel = booking.pricingUnit === 'MONTH' ? 'month' : booking.pricingUnit === 'HOUR' ? 'hour' : 'night';
+            const checkInDate = booking.checkIn?.split('T')[0];
+            const checkOutDate = booking.checkOut?.split('T')[0];
+            const checkInFormatted = checkInDate ? new Date(checkInDate + 'T00:00').toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }) : '';
+            const checkOutFormatted = checkOutDate ? new Date(checkOutDate + 'T00:00').toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : '';
+
             return (
-              <div key={booking.id} className="border rounded-2xl p-5 hover:shadow-sm transition">
-                {/* Header row */}
-                <div className="flex items-start justify-between gap-4">
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1">
-                      <span className="text-xs font-mono text-gray-400">{booking.bookingRef}</span>
-                      <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${s.color}`}>
-                        {s.label}
-                      </span>
-                    </div>
-                    <Link
-                      href={`/listings/${booking.listingId}`}
-                      className="font-semibold hover:text-orange-500 transition text-sm"
-                    >
-                      {booking.listingTitle || 'View listing details'}
-                    </Link>
-                    {booking.guestFirstName && (
-                      <p className="text-xs text-gray-400 mt-0.5">
-                        Guest: {booking.guestFirstName} {booking.guestLastName}
-                      </p>
+              <div key={booking.id} className="border rounded-2xl overflow-hidden hover:shadow-md transition bg-white">
+                {/* Photo + overlay */}
+                <div className="flex">
+                  <div className="relative w-40 sm:w-52 shrink-0">
+                    {booking.listingPhotoUrl ? (
+                      <img src={booking.listingPhotoUrl.startsWith('http') ? booking.listingPhotoUrl : `${process.env.NEXT_PUBLIC_API_URL || ''}${booking.listingPhotoUrl}`}
+                        alt={booking.listingTitle || ''} className="w-full h-full object-cover min-h-[140px]" />
+                    ) : (
+                      <div className="w-full h-full min-h-[140px] bg-gradient-to-br from-orange-100 to-amber-50 flex items-center justify-center">
+                        <span className="text-4xl">{typeIcon}</span>
+                      </div>
                     )}
+                    <span className={`absolute top-2 left-2 text-[10px] font-semibold px-2 py-0.5 rounded-full backdrop-blur-sm ${s.color}`}>
+                      {s.label}
+                    </span>
                   </div>
-                  <div className="text-right shrink-0">
-                    <p className="text-base font-bold">{formatPaise(booking.totalAmountPaise)}</p>
-                    <p className="text-xs text-gray-400">{booking.nights} night{booking.nights > 1 ? 's' : ''}</p>
-                  </div>
-                </div>
 
-                {/* Dates & guests */}
-                <div className="flex flex-wrap gap-4 mt-3 text-sm text-gray-600">
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-gray-400">Check-in</span>
-                    <span className="font-medium">{booking.checkIn?.split('T')[0]}</span>
-                  </div>
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-gray-400">Check-out</span>
-                    <span className="font-medium">{booking.checkOut?.split('T')[0]}</span>
-                  </div>
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-gray-400">Guests</span>
-                    <span className="font-medium">{booking.guestsCount}</span>
-                  </div>
-                </div>
+                  {/* Content */}
+                  <div className="flex-1 p-4 flex flex-col justify-between min-w-0">
+                    {/* Top section */}
+                    <div>
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-1.5 mb-0.5">
+                            <span className="text-sm">{typeIcon}</span>
+                            <span className="text-[10px] text-gray-400 uppercase font-medium tracking-wide">{typeLabel}</span>
+                            <span className="text-[10px] text-gray-300">|</span>
+                            <span className="text-[10px] font-mono text-gray-400">{booking.bookingRef}</span>
+                          </div>
+                          <Link href={`/listings/${booking.listingId}`}
+                            className="font-semibold text-gray-900 hover:text-orange-500 transition text-sm line-clamp-1">
+                            {booking.listingTitle || 'View listing'}
+                          </Link>
+                          {(booking.listingCity || booking.listingAddress) && (
+                            <p className="text-xs text-gray-400 mt-0.5 line-clamp-1">
+                              {booking.listingAddress ? booking.listingAddress + ', ' : ''}{booking.listingCity || ''}
+                            </p>
+                          )}
+                          {booking.hostName && (
+                            <p className="text-xs text-gray-400">Hosted by {booking.hostName}</p>
+                          )}
+                        </div>
+                        <div className="text-right shrink-0">
+                          <p className="text-base font-bold text-gray-900">{formatPaise(booking.totalAmountPaise)}</p>
+                          <p className="text-[10px] text-gray-400">{booking.nights} {unitLabel}{booking.nights > 1 ? 's' : ''}</p>
+                        </div>
+                      </div>
+                    </div>
 
-                {/* Price breakdown (expandable on click) */}
-                <div className="mt-3 flex flex-wrap gap-3 text-xs text-gray-500">
-                  <span>Base: {formatPaise(booking.baseAmountPaise)}</span>
-                  <span>Insurance: {formatPaise(booking.insuranceAmountPaise)}</span>
-                  <span>GST: {formatPaise(booking.gstAmountPaise)}</span>
-                </div>
+                    {/* Date/guest row */}
+                    <div className="flex items-center gap-3 mt-2 text-xs">
+                      <div className="flex items-center gap-1 bg-gray-50 rounded-lg px-2.5 py-1.5">
+                        <span className="text-gray-400">📅</span>
+                        <span className="font-medium text-gray-700">{checkInFormatted}</span>
+                        <span className="text-gray-300">→</span>
+                        <span className="font-medium text-gray-700">{checkOutFormatted}</span>
+                      </div>
+                      <div className="flex items-center gap-1 bg-gray-50 rounded-lg px-2.5 py-1.5">
+                        <span className="text-gray-400">👤</span>
+                        <span className="font-medium text-gray-700">{booking.guestsCount} guest{booking.guestsCount > 1 ? 's' : ''}</span>
+                      </div>
+                      {booking.roomsCount && booking.roomsCount > 1 && (
+                        <div className="flex items-center gap-1 bg-gray-50 rounded-lg px-2.5 py-1.5">
+                          <span className="text-gray-400">🚪</span>
+                          <span className="font-medium text-gray-700">{booking.roomsCount} room{booking.roomsCount > 1 ? 's' : ''}</span>
+                        </div>
+                      )}
+                      {booking.roomTypeName && (
+                        <span className="text-[10px] bg-orange-50 text-orange-600 px-2 py-1 rounded-full">{booking.roomTypeName}</span>
+                      )}
+                    </div>
 
-                {/* Cancellation reason */}
-                {booking.status === 'CANCELLED' && booking.cancellationReason && (
-                  <div className="mt-3 bg-red-50 rounded-xl px-3 py-2 text-xs text-red-600">
-                    Reason: {booking.cancellationReason}
-                  </div>
-                )}
+                    {/* Room selections */}
+                    {booking.roomSelections && booking.roomSelections.length > 0 && (
+                      <div className="flex flex-wrap gap-1.5 mt-2">
+                        {booking.roomSelections.map((rs: any) => (
+                          <span key={rs.id} className="text-[10px] bg-blue-50 text-blue-600 px-2 py-0.5 rounded-full">
+                            {rs.count}x {rs.roomTypeName} @ {formatPaise(rs.pricePerUnitPaise)}/{unitLabel}
+                          </span>
+                        ))}
+                      </div>
+                    )}
 
-                {/* Actions */}
-                <div className="flex flex-wrap gap-2 mt-4">
-                  {booking.status === 'PENDING_PAYMENT' && (
-                    <Link
-                      href={`/book/${booking.listingId}?checkIn=${booking.checkIn?.split('T')[0]}&checkOut=${booking.checkOut?.split('T')[0]}&guests=${booking.guestsCount}&bookingId=${booking.id}`}
-                      className="text-sm px-4 py-1.5 rounded-lg bg-orange-500 text-white hover:bg-orange-600 font-medium transition"
-                    >
-                      Complete Payment
-                    </Link>
-                  )}
-                  {(() => {
-                    const isReviewed = booking.hasReview || reviewedBookings.has(booking.id);
-                    const isReviewable = booking.status === 'COMPLETED' || booking.status === 'CONFIRMED';
-                    const checkOutDate = booking.checkOut ? new Date(booking.checkOut) : null;
-                    const daysSinceCheckout = checkOutDate ? Math.floor((Date.now() - checkOutDate.getTime()) / (1000 * 60 * 60 * 24)) : 0;
-                    const reviewWindowExpired = daysSinceCheckout > 30;
+                    {/* Cancellation reason */}
+                    {booking.status === 'CANCELLED' && booking.cancellationReason && (
+                      <div className="mt-2 bg-red-50 rounded-lg px-2.5 py-1.5 text-[10px] text-red-600 line-clamp-1">
+                        {booking.cancellationReason}
+                      </div>
+                    )}
 
-                    if (isReviewed) {
-                      return (
-                        <span className="text-sm px-4 py-1.5 rounded-lg bg-green-50 text-green-600 font-medium flex items-center gap-1.5">
-                          {booking.reviewRating ? (
-                            <span className="text-yellow-500">{'★'.repeat(booking.reviewRating)}{'☆'.repeat(5 - booking.reviewRating)}</span>
-                          ) : null}
-                          Review submitted{booking.reviewedAt ? ` on ${new Date(booking.reviewedAt).toLocaleDateString()}` : ''}
-                        </span>
-                      );
-                    }
-                    if (isReviewable && reviewWindowExpired) {
-                      return (
-                        <span className="text-sm px-4 py-1.5 rounded-lg bg-gray-50 text-gray-400 font-medium">
-                          Review window expired
-                        </span>
-                      );
-                    }
-                    if (isReviewable && !reviewWindowExpired) {
-                      return (
-                        <button
-                          onClick={() => setReviewModal({ open: true, bookingId: booking.id, listingId: booking.listingId })}
-                          className="text-sm px-4 py-1.5 rounded-lg bg-orange-500 text-white hover:bg-orange-600 font-medium transition"
-                        >
-                          Write Review
+                    {/* Actions */}
+                    <div className="flex flex-wrap gap-2 mt-3">
+                      {booking.status === 'PENDING_PAYMENT' && (
+                        <Link href={`/book/${booking.listingId}?checkIn=${checkInDate}&checkOut=${checkOutDate}&guests=${booking.guestsCount}&bookingId=${booking.id}`}
+                          className="text-xs px-3 py-1.5 rounded-lg bg-orange-500 text-white hover:bg-orange-600 font-medium transition">
+                          Complete Payment
+                        </Link>
+                      )}
+                      {(() => {
+                        const isReviewed = booking.hasReview || reviewedBookings.has(booking.id);
+                        const isReviewable = booking.status === 'COMPLETED' || booking.status === 'CONFIRMED';
+                        const co = booking.checkOut ? new Date(booking.checkOut) : null;
+                        const daysSince = co ? Math.floor((Date.now() - co.getTime()) / 86400000) : 0;
+                        const expired = daysSince > 30;
+
+                        if (isReviewed) return (
+                          <span className="text-xs px-3 py-1.5 rounded-lg bg-green-50 text-green-600 font-medium flex items-center gap-1">
+                            {booking.reviewRating ? <span className="text-yellow-500">{'★'.repeat(booking.reviewRating)}</span> : null}
+                            Reviewed
+                          </span>
+                        );
+                        if (isReviewable && expired) return (
+                          <span className="text-xs px-3 py-1.5 rounded-lg bg-gray-50 text-gray-400">Review expired</span>
+                        );
+                        if (isReviewable && !expired) return (
+                          <button onClick={() => setReviewModal({ open: true, bookingId: booking.id, listingId: booking.listingId })}
+                            className="text-xs px-3 py-1.5 rounded-lg bg-orange-500 text-white hover:bg-orange-600 font-medium transition">
+                            Write Review
+                          </button>
+                        );
+                        return null;
+                      })()}
+                      {canCancel && (
+                        <button onClick={() => setCancelModal({ open: true, bookingId: booking.id, ref: booking.bookingRef })}
+                          className="text-xs px-3 py-1.5 rounded-lg border border-red-200 text-red-500 hover:bg-red-50 font-medium transition">
+                          Cancel
                         </button>
-                      );
-                    }
-                    return null;
-                  })()}
-                  {canCancel && (
-                    <button
-                      onClick={() => setCancelModal({ open: true, bookingId: booking.id, ref: booking.bookingRef })}
-                      className="text-sm px-4 py-1.5 rounded-lg border border-red-200 text-red-500 hover:bg-red-50 font-medium transition"
-                    >
-                      Cancel Booking
-                    </button>
-                  )}
-                  {booking.status !== 'CANCELLED' && booking.status !== 'COMPLETED' && (
-                    <button
-                      onClick={() => setGuestModal({ open: true, bookingId: booking.id, ref: booking.bookingRef })}
-                      className="text-sm px-4 py-1.5 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50 font-medium transition"
-                    >
-                      Manage Guests
-                    </button>
-                  )}
+                      )}
+                      {booking.status !== 'CANCELLED' && booking.status !== 'COMPLETED' && (
+                        <button onClick={() => setGuestModal({ open: true, bookingId: booking.id, ref: booking.bookingRef })}
+                          className="text-xs px-3 py-1.5 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 font-medium transition">
+                          Guests
+                        </button>
+                      )}
+                    </div>
+                  </div>
                 </div>
               </div>
             );
