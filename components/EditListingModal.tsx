@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { api } from '@/lib/api';
+import CityAutocomplete from '@/components/CityAutocomplete';
 import type { Listing } from '@/types';
 
 interface Props {
@@ -185,9 +186,13 @@ export default function EditListingModal({ listing, onClose, onSaved, token }: P
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">City</label>
-                  <input value={city} onChange={e => setCity(e.target.value)}
-                    className="w-full border rounded-lg px-3 py-2 text-sm" placeholder="e.g. Hyderabad" />
+                  <CityAutocomplete
+                    value={city}
+                    onChange={setCity}
+                    label="City"
+                    placeholder="e.g. Hyderabad"
+                    className="w-full border rounded-lg px-3 py-2 text-sm"
+                  />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">State</label>

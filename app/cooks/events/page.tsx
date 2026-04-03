@@ -4,6 +4,8 @@ import { useState, useEffect } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { api } from '@/lib/api';
 import { formatPaise } from '@/lib/utils';
+import CityAutocomplete from '@/components/CityAutocomplete';
+import LocalityAutocomplete from '@/components/LocalityAutocomplete';
 
 const EVENT_TYPES = [
   { value: 'BIRTHDAY', label: 'Birthday Party', icon: '🎂' },
@@ -268,10 +270,12 @@ export default function EventBookingPage() {
                     <input type="text" required value={venueAddress} onChange={e => setVenueAddress(e.target.value)}
                       placeholder="Full venue address" className="w-full border rounded-lg px-4 py-2.5 text-sm" />
                     <div className="grid grid-cols-2 gap-4">
-                      <input type="text" required value={city} onChange={e => setCity(e.target.value)}
-                        placeholder="City" className="border rounded-lg px-4 py-2.5 text-sm" />
-                      <input type="text" required value={pincode} onChange={e => setPincode(e.target.value)}
-                        placeholder="Pincode" maxLength={6} className="border rounded-lg px-4 py-2.5 text-sm" />
+                      <CityAutocomplete value={city} onChange={setCity} className="px-4 py-2.5" />
+                      <div>
+                        <label className="text-xs font-medium text-gray-600 mb-1 block">Pincode</label>
+                        <input type="text" required value={pincode} onChange={e => setPincode(e.target.value)}
+                          placeholder="Pincode" maxLength={6} className="w-full border rounded-lg px-4 py-2.5 text-sm focus:ring-1 focus:ring-orange-300 outline-none" />
+                      </div>
                     </div>
                   </div>
 

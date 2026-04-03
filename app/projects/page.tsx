@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { api } from '@/lib/api';
+import LocalityAutocomplete from '@/components/LocalityAutocomplete';
 
 /* ── Price formatter for sale prices (paise → Lakh/Cr) ── */
 function formatSalePrice(paise: number): string {
@@ -179,14 +180,13 @@ export default function ProjectsListingPage() {
 
               {/* Locality */}
               <div>
-                <label className="block text-xs font-medium text-gray-500 mb-1">Locality</label>
-                <input
-                  type="text"
+                <LocalityAutocomplete
+                  city={city}
                   value={locality}
-                  onChange={e => setLocality(e.target.value)}
+                  onChange={setLocality}
+                  label="Locality"
                   placeholder="e.g. Whitefield, Bandra"
                   className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-gray-800 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400"
-                  onKeyDown={e => e.key === 'Enter' && handleSearch()}
                 />
               </div>
 

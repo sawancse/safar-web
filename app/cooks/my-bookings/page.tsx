@@ -4,6 +4,8 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { api } from '@/lib/api';
 import { formatPaise } from '@/lib/utils';
+import CityAutocomplete from '@/components/CityAutocomplete';
+import LocalityAutocomplete from '@/components/LocalityAutocomplete';
 
 const STATUS_COLORS: Record<string, string> = {
   PENDING_PAYMENT: 'bg-amber-100 text-amber-700',
@@ -335,7 +337,7 @@ export default function MyChefBookingsPage() {
                   <Field label="Special Requests" value={editForm.specialRequests} onChange={(v: string) => setEditForm({...editForm, specialRequests: v})} textarea />
                   <Field label="Address" value={editForm.address} onChange={(v: string) => setEditForm({...editForm, address: v})} />
                   <div className="grid grid-cols-2 gap-3">
-                    <Field label="City" value={editForm.city} onChange={(v: string) => setEditForm({...editForm, city: v})} />
+                    <CityAutocomplete value={editForm.city} onChange={(v: string) => setEditForm({...editForm, city: v})} />
                     <Field label="Pincode" value={editForm.pincode} onChange={(v: string) => setEditForm({...editForm, pincode: v})} />
                   </div>
                 </>
@@ -350,7 +352,7 @@ export default function MyChefBookingsPage() {
                   </div>
                   <Field label="Venue Address" value={editForm.venueAddress} onChange={(v: string) => setEditForm({...editForm, venueAddress: v})} />
                   <div className="grid grid-cols-2 gap-3">
-                    <Field label="City" value={editForm.city} onChange={(v: string) => setEditForm({...editForm, city: v})} />
+                    <CityAutocomplete value={editForm.city} onChange={(v: string) => setEditForm({...editForm, city: v})} />
                     <Field label="Pincode" value={editForm.pincode} onChange={(v: string) => setEditForm({...editForm, pincode: v})} />
                   </div>
                   <Field label="Menu Description" value={editForm.menuDescription} onChange={(v: string) => setEditForm({...editForm, menuDescription: v})} textarea />
@@ -365,7 +367,7 @@ export default function MyChefBookingsPage() {
                   <Field label="Dietary Preferences" value={editForm.dietaryPreferences} onChange={(v: string) => setEditForm({...editForm, dietaryPreferences: v})} />
                   <Field label="Address" value={editForm.address} onChange={(v: string) => setEditForm({...editForm, address: v})} />
                   <div className="grid grid-cols-2 gap-3">
-                    <Field label="City" value={editForm.city} onChange={(v: string) => setEditForm({...editForm, city: v})} />
+                    <CityAutocomplete value={editForm.city} onChange={(v: string) => setEditForm({...editForm, city: v})} />
                     <Field label="Pincode" value={editForm.pincode} onChange={(v: string) => setEditForm({...editForm, pincode: v})} />
                   </div>
                   <Field label="Special Requests" value={editForm.specialRequests} onChange={(v: string) => setEditForm({...editForm, specialRequests: v})} textarea />

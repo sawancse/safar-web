@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { api } from '@/lib/api';
+import LocalityAutocomplete from '@/components/LocalityAutocomplete';
 const SHARING_TYPES = ['PRIVATE', 'TWO_SHARING', 'THREE_SHARING', 'FOUR_SHARING', 'DORMITORY'];
 const GENDER_OPTIONS = ['MALE_ONLY', 'FEMALE_ONLY', 'COED'];
 const CITIES = ['Mumbai', 'Delhi', 'Bangalore', 'Chennai', 'Hyderabad', 'Pune', 'Kolkata', 'Goa', 'Jaipur'];
@@ -88,9 +89,14 @@ export default function LookingForPage() {
                 </select>
               </div>
               <div>
-                <label className="text-sm text-gray-600 block mb-1">Locality</label>
-                <input value={form.preferredLocality} onChange={e => setForm({ ...form, preferredLocality: e.target.value })}
-                  placeholder="e.g. Koramangala, HSR Layout" className="w-full border rounded-lg px-3 py-2" />
+                <LocalityAutocomplete
+                  city={form.preferredCity}
+                  value={form.preferredLocality}
+                  onChange={(v: string) => setForm({ ...form, preferredLocality: v })}
+                  label="Locality"
+                  placeholder="e.g. Koramangala, HSR Layout"
+                  className="w-full border rounded-lg px-3 py-2"
+                />
               </div>
               <div>
                 <label className="text-sm text-gray-600 block mb-1">Budget Range (₹/month)</label>

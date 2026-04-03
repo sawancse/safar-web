@@ -1,8 +1,10 @@
 'use client';
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, useEffect } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { api } from '@/lib/api';
+import CityAutocomplete from '@/components/CityAutocomplete';
+import LocalityAutocomplete from '@/components/LocalityAutocomplete';
 
 const ALL_AMENITIES = [
   'Swimming Pool', 'Gym', 'Club House', 'Children\'s Play Area', 'Landscaped Gardens',
@@ -74,8 +76,12 @@ function createEmptyUnit(): UnitTypeForm {
 
 export default function BuilderNewProjectPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const editId = searchParams.get('edit');
+  const isEdit = !!editId;
   const [step, setStep] = useState(0);
   const [submitting, setSubmitting] = useState(false);
+  const [loading, setLoading] = useState(false);
 
   /* Step 0: Builder Info */
   const [builderName, setBuilderName] = useState('');
@@ -121,6 +127,63 @@ export default function BuilderNewProjectPage() {
   const [masterPlanPreview, setMasterPlanPreview] = useState('');
   const [brochureUrl, setBrochureUrl] = useState('');
   const [walkthroughUrl, setWalkthroughUrl] = useState('');
+
+  // Load existing project data in edit mode
+  useEffect(() => {
+    if (!editId) return;
+    setLoading(true);
+    api.getBuilderProject(editId).then((p: any) => {
+      setBuilderName(p.builderName || '');
+      setBuilderLogoPreview(p.builderLogoUrl || '');
+      setReraId(p.reraId || '');
+      setProjectName(p.projectName || '');
+      setTagline(p.tagline || '');
+      setDescription(p.description || '');
+      setProjectStatus(p.projectStatus || 'UNDER_CONSTRUCTION');
+      setLaunchDate(p.launchDate || '');
+      setPossessionDate(p.possessionDate || '');
+      setTotalTowers(p.totalTowers?.toString() || '');
+      setTotalFloors(p.totalFloors?.toString() || '');
+      setLandAreaAcres(p.landAreaAcres?.toString() || '');
+      setCity(p.city || '');
+      setState(p.state || '');
+      setLocality(p.locality || '');
+      setPincode(p.pincode || '');
+      setAddress(p.address || '');
+      setLatitude(p.latitude?.toString() || '');
+      setLongitude(p.longitude?.toString() || '');
+      setSelectedAmenities(p.amenities || []);
+      setBankApprovals(p.bankApprovals || []);
+      if (p.paymentPlansJson) {
+        try { setPaymentPlans(JSON.parse(p.paymentPlansJson)); } catch {}
+      }
+      setBrochureUrl(p.brochureUrl || '');
+      setWalkthroughUrl(p.walkthroughVideoUrl || '');
+      setPhotoPreviews(p.photoUrls || []);
+      setMasterPlanPreview(p.masterPlanUrl || '');
+      if (p.unitTypes?.length) {
+        setUnitTypes(p.unitTypes.map((u: any) => ({
+          id: u.id || crypto.randomUUID(),
+          name: u.name || '',
+          bhk: u.bhk?.toString() || '2',
+          areaSqft: u.areaSqft?.toString() || '',
+          carpetAreaSqft: u.carpetAreaSqft?.toString() || '',
+          basePricePaise: u.basePricePaise?.toString() || '',
+          floorRisePaise: u.floorRisePaise?.toString() || '',
+          facingPremiumPaise: u.facingPremiumPaise?.toString() || '',
+          totalUnits: u.totalUnits?.toString() || '',
+          bathrooms: u.bathrooms?.toString() || '2',
+          balconies: u.balconies?.toString() || '1',
+          furnishing: u.furnishing || 'Unfurnished',
+          floorPlanFile: null,
+          floorPlanPreview: u.floorPlanUrl || '',
+        })));
+      }
+    }).catch(() => {
+      alert('Failed to load project');
+      router.push('/dashboard?tab=builder');
+    }).finally(() => setLoading(false));
+  }, [editId]);
 
   function handleLogoChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -252,8 +315,10 @@ export default function BuilderNewProjectPage() {
         masterPlanUrl: masterPlanPreview || undefined,
       };
 
-      const created = await api.createBuilderProject(projectData, token);
-      const projectId = created.id;
+      const result = isEdit
+        ? await api.updateBuilderProject(editId!, projectData, token)
+        : await api.createBuilderProject(projectData, token);
+      const projectId = result.id || editId;
 
       // Add unit types (re-read token in case it was refreshed during create)
       for (const unit of unitTypes) {
@@ -284,13 +349,21 @@ export default function BuilderNewProjectPage() {
     }
   }
 
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-gray-500">Loading project...</div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
       <div className="bg-white border-b border-gray-200 sticky top-0 z-10">
         <div className="max-w-4xl mx-auto px-4 py-4 flex items-center justify-between">
           <div>
-            <h1 className="text-xl font-bold text-gray-900">Create New Project</h1>
+            <h1 className="text-xl font-bold text-gray-900">{isEdit ? 'Edit Project' : 'Create New Project'}</h1>
             <p className="text-sm text-gray-500">{STEP_LABELS[step]} (Step {step + 1} of {STEP_LABELS.length})</p>
           </div>
           <button onClick={() => router.back()} className="text-gray-400 hover:text-gray-600 text-sm">Cancel</button>
@@ -480,11 +553,10 @@ export default function BuilderNewProjectPage() {
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">City *</label>
-                <input
-                  type="text"
+                <CityAutocomplete
                   value={city}
-                  onChange={e => setCity(e.target.value)}
+                  onChange={setCity}
+                  label="City *"
                   placeholder="e.g. Hyderabad"
                   className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400"
                 />
@@ -503,11 +575,11 @@ export default function BuilderNewProjectPage() {
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Locality / Area</label>
-                <input
-                  type="text"
+                <LocalityAutocomplete
+                  city={city}
                   value={locality}
-                  onChange={e => setLocality(e.target.value)}
+                  onChange={setLocality}
+                  label="Locality / Area"
                   placeholder="e.g. Whitefield"
                   className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400"
                 />
@@ -960,10 +1032,10 @@ export default function BuilderNewProjectPage() {
                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
                   </svg>
-                  Publishing...
+                  {isEdit ? 'Updating...' : 'Publishing...'}
                 </>
               ) : (
-                'Publish Project'
+                isEdit ? 'Update Project' : 'Publish Project'
               )}
             </button>
           )}

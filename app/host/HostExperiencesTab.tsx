@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { api } from '@/lib/api';
 import { formatPaise } from '@/lib/utils';
+import CityAutocomplete from '@/components/CityAutocomplete';
 import type { Experience, ExperienceCategory } from '@/types';
 
 const CATEGORIES: ExperienceCategory[] = ['CULINARY', 'CULTURAL', 'WELLNESS', 'ADVENTURE', 'CREATIVE'];
@@ -214,9 +215,12 @@ export default function HostExperiencesTab() {
               </div>
 
               <div>
-                <label className="text-sm font-medium">City *</label>
-                <input required className="w-full border rounded-lg px-3 py-2 text-sm mt-1"
-                  value={form.city} onChange={e => setForm({ ...form, city: e.target.value })} />
+                <CityAutocomplete
+                  value={form.city}
+                  onChange={(v: string) => setForm({ ...form, city: v })}
+                  label="City *"
+                  className="w-full border rounded-lg px-3 py-2 text-sm mt-1"
+                />
               </div>
 
               <div>

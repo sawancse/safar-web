@@ -5,6 +5,8 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { api } from '@/lib/api';
 import { formatPaise } from '@/lib/utils';
 import RazorpayButton from '@/components/RazorpayButton';
+import CityAutocomplete from '@/components/CityAutocomplete';
+import LocalityAutocomplete from '@/components/LocalityAutocomplete';
 
 export default function BookCookPage() {
   const router = useRouter();
@@ -387,20 +389,12 @@ export default function BookCookPage() {
             className="w-full border rounded-lg px-3 py-2 text-sm" placeholder="Full address" />
         </div>
         <div className="grid grid-cols-3 gap-4">
+          <CityAutocomplete value={city} onChange={setCity} />
+          <LocalityAutocomplete city={city} value={locality} onChange={setLocality} />
           <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1">City</label>
-            <input value={city} onChange={e => setCity(e.target.value)}
-              className="w-full border rounded-lg px-3 py-2 text-sm" />
-          </div>
-          <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1">Locality</label>
-            <input value={locality} onChange={e => setLocality(e.target.value)}
-              className="w-full border rounded-lg px-3 py-2 text-sm" />
-          </div>
-          <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1">Pincode</label>
+            <label className="text-xs font-medium text-gray-600 mb-1 block">Pincode</label>
             <input value={pincode} onChange={e => setPincode(e.target.value)}
-              className="w-full border rounded-lg px-3 py-2 text-sm" maxLength={6} />
+              className="w-full border rounded-lg px-3 py-2 text-sm focus:ring-1 focus:ring-orange-300 outline-none" maxLength={6} />
           </div>
         </div>
 

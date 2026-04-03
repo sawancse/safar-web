@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { api } from '@/lib/api';
+import LocalityAutocomplete from '@/components/LocalityAutocomplete';
 
 /* ── Constants ─────────────────────────────────────────────── */
 
@@ -404,11 +405,11 @@ export default function SellPropertyWizard() {
             )}
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Locality / Area</label>
-            <input
-              type="text"
+            <LocalityAutocomplete
+              city={data.city}
               value={data.locality}
-              onChange={e => update({ locality: e.target.value })}
+              onChange={(v: string) => update({ locality: v })}
+              label="Locality / Area"
               placeholder="e.g. Banjara Hills, Koramangala"
               className="w-full border rounded-xl px-4 py-3 focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none"
             />

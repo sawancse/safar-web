@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { api } from '@/lib/api';
 import { formatPaise } from '@/lib/utils';
 import { geocodeIndianAddress } from '@/lib/geocode';
+import CityAutocomplete from '@/components/CityAutocomplete';
 import type { HostSubscription, Listing, SubscriptionTier } from '@/types';
 import HostBookingsTab from './HostBookingsTab';
 import HostKycTab from './HostKycTab';
@@ -857,9 +858,13 @@ export default function HostPage() {
                 placeholder="123, MG Road" value={addressLine1} onChange={(e) => setAddressLine1(e.target.value)} />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">City</label>
-              <input required className="w-full border rounded-xl px-3 py-2 text-sm outline-none focus:border-orange-400"
-                placeholder="Mumbai" value={city} onChange={(e) => setCity(e.target.value)} />
+              <CityAutocomplete
+                value={city}
+                onChange={setCity}
+                label="City"
+                placeholder="Mumbai"
+                className="w-full border rounded-xl px-3 py-2 text-sm outline-none focus:border-orange-400"
+              />
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">State</label>
