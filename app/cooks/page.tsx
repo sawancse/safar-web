@@ -95,6 +95,10 @@ export default function CooksPage() {
                 className="px-6 py-3 bg-orange-700/40 text-white rounded-xl font-semibold hover:bg-orange-700/60 transition backdrop-blur-sm border border-white/20">
                 Browse Cooks
               </Link>
+              <Link href="/cooks/my-bookings"
+                className="px-6 py-3 bg-orange-700/40 text-white rounded-xl font-semibold hover:bg-orange-700/60 transition backdrop-blur-sm border border-white/20">
+                My Bookings
+              </Link>
             </div>
           </div>
           {/* Trust Stats */}

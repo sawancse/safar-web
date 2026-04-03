@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import './globals.css';
 import Navbar from '@/components/Navbar';
+import CookCartButton from '@/components/CookCartButton';
 import { I18nProvider } from '@/lib/i18n';
 
 export const metadata: Metadata = {
@@ -21,6 +22,7 @@ export default function RootLayout({
         <I18nProvider>
           <Navbar />
           <main>{children}</main>
+          <CookCartButton />
           <footer className="bg-gray-50 border-t mt-16">
             <div className="max-w-6xl mx-auto px-4 py-8 text-sm text-gray-500 text-center">
               © {new Date().getFullYear()} Safar India Pvt. Ltd. · Zero commission, 100% yours.

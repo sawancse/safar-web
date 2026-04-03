@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { api } from '@/lib/api';
 import { formatPaise } from '@/lib/utils';
+import { addToCart } from '@/lib/cookCart';
 import Link from 'next/link';
 
 const REVIEW_DIMENSIONS = [
@@ -197,6 +198,16 @@ export default function ChefProfilePage() {
                 className="block bg-orange-500 text-white text-sm font-semibold py-2.5 rounded-lg hover:bg-orange-600 transition">
                 Book for a Day
               </Link>
+              <button onClick={() => {
+                const date = prompt('Service date (YYYY-MM-DD):');
+                if (!date) return;
+                addToCart({ chefId: chef.id, chefName: chef.name, serviceType: 'DAILY', mealType: 'LUNCH',
+                  serviceDate: date, serviceTime: '12:00', guestsCount: 4, numberOfMeals: 1,
+                  estimatedPricePaise: chef.dailyRatePaise * 4 });
+                alert('Added to cart!');
+              }} className="block w-full mt-2 border border-orange-300 text-orange-600 text-xs font-medium py-2 rounded-lg hover:bg-orange-50 transition">
+                + Add to Cart
+              </button>
             </div>
           )}
           {chef.monthlyRatePaise > 0 && (
