@@ -98,8 +98,23 @@ async function ensureFreshToken(options?: RequestInit): Promise<RequestInit | un
 }
 
 async function apiFetch<T>(path: string, options?: RequestInit): Promise<T> {
+  // Auto-inject auth token from localStorage if not already provided
+  let opts = options;
+  if (typeof window !== 'undefined') {
+    const headers = opts?.headers as Record<string, string> | undefined;
+    if (!headers?.Authorization) {
+      const storedToken = localStorage.getItem('access_token');
+      if (storedToken) {
+        opts = {
+          ...opts,
+          headers: { ...headers, Authorization: `Bearer ${storedToken}` },
+        };
+      }
+    }
+  }
+
   // Proactively refresh token if about to expire
-  const freshOptions = await ensureFreshToken(options);
+  const freshOptions = await ensureFreshToken(opts);
 
   const res = await fetch(`${API_URL}${path}`, {
     ...freshOptions,
