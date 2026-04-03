@@ -98,6 +98,7 @@ export default function Navbar() {
     { href: '/dashboard/miles', icon: '\u{1F381}', label: 'Rewards & Wallet' },
     { href: '/dashboard/reviews', icon: '\u{2B50}', label: 'Reviews' },
     { href: '/cooks/my-bookings', icon: '\u{1F468}\u{200D}\u{1F373}', label: 'Cook Bookings' },
+    { href: '/cooks/dashboard', icon: '\u{1F4CA}', label: 'Chef Dashboard' },
     { href: '/dashboard/saved', icon: '\u{2764}\u{FE0F}', label: 'Saved' },
   ];
 

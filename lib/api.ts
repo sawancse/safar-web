@@ -1883,6 +1883,64 @@ export const api = {
       body: JSON.stringify(data),
     }),
 
+  // ── Chef Dashboard (chef-side views) ────────────────────
+  getChefIncomingBookings: (token: string) =>
+    apiFetch<any[]>('/api/v1/chef-bookings/chef', {
+      headers: { Authorization: `Bearer ${token}` },
+    }),
+
+  getChefIncomingEvents: (token: string) =>
+    apiFetch<any[]>('/api/v1/chef-events/chef', {
+      headers: { Authorization: `Bearer ${token}` },
+    }),
+
+  getChefIncomingSubscriptions: (token: string) =>
+    apiFetch<any[]>('/api/v1/chef-subscriptions/chef', {
+      headers: { Authorization: `Bearer ${token}` },
+    }),
+
+  getMyChefProfile: (token: string) =>
+    apiFetch<any>('/api/v1/chefs/me', {
+      headers: { Authorization: `Bearer ${token}` },
+    }),
+
+  updateChefProfile: (data: any, token: string) =>
+    apiFetch<any>('/api/v1/chefs/me', {
+      method: 'PUT',
+      headers: { Authorization: `Bearer ${token}` },
+      body: JSON.stringify(data),
+    }),
+
+  toggleChefAvailability: (token: string) =>
+    apiFetch<any>('/api/v1/chefs/me/availability', {
+      method: 'PUT',
+      headers: { Authorization: `Bearer ${token}` },
+    }),
+
+  confirmChefBooking: (bookingId: string, token: string) =>
+    apiFetch<any>(`/api/v1/chef-bookings/${bookingId}/confirm`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}` },
+    }),
+
+  completeChefBooking: (bookingId: string, token: string) =>
+    apiFetch<any>(`/api/v1/chef-bookings/${bookingId}/complete`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}` },
+    }),
+
+  quoteEvent: (eventId: string, totalAmountPaise: number, token: string) =>
+    apiFetch<any>(`/api/v1/chef-events/${eventId}/quote?totalAmountPaise=${totalAmountPaise}`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}` },
+    }),
+
+  completeEvent: (eventId: string, token: string) =>
+    apiFetch<any>(`/api/v1/chef-events/${eventId}/complete`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}` },
+    }),
+
   // ── Chef Calendar / Availability ─────────────────────────
   getChefCalendar: (chefId: string, from: string, to: string) =>
     apiFetch<any>(`/api/v1/chefs/availability/${chefId}/calendar?from=${from}&to=${to}`),
