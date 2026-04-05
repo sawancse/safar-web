@@ -132,7 +132,7 @@ export default function ShareButton({ title, city, state, price, priceUnit = 'ni
             {/* Listing preview */}
             <div className="px-5 py-4 flex gap-4 items-start">
               {imageUrl ? (
-                <img src={imageUrl.startsWith('http') ? imageUrl : `http://localhost:8080${imageUrl}`}
+                <img src={imageUrl.startsWith('http') ? imageUrl : `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080'}${imageUrl}`}
                   alt={title} className="w-16 h-16 rounded-xl object-cover flex-shrink-0" />
               ) : (
                 <div className="w-16 h-16 rounded-xl bg-gray-100 flex items-center justify-center text-2xl flex-shrink-0">🏠</div>

@@ -380,7 +380,7 @@ export default function BookPage() {
                     <div key={sel.id} className="flex items-center justify-between bg-orange-50 border border-orange-200 rounded-xl p-3">
                       <div className="flex items-center gap-3">
                         {rt.primaryPhotoUrl && (
-                          <img src={rt.primaryPhotoUrl.startsWith('http') ? rt.primaryPhotoUrl : `http://localhost:8080${rt.primaryPhotoUrl}`}
+                          <img src={rt.primaryPhotoUrl.startsWith('http') ? rt.primaryPhotoUrl : `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080'}${rt.primaryPhotoUrl}`}
                             alt={rt.name} className="w-14 h-10 rounded-lg object-cover" />
                         )}
                         <div>
@@ -422,7 +422,7 @@ export default function BookPage() {
                     />
                     {/* Room type photo */}
                     {rt.primaryPhotoUrl && (
-                      <img src={rt.primaryPhotoUrl.startsWith('http') ? rt.primaryPhotoUrl : `http://localhost:8080${rt.primaryPhotoUrl}`} alt={rt.name}
+                      <img src={rt.primaryPhotoUrl.startsWith('http') ? rt.primaryPhotoUrl : `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080'}${rt.primaryPhotoUrl}`} alt={rt.name}
                         className="w-20 h-16 rounded-lg object-cover shrink-0" />
                     )}
                     <div className="flex-1 min-w-0">
@@ -596,7 +596,7 @@ export default function BookPage() {
             {/* Listing card */}
             <div className="flex gap-3">
               {listing.primaryPhotoUrl && (
-                <img src={listing.primaryPhotoUrl.startsWith('http') ? listing.primaryPhotoUrl : `http://localhost:8080${listing.primaryPhotoUrl}`}
+                <img src={listing.primaryPhotoUrl.startsWith('http') ? listing.primaryPhotoUrl : `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080'}${listing.primaryPhotoUrl}`}
                   alt={listing.title} className="w-20 h-16 rounded-lg object-cover shrink-0" />
               )}
               <div>
