@@ -55,6 +55,16 @@ export default function AccountPage() {
   const [travConsent, setTravConsent] = useState(false);
   const [travSaving, setTravSaving] = useState(false);
 
+  // PIN management
+  const [pinStatus, setPinStatus] = useState<{ hasPin: boolean; pinLocked: boolean }>({ hasPin: false, pinLocked: false });
+  const [showPinModal, setShowPinModal] = useState<'set' | 'change' | 'remove' | null>(null);
+  const [pinDigits, setPinDigits] = useState(['', '', '', '', '', '']);
+  const [pinConfirmDigits, setPinConfirmDigits] = useState(['', '', '', '', '', '']);
+  const [currentPinDigits, setCurrentPinDigits] = useState(['', '', '', '', '', '']);
+  const [pinStep, setPinStep] = useState<'current' | 'new' | 'confirm'>('new');
+  const [pinSaving, setPinSaving] = useState(false);
+  const [pinMessage, setPinMessage] = useState('');
+
   // Payment methods
   const [paymentMethods, setPaymentMethods] = useState<SavedPaymentMethod[]>([]);
   const [showPaymentForm, setShowPaymentForm] = useState(false);
@@ -101,6 +111,9 @@ export default function AccountPage() {
     loadProfile(t);
     api.getCoTravelers(t).then(setCoTravelers).catch(() => {});
     api.getPaymentMethods(t).then(setPaymentMethods).catch(() => {});
+    // Load PIN status
+    const phone = localStorage.getItem('last_login_phone');
+    if (phone) api.checkPinStatus(phone).then(setPinStatus).catch(() => {});
   }, [router, loadProfile]);
 
   if (loading || !profile) {
@@ -612,6 +625,37 @@ export default function AccountPage() {
                   </div>
                   <span className="text-xs bg-green-100 text-green-700 font-medium px-2.5 py-1 rounded-full">Enabled</span>
                 </div>
+                {/* PIN Management */}
+                <div className="p-5 flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-gray-800">Login PIN</p>
+                    <p className="text-xs text-gray-400 mt-0.5">
+                      {pinStatus.hasPin
+                        ? 'Quick login PIN is set. Sign in without OTP.'
+                        : 'Set a 4-6 digit PIN for instant sign-in without OTP.'}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {pinStatus.hasPin ? (
+                      <>
+                        <span className="text-xs bg-green-100 text-green-700 font-medium px-2.5 py-1 rounded-full">Active</span>
+                        <button
+                          onClick={() => { setShowPinModal('change'); setPinStep('current'); setCurrentPinDigits(['','','','','','']); setPinDigits(['','','','','','']); setPinMessage(''); }}
+                          className="text-sm text-orange-500 font-medium hover:underline"
+                        >Change</button>
+                        <button
+                          onClick={() => setShowPinModal('remove')}
+                          className="text-sm text-red-500 font-medium hover:underline"
+                        >Remove</button>
+                      </>
+                    ) : (
+                      <button
+                        onClick={() => { setShowPinModal('set'); setPinStep('new'); setPinDigits(['','','','','','']); setPinConfirmDigits(['','','','','','']); setPinMessage(''); }}
+                        className="text-sm text-orange-500 font-medium hover:underline"
+                      >Set PIN</button>
+                    )}
+                  </div>
+                </div>
                 <div className="p-5 flex items-center justify-between">
                   <div>
                     <p className="text-sm font-medium text-gray-800">Active sessions</p>
@@ -645,6 +689,129 @@ export default function AccountPage() {
                   <button className="text-sm text-red-500 border border-red-200 px-4 py-2 rounded-lg hover:bg-red-50 transition font-medium">Delete my account</button>
                 </div>
               </div>
+
+              {/* PIN Modal */}
+              {showPinModal && (
+                <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4" onClick={() => setShowPinModal(null)}>
+                  <div className="bg-white rounded-2xl p-6 max-w-sm w-full shadow-xl" onClick={e => e.stopPropagation()}>
+                    <h3 className="text-lg font-bold text-gray-900 mb-1">
+                      {showPinModal === 'set' ? 'Set Login PIN' : showPinModal === 'change' ? 'Change PIN' : 'Remove PIN'}
+                    </h3>
+
+                    {showPinModal === 'remove' ? (
+                      <div>
+                        <p className="text-sm text-gray-500 mb-4">Are you sure you want to remove your login PIN? You&apos;ll need to use OTP to sign in.</p>
+                        {pinMessage && <p className="text-sm text-red-500 mb-3">{pinMessage}</p>}
+                        <div className="flex gap-3">
+                          <button onClick={() => setShowPinModal(null)} className="flex-1 border rounded-xl py-2.5 text-sm font-medium hover:bg-gray-50">Cancel</button>
+                          <button
+                            disabled={pinSaving}
+                            onClick={async () => {
+                              setPinSaving(true);
+                              try {
+                                await api.removePin(token);
+                                setPinStatus({ hasPin: false, pinLocked: false });
+                                setShowPinModal(null);
+                              } catch (e: any) { setPinMessage(e.message || 'Failed to remove PIN'); }
+                              finally { setPinSaving(false); }
+                            }}
+                            className="flex-1 bg-red-500 text-white rounded-xl py-2.5 text-sm font-semibold hover:bg-red-600 disabled:opacity-50"
+                          >{pinSaving ? 'Removing...' : 'Remove PIN'}</button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div>
+                        <p className="text-sm text-gray-500 mb-4">
+                          {showPinModal === 'change' && pinStep === 'current' ? 'Enter your current PIN' :
+                           pinStep === 'new' ? 'Enter a 4-6 digit PIN' :
+                           'Confirm your new PIN'}
+                        </p>
+
+                        {pinMessage && <p className="text-sm text-red-500 mb-3">{pinMessage}</p>}
+
+                        {/* PIN input boxes */}
+                        <div className="flex justify-center gap-2 mb-5">
+                          {(pinStep === 'current' ? currentPinDigits : pinStep === 'new' ? pinDigits : pinConfirmDigits).map((d, i) => (
+                            <input
+                              key={`${pinStep}-${i}`}
+                              type="password"
+                              inputMode="numeric"
+                              maxLength={1}
+                              value={d}
+                              autoFocus={i === 0}
+                              onChange={(e) => {
+                                const val = e.target.value.replace(/\D/g, '');
+                                const arr = pinStep === 'current' ? [...currentPinDigits] : pinStep === 'new' ? [...pinDigits] : [...pinConfirmDigits];
+                                arr[i] = val;
+                                if (pinStep === 'current') setCurrentPinDigits(arr);
+                                else if (pinStep === 'new') setPinDigits(arr);
+                                else setPinConfirmDigits(arr);
+                                setPinMessage('');
+                                if (val && i < 5) {
+                                  const next = e.target.parentElement?.children[i + 1] as HTMLInputElement;
+                                  next?.focus();
+                                }
+                              }}
+                              onKeyDown={(e) => {
+                                const arr = pinStep === 'current' ? currentPinDigits : pinStep === 'new' ? pinDigits : pinConfirmDigits;
+                                if (e.key === 'Backspace' && !arr[i] && i > 0) {
+                                  const prev = (e.target as HTMLElement).parentElement?.children[i - 1] as HTMLInputElement;
+                                  prev?.focus();
+                                }
+                              }}
+                              className="w-11 h-13 text-center text-lg font-bold border-2 border-gray-200 rounded-xl outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-200 transition"
+                            />
+                          ))}
+                        </div>
+
+                        <div className="flex gap-3">
+                          <button onClick={() => setShowPinModal(null)} className="flex-1 border rounded-xl py-2.5 text-sm font-medium hover:bg-gray-50">Cancel</button>
+                          <button
+                            disabled={pinSaving}
+                            onClick={async () => {
+                              const currentPin = currentPinDigits.join('');
+                              const newPinStr = pinDigits.join('');
+                              const confirmPin = pinConfirmDigits.join('');
+
+                              if (showPinModal === 'change' && pinStep === 'current') {
+                                if (currentPin.length < 4) { setPinMessage('Enter at least 4 digits'); return; }
+                                setPinStep('new');
+                                setPinDigits(['','','','','','']);
+                                return;
+                              }
+                              if (pinStep === 'new') {
+                                if (newPinStr.length < 4) { setPinMessage('PIN must be at least 4 digits'); return; }
+                                setPinStep('confirm');
+                                setPinConfirmDigits(['','','','','','']);
+                                return;
+                              }
+                              // Confirm step
+                              if (confirmPin !== newPinStr) { setPinMessage('PINs do not match'); setPinConfirmDigits(['','','','','','']); return; }
+
+                              setPinSaving(true);
+                              setPinMessage('');
+                              try {
+                                if (showPinModal === 'set') {
+                                  await api.setPin(newPinStr, token);
+                                } else {
+                                  await api.changePin(currentPin, newPinStr, token);
+                                }
+                                setPinStatus({ hasPin: true, pinLocked: false });
+                                setShowPinModal(null);
+                              } catch (e: any) {
+                                setPinMessage(e.message || 'Failed to save PIN');
+                              } finally { setPinSaving(false); }
+                            }}
+                            className="flex-1 bg-orange-500 text-white rounded-xl py-2.5 text-sm font-semibold hover:bg-orange-600 disabled:opacity-50"
+                          >
+                            {pinSaving ? 'Saving...' : pinStep === 'confirm' ? 'Confirm & Save' : 'Next'}
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
           )}
 

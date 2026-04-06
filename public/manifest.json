@@ -1,0 +1,9 @@
+{
+  "name": "Safar",
+  "short_name": "Safar",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#f97316",
+  "icons": []
+}

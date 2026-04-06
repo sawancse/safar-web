@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useRef, useCallback } from 'react';
 import dynamic from 'next/dynamic';
+import 'leaflet/dist/leaflet.css';
 
 // Types for the inner map component
 export interface MapLocation {
@@ -69,6 +70,7 @@ function MapInner({ lat, lng, onLocationChange, className }: Props) {
   const debouncedQuery = useDebounce(searchQuery, 500);
   const mapRef = useRef<any>(null);
   const markerRef = useRef<any>(null);
+  const searchContainerRef = useRef<HTMLDivElement>(null);
 
   // Dynamic import Leaflet (not SSR-safe)
   useEffect(() => {
@@ -80,15 +82,15 @@ function MapInner({ lat, lng, onLocationChange, className }: Props) {
       setRL(reactLeaflet);
       setMounted(true);
     });
-    // Inject leaflet CSS via link tag
-    if (!document.getElementById('leaflet-css')) {
-      const link = document.createElement('link');
-      link.id = 'leaflet-css';
-      link.rel = 'stylesheet';
-      link.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
-      document.head.appendChild(link);
-    }
   }, []);
+
+  // Prevent Leaflet from capturing events on the search bar
+  useEffect(() => {
+    if (L && searchContainerRef.current) {
+      L.DomEvent.disableClickPropagation(searchContainerRef.current);
+      L.DomEvent.disableScrollPropagation(searchContainerRef.current);
+    }
+  }, [L, mounted]);
 
   // Search on debounced query
   useEffect(() => {
@@ -158,6 +160,9 @@ function MapInner({ lat, lng, onLocationChange, className }: Props) {
     );
   }
 
+  // Ensure the container has an explicit height for Leaflet
+  const containerClass = className || 'h-64';
+
   const { MapContainer, TileLayer, Marker, useMapEvents } = RL;
 
   // Fix default marker icon (Leaflet issue with bundlers)
@@ -180,7 +185,14 @@ function MapInner({ lat, lng, onLocationChange, className }: Props) {
   // Map ref setter
   function MapRefSetter() {
     const map = RL.useMap();
-    useEffect(() => { mapRef.current = map; }, [map]);
+    useEffect(() => {
+      mapRef.current = map;
+      // Force recalculate size after mount so tiles render correctly
+      // Multiple delays to handle step/tab conditional rendering timing
+      setTimeout(() => map.invalidateSize(), 100);
+      setTimeout(() => map.invalidateSize(), 500);
+      setTimeout(() => map.invalidateSize(), 1000);
+    }, [map]);
     // Fly to new coords when lat/lng change from outside
     useEffect(() => {
       if (lat && lng && lat !== 0 && lng !== 0) {
@@ -194,15 +206,19 @@ function MapInner({ lat, lng, onLocationChange, className }: Props) {
   const zoom = lat && lng && lat !== 0 ? 15 : 5;
 
   return (
-    <div className={`relative ${className || ''}`}>
+    <div className={`relative ${containerClass}`}>
       {/* Search bar + GPS */}
-      <div className="absolute top-3 left-3 right-3 z-[1000] flex gap-2">
+      <div
+        ref={searchContainerRef}
+        className="absolute top-3 left-3 right-3 z-[1000] flex gap-2"
+      >
         <div className="relative flex-1">
           <input
             className="w-full bg-white border border-gray-300 rounded-lg px-3 py-2 text-sm outline-none shadow-md focus:ring-2 focus:ring-orange-400 pr-8"
             placeholder="Search address or landmark..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
+            onFocus={e => e.stopPropagation()}
           />
           {searching && (
             <div className="absolute right-2 top-2.5">

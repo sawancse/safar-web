@@ -56,10 +56,13 @@ async function doRefreshToken(): Promise<boolean> {
     });
     if (res.ok) {
       const data = await res.json();
+      console.log('[AUTH] Refresh response keys:', Object.keys(data), 'hasAccessToken:', !!data.accessToken, 'tokenLen:', data.accessToken?.length);
       localStorage.setItem('access_token', data.accessToken);
       if (data.refreshToken) localStorage.setItem('refresh_token', data.refreshToken);
       document.cookie = `access_token=${data.accessToken}; path=/; max-age=${30 * 24 * 60 * 60}; SameSite=Lax`;
       return true;
+    } else {
+      console.log('[AUTH] Refresh failed:', res.status);
     }
   } catch { /* network error */ }
   return false;
@@ -126,23 +129,26 @@ async function apiFetch<T>(path: string, options?: RequestInit): Promise<T> {
     cache: 'no-store',
   });
 
-  // Auto-refresh token on 401 — only for authenticated endpoints (those with Authorization header)
-  const hasAuthHeader = freshOptions?.headers && ('Authorization' in (freshOptions.headers as Record<string, string>));
-  if (res.status === 401 && typeof window !== 'undefined' && hasAuthHeader && !path.includes('/auth/')) {
+  // Auto-refresh token on 401 for any non-auth endpoint
+  if (res.status === 401 && typeof window !== 'undefined' && !path.includes('/auth/')) {
+    console.log('[AUTH] 401 on', path, '- attempting refresh. localStorage token:', !!localStorage.getItem('access_token'));
     const ok = await refreshTokenOnce();
+    console.log('[AUTH] Refresh result:', ok, 'new token:', !!localStorage.getItem('access_token'), 'len:', localStorage.getItem('access_token')?.length);
     if (ok) {
       const newToken = localStorage.getItem('access_token') || '';
-      const retryRes = await fetch(`${API_URL}${path}`, {
-        ...freshOptions,
-        headers: { 'Content-Type': 'application/json', ...freshOptions?.headers as Record<string, string>, Authorization: `Bearer ${newToken}` },
-        credentials: 'include',
-      });
-      if (!retryRes.ok) {
-        const text = await retryRes.text().catch(() => 'Unknown error');
-        throw new Error(text || `HTTP ${retryRes.status}`);
+      if (newToken) {
+        const retryRes = await fetch(`${API_URL}${path}`, {
+          ...freshOptions,
+          headers: { 'Content-Type': 'application/json', ...freshOptions?.headers as Record<string, string>, Authorization: `Bearer ${newToken}` },
+          credentials: 'include',
+        });
+        if (!retryRes.ok) {
+          const text = await retryRes.text().catch(() => 'Unknown error');
+          throw new Error(text || `HTTP ${retryRes.status}`);
+        }
+        const text = await retryRes.text();
+        return text ? JSON.parse(text) : (undefined as T);
       }
-      const text = await retryRes.text();
-      return text ? JSON.parse(text) : (undefined as T);
     }
     // Refresh failed — clear and redirect to login
     localStorage.removeItem('access_token');
@@ -338,6 +344,43 @@ export const api = {
     apiFetch<AuthResponse>('/api/v1/auth/password/reset', {
       method: 'POST',
       body: JSON.stringify({ email, otp, newPassword }),
+    }),
+
+  // ── PIN-based quick login ──
+  checkPinStatus: (phone?: string, email?: string) =>
+    apiFetch<{ hasPin: boolean; pinLocked: boolean }>(`/api/v1/auth/pin/check?${phone ? 'phone=' + encodeURIComponent(phone) : 'email=' + encodeURIComponent(email || '')}`),
+
+  pinSignIn: (pin: string, phone?: string, email?: string) =>
+    apiFetch<AuthResponse>('/api/v1/auth/pin/signin', {
+      method: 'POST',
+      body: JSON.stringify({ phone, email, pin }),
+    }),
+
+  setPin: (pin: string, token: string) =>
+    apiFetch<void>('/api/v1/auth/pin/set', {
+      method: 'POST',
+      body: JSON.stringify({ pin }),
+      headers: { Authorization: `Bearer ${token}` },
+    }),
+
+  changePin: (currentPin: string, newPin: string, token: string) =>
+    apiFetch<void>('/api/v1/auth/pin/change', {
+      method: 'POST',
+      body: JSON.stringify({ currentPin, newPin }),
+      headers: { Authorization: `Bearer ${token}` },
+    }),
+
+  resetPin: (pin: string, token: string) =>
+    apiFetch<void>('/api/v1/auth/pin/reset', {
+      method: 'POST',
+      body: JSON.stringify({ pin }),
+      headers: { Authorization: `Bearer ${token}` },
+    }),
+
+  removePin: (token: string) =>
+    apiFetch<void>('/api/v1/auth/pin', {
+      method: 'DELETE',
+      headers: { Authorization: `Bearer ${token}` },
     }),
 
   refreshToken: (refreshToken: string) =>
@@ -775,6 +818,20 @@ export const api = {
       headers: token ? { Authorization: `Bearer ${token}` } : {},
     }),
 
+  /** Upload a file to S3 via generic presign (for builder projects, sale properties, etc.) */
+  uploadGenericFile: async (file: File, folder: string, token: string): Promise<string> => {
+    const res = await apiFetch<{ uploadUrl: string; publicUrl: string }>(
+      `/api/v1/media/upload/generic-presign?folder=${encodeURIComponent(folder)}&contentType=${encodeURIComponent(file.type)}`,
+      { method: 'POST', headers: { Authorization: `Bearer ${token}` } }
+    );
+    await fetch(res.uploadUrl, {
+      method: 'PUT',
+      body: file,
+      headers: { 'Content-Type': file.type },
+    });
+    return res.publicUrl;
+  },
+
   reorderMedia: (listingId: string, mediaIds: string[]) =>
     apiFetch<void>(`/api/v1/listings/${listingId}/media/reorder`, {
       method: 'PUT',
@@ -933,7 +990,7 @@ export const api = {
     comment?: string;
   }) => apiFetch<Review>('/api/v1/reviews/experience', { method: 'POST', body: JSON.stringify(data) }),
 
-  bookExperience: (data: { sessionId: string; numGuests: number; propertyBookingId?: string }) =>
+  bookExperience: (data: { sessionId?: string; experienceId: string; numGuests: number; propertyBookingId?: string; requestedDate?: string }) =>
     apiFetch('/api/v1/experience-bookings', { method: 'POST', body: JSON.stringify(data) }),
 
   getMyExperienceBookings: () =>
@@ -1451,7 +1508,7 @@ export const api = {
     }),
 
   // PG Agreement
-  createAgreement: (tenancyId: string, data: any, token: string) =>
+  createPgAgreement: (tenancyId: string, data: any, token: string) =>
     apiFetch<any>(`/api/v1/pg-tenancies/${tenancyId}/agreement`, {
       method: 'POST',
       body: JSON.stringify(data),
@@ -1560,6 +1617,87 @@ export const api = {
       headers: { Authorization: `Bearer ${token}` },
     }),
 
+  // Ticket enhancements (Zolo-style)
+  reopenTicket: (tenancyId: string, requestId: string, reason: string, token: string) =>
+    apiFetch<any>(`/api/v1/pg-tenancies/${tenancyId}/maintenance/${requestId}/reopen`, {
+      method: 'POST',
+      body: JSON.stringify({ reason }),
+      headers: { Authorization: `Bearer ${token}` },
+    }),
+  closeTicket: (tenancyId: string, requestId: string, token: string) =>
+    apiFetch<any>(`/api/v1/pg-tenancies/${tenancyId}/maintenance/${requestId}/close`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}` },
+    }),
+  getTicketComments: (tenancyId: string, requestId: string, token: string) =>
+    apiFetch<any>(`/api/v1/pg-tenancies/${tenancyId}/maintenance/${requestId}/comments`, {
+      headers: { Authorization: `Bearer ${token}` },
+    }),
+  addTicketComment: (tenancyId: string, requestId: string, data: { commentText: string }, token: string) =>
+    apiFetch<any>(`/api/v1/pg-tenancies/${tenancyId}/maintenance/${requestId}/comments`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+      headers: { Authorization: `Bearer ${token}` },
+    }),
+
+  // Host ticket management
+  getListingTickets: (listingId: string, params: { status?: string; page?: number }, token: string) =>
+    apiFetch<any>(`/api/v1/listings/${listingId}/tickets?${new URLSearchParams(
+      Object.entries(params).filter(([, v]) => v != null).map(([k, v]) => [k, String(v)])
+    ).toString()}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    }),
+  getTicketStats: (listingId: string, token: string) =>
+    apiFetch<any>(`/api/v1/listings/${listingId}/tickets/stats`, {
+      headers: { Authorization: `Bearer ${token}` },
+    }),
+  updateListingTicket: (listingId: string, requestId: string, data: any, token: string) =>
+    apiFetch<any>(`/api/v1/listings/${listingId}/tickets/${requestId}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+      headers: { Authorization: `Bearer ${token}` },
+    }),
+  addHostTicketComment: (listingId: string, requestId: string, data: { commentText: string }, token: string) =>
+    apiFetch<any>(`/api/v1/listings/${listingId}/tickets/${requestId}/comments`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+      headers: { Authorization: `Bearer ${token}` },
+    }),
+
+  // Settlement enhancements
+  addChecklistItem: (tenancyId: string, data: any, token: string) =>
+    apiFetch<any>(`/api/v1/pg-tenancies/${tenancyId}/settlement/checklist`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+      headers: { Authorization: `Bearer ${token}` },
+    }),
+  getChecklist: (tenancyId: string, token: string) =>
+    apiFetch<any>(`/api/v1/pg-tenancies/${tenancyId}/settlement/checklist`, {
+      headers: { Authorization: `Bearer ${token}` },
+    }),
+  disputeDeduction: (tenancyId: string, deductionId: string, reason: string, token: string) =>
+    apiFetch<any>(`/api/v1/pg-tenancies/${tenancyId}/settlement/deductions/${deductionId}/dispute`, {
+      method: 'POST',
+      body: JSON.stringify({ reason }),
+      headers: { Authorization: `Bearer ${token}` },
+    }),
+  disputeSettlement: (tenancyId: string, reason: string, token: string) =>
+    apiFetch<any>(`/api/v1/pg-tenancies/${tenancyId}/settlement/dispute`, {
+      method: 'POST',
+      body: JSON.stringify({ reason }),
+      headers: { Authorization: `Bearer ${token}` },
+    }),
+  saveBankDetails: (tenancyId: string, data: any, token: string) =>
+    apiFetch<any>(`/api/v1/pg-tenancies/${tenancyId}/settlement/bank-details`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+      headers: { Authorization: `Bearer ${token}` },
+    }),
+  getSettlementTimeline: (tenancyId: string, token: string) =>
+    apiFetch<any>(`/api/v1/pg-tenancies/${tenancyId}/settlement/timeline`, {
+      headers: { Authorization: `Bearer ${token}` },
+    }),
+
   // Tenant Dashboard
   getTenantDashboard: (token: string) =>
     apiFetch<any>('/api/v1/pg-tenancies/my-dashboard', {
@@ -1623,7 +1761,7 @@ export const api = {
     apiFetch<any>(`/api/v1/localities/${id}`),
 
   getLocalitiesByCity: (city: string) =>
-    apiFetch<any>(`/api/v1/localities/city/${city}`),
+    apiFetch<any>(`/api/v1/locations/city/${city}`),
 
   getLocalityByName: (name: string, city: string) =>
     apiFetch<any>(`/api/v1/localities/by-name?name=${name}&city=${city}`),
@@ -1648,8 +1786,14 @@ export const api = {
     return apiFetch<any>(`/api/v1/search/sale-properties?${qs.toString()}`);
   },
 
+  autocompleteSaleProperties: (q: string) =>
+    apiFetch<any[]>(`/api/v1/search/sale-properties/autocomplete?q=${encodeURIComponent(q)}`),
+
   getSaleProperty: (id: string) =>
     apiFetch<any>(`/api/v1/sale-properties/${id}`),
+
+  getSellerContact: (propertyId: string) =>
+    apiFetch<{ name: string; phone: string; email: string }>(`/api/v1/sale-properties/${propertyId}/contact`),
 
   createSaleProperty: (data: object, token: string) =>
     apiFetch<any>('/api/v1/sale-properties', {
@@ -2043,6 +2187,9 @@ export const api = {
   searchBuilderProjects: (params: Record<string, string>) =>
     apiFetch<any>(`/api/v1/search/builder-projects?${new URLSearchParams(params)}`),
 
+  autocompleteBuilderProjects: (q: string) =>
+    apiFetch<any[]>(`/api/v1/search/builder-projects/autocomplete?q=${encodeURIComponent(q)}`),
+
   getBuilderProject: (id: string) =>
     apiFetch<any>(`/api/v1/builder-projects/${id}`),
 
@@ -2081,6 +2228,12 @@ export const api = {
   getUnitTypes: (projectId: string) =>
     apiFetch<any[]>(`/api/v1/builder-projects/${projectId}/unit-types`),
 
+  deleteUnitType: (unitTypeId: string, token: string) =>
+    apiFetch<void>(`/api/v1/builder-projects/unit-types/${unitTypeId}`, {
+      method: 'DELETE',
+      headers: { Authorization: `Bearer ${token}` },
+    }),
+
   calculateUnitPrice: (unitTypeId: string, floor: number, preferredFacing: boolean) =>
     apiFetch<any>(`/api/v1/builder-projects/unit-types/${unitTypeId}/calculate-price?floor=${floor}&preferredFacing=${preferredFacing}`),
 
@@ -2093,4 +2246,119 @@ export const api = {
 
   getConstructionUpdates: (projectId: string) =>
     apiFetch<any[]>(`/api/v1/builder-projects/${projectId}/construction-updates`),
+
+  // ── Broker profiles ────────────────────────────────────────────────
+  registerBroker: (data: any) =>
+    apiFetch<any>('/api/v1/brokers/register', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
+  getBrokerProfile: () =>
+    apiFetch<any>('/api/v1/brokers/me'),
+
+  updateBrokerProfile: (data: any) =>
+    apiFetch<any>('/api/v1/brokers/me', {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    }),
+
+  searchBrokers: (params: Record<string, string>) =>
+    apiFetch<any>(`/api/v1/brokers/search?${new URLSearchParams(params)}`),
+
+  getBrokerById: (id: string) =>
+    apiFetch<any>(`/api/v1/brokers/${id}`),
+
+  // ══════ VAS: Sale Agreement ══════
+  getAgreementTemplates: () => apiFetch<any[]>('/api/v1/agreements/templates'),
+  calculateStampDuty: (state: string, agreementType: string, propertyValuePaise: number) =>
+    apiFetch<any>(`/api/v1/agreements/stamp-duty/calculate?state=${state}&agreementType=${agreementType}&propertyValuePaise=${propertyValuePaise}`),
+  createAgreement: (data: any, token?: string) =>
+    apiFetch<any>('/api/v1/agreements', { method: 'POST', ...(token ? { headers: { Authorization: `Bearer ${token}` } } : {}), body: JSON.stringify(data) }),
+  getAgreement: (id: string, token: string) =>
+    apiFetch<any>(`/api/v1/agreements/${id}`, { headers: { Authorization: `Bearer ${token}` } }),
+  getMyAgreements: (token: string) =>
+    apiFetch<any>('/api/v1/agreements/my', { headers: { Authorization: `Bearer ${token}` } }),
+  addAgreementParty: (agreementId: string, data: any, token: string) =>
+    apiFetch<any>(`/api/v1/agreements/${agreementId}/parties`, { method: 'POST', headers: { Authorization: `Bearer ${token}` }, body: JSON.stringify(data) }),
+  generateAgreementDraft: (id: string, token: string) =>
+    apiFetch<any>(`/api/v1/agreements/${id}/generate-draft`, { method: 'POST', headers: { Authorization: `Bearer ${token}` } }),
+  payAgreement: (id: string, paymentId: string, token: string) =>
+    apiFetch<any>(`/api/v1/agreements/${id}/pay?paymentId=${paymentId}`, { method: 'POST', headers: { Authorization: `Bearer ${token}` } }),
+  signAgreement: (id: string, partyId: string, token: string) =>
+    apiFetch<any>(`/api/v1/agreements/${id}/sign/${partyId}`, { method: 'POST', headers: { Authorization: `Bearer ${token}` } }),
+
+  // ══════ VAS: Home Loan ══════
+  checkLoanEligibility: (data: any, token: string) =>
+    apiFetch<any>('/api/v1/homeloan/eligibility', { method: 'POST', headers: { Authorization: `Bearer ${token}` }, body: JSON.stringify(data) }),
+  calculateEmi: (loanAmountPaise: number, interestRate: number, tenureMonths: number) =>
+    apiFetch<any>(`/api/v1/homeloan/emi/calculate?loanAmountPaise=${loanAmountPaise}&interestRate=${interestRate}&tenureMonths=${tenureMonths}`, { method: 'POST' }),
+  getPartnerBanks: () => apiFetch<any[]>('/api/v1/homeloan/banks'),
+  compareBanks: (eligibilityId: string) => apiFetch<any[]>(`/api/v1/homeloan/banks/compare?eligibilityId=${eligibilityId}`),
+  applyLoan: (data: any, token: string) =>
+    apiFetch<any>('/api/v1/homeloan/apply', { method: 'POST', headers: { Authorization: `Bearer ${token}` }, body: JSON.stringify(data) }),
+  getMyLoanApplications: (token: string) =>
+    apiFetch<any>('/api/v1/homeloan/applications/my', { headers: { Authorization: `Bearer ${token}` } }),
+  getLoanApplication: (id: string, token: string) =>
+    apiFetch<any>(`/api/v1/homeloan/applications/${id}`, { headers: { Authorization: `Bearer ${token}` } }),
+
+  // ══════ VAS: Legal Services ══════
+  getLegalPackages: () => apiFetch<any[]>('/api/v1/legal/packages'),
+  getAdvocates: (city?: string) => apiFetch<any[]>(`/api/v1/legal/advocates${city ? '?city=' + city : ''}`),
+  createLegalCase: (data: any, token?: string) =>
+    apiFetch<any>('/api/v1/legal/cases', { method: 'POST', ...(token ? { headers: { Authorization: `Bearer ${token}` } } : {}), body: JSON.stringify(data) }),
+  getMyLegalCases: (token: string) =>
+    apiFetch<any>('/api/v1/legal/cases/my', { headers: { Authorization: `Bearer ${token}` } }),
+  getLegalCase: (id: string, token: string) =>
+    apiFetch<any>(`/api/v1/legal/cases/${id}`, { headers: { Authorization: `Bearer ${token}` } }),
+  uploadLegalDocument: (caseId: string, data: any, token: string) =>
+    apiFetch<any>(`/api/v1/legal/cases/${caseId}/documents`, { method: 'POST', headers: { Authorization: `Bearer ${token}` }, body: JSON.stringify(data) }),
+  getLegalDocuments: (caseId: string, token: string) =>
+    apiFetch<any[]>(`/api/v1/legal/cases/${caseId}/documents`, { headers: { Authorization: `Bearer ${token}` } }),
+  scheduleLegalConsultation: (caseId: string, data: any, token?: string) =>
+    apiFetch<any>(`/api/v1/legal/cases/${caseId}/consultation`, { method: 'POST', ...(token ? { headers: { Authorization: `Bearer ${token}` } } : {}), body: JSON.stringify(data) }),
+  downloadLegalReport: async (caseId: string): Promise<Blob> => {
+    // Report endpoint is public (permitAll) — no auth needed
+    const res = await fetch(`${API_URL}/api/v1/legal/cases/${caseId}/report`);
+    if (!res.ok) {
+      const text = await res.text().catch(() => '');
+      throw new Error(text || `Download failed (${res.status})`);
+    }
+    return res.blob();
+  },
+
+  // ══════ VAS: Home Interiors ══════
+  getInteriorDesigners: (city?: string) => apiFetch<any[]>(`/api/v1/interiors/designers${city ? '?city=' + city : ''}`),
+  getMaterialCatalog: (category?: string) => apiFetch<any[]>(`/api/v1/interiors/materials/catalog${category ? '?category=' + category : ''}`),
+  bookInteriorConsultation: (data: any, token: string) =>
+    apiFetch<any>('/api/v1/interiors/consultation', { method: 'POST', headers: { Authorization: `Bearer ${token}` }, body: JSON.stringify(data) }),
+  getMyInteriorProjects: (token?: string) =>
+    apiFetch<any>('/api/v1/interiors/projects/my', token ? { headers: { Authorization: `Bearer ${token}` } } : {}),
+  getInteriorProject: (id: string, token: string) =>
+    apiFetch<any>(`/api/v1/interiors/projects/${id}`, { headers: { Authorization: `Bearer ${token}` } }),
+  getInteriorRoomDesigns: (projectId: string, token: string) =>
+    apiFetch<any[]>(`/api/v1/interiors/projects/${projectId}/rooms`, { headers: { Authorization: `Bearer ${token}` } }),
+  getInteriorMilestones: (projectId: string, token: string) =>
+    apiFetch<any[]>(`/api/v1/interiors/projects/${projectId}/milestones`, { headers: { Authorization: `Bearer ${token}` } }),
+  getInteriorQuote: (projectId: string, token: string) =>
+    apiFetch<any>(`/api/v1/interiors/projects/${projectId}/quote`, { headers: { Authorization: `Bearer ${token}` } }),
+
+  // ══════ PG Tickets ══════
+  getTicketStats: (listingId: string, token: string) =>
+    apiFetch<any>(`/api/v1/pg/listings/${listingId}/tickets/stats`, { headers: { Authorization: `Bearer ${token}` } }),
+  getListingTickets: (listingId: string, params: { status?: string; priority?: string; category?: string; page?: number }, token: string) => {
+    const q = new URLSearchParams();
+    if (params.status) q.set('status', params.status);
+    if (params.priority) q.set('priority', params.priority);
+    if (params.category) q.set('category', params.category);
+    if (params.page !== undefined) q.set('page', String(params.page));
+    q.set('size', '20');
+    return apiFetch<any>(`/api/v1/pg/listings/${listingId}/tickets?${q}`, { headers: { Authorization: `Bearer ${token}` } });
+  },
+  getTicketComments: (tenancyId: string, requestId: string, token: string) =>
+    apiFetch<any[]>(`/api/v1/pg/tenancies/${tenancyId}/requests/${requestId}/comments`, { headers: { Authorization: `Bearer ${token}` } }),
+  addTicketComment: (tenancyId: string, requestId: string, data: { commentText: string }, token: string) =>
+    apiFetch<any>(`/api/v1/pg/tenancies/${tenancyId}/requests/${requestId}/comments`, { method: 'POST', headers: { Authorization: `Bearer ${token}` }, body: JSON.stringify(data) }),
+  updateListingTicket: (listingId: string, requestId: string, data: { status?: string; assignedTo?: string; resolutionNotes?: string }, token: string) =>
+    apiFetch<any>(`/api/v1/pg/listings/${listingId}/tickets/${requestId}`, { method: 'PUT', headers: { Authorization: `Bearer ${token}` }, body: JSON.stringify(data) }),
 };

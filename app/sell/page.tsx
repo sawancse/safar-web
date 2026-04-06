@@ -1,10 +1,12 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, useEffect, useCallback, useRef, Suspense } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { api } from '@/lib/api';
 import LocalityAutocomplete from '@/components/LocalityAutocomplete';
+import CityAutocomplete from '@/components/CityAutocomplete';
+import MapLocationPicker from '@/components/MapLocationPicker';
 
 /* ── Constants ─────────────────────────────────────────────── */
 
@@ -71,7 +73,16 @@ const INDIAN_CITIES: Record<string, string[]> = {
   'Sikkim': ['Gangtok', 'Namchi', 'Pelling'],
 };
 
-const FACING_OPTIONS = ['North', 'South', 'East', 'West', 'North-East', 'North-West', 'South-East', 'South-West'];
+const FACING_OPTIONS = [
+  { value: 'NORTH', label: 'North' },
+  { value: 'SOUTH', label: 'South' },
+  { value: 'EAST', label: 'East' },
+  { value: 'WEST', label: 'West' },
+  { value: 'NORTH_EAST', label: 'North-East' },
+  { value: 'NORTH_WEST', label: 'North-West' },
+  { value: 'SOUTH_EAST', label: 'South-East' },
+  { value: 'SOUTH_WEST', label: 'South-West' },
+];
 
 const AMENITIES = [
   'Gym', 'Swimming Pool', 'Club House', "Children's Play Area", 'Park', 'Lift',
@@ -80,6 +91,52 @@ const AMENITIES = [
 ];
 
 const OVERLOOKING_OPTIONS = ['Garden', 'Pool', 'Main Road', 'Park', 'City View'];
+
+/* ── State Autocomplete (inline) ─────────────────────────── */
+function StateAutocomplete({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState(value);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => { setQuery(value); }, [value]);
+
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    }
+    document.addEventListener('mousedown', handleClick);
+    return () => document.removeEventListener('mousedown', handleClick);
+  }, []);
+
+  const filtered = query
+    ? INDIAN_STATES.filter(s => s.toLowerCase().includes(query.toLowerCase()))
+    : INDIAN_STATES;
+
+  return (
+    <div ref={ref} className="relative">
+      <label className="block text-sm font-medium text-gray-700 mb-1">State *</label>
+      <input
+        type="text"
+        value={query}
+        onChange={e => { setQuery(e.target.value); setOpen(true); if (!e.target.value) onChange(''); }}
+        onFocus={() => setOpen(true)}
+        placeholder="Type to search state..."
+        className="w-full border rounded-xl px-4 py-3 focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none text-sm"
+      />
+      {open && filtered.length > 0 && (
+        <div className="absolute z-50 w-full mt-1 bg-white border rounded-xl shadow-lg max-h-48 overflow-y-auto">
+          {filtered.map(s => (
+            <button key={s} type="button"
+              onClick={() => { onChange(s); setQuery(s); setOpen(false); }}
+              className="w-full text-left px-4 py-2 text-sm hover:bg-orange-50 transition">
+              {s}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
 
 /* ── Wizard State ─────────────────────────────────────────── */
 
@@ -143,7 +200,7 @@ const INITIAL_DATA: SaleWizardData = {
   facing: '', ageYears: 0, furnishing: 'SEMI_FURNISHED', coveredParking: 0, openParking: 0,
   carpetAreaSqft: 0, builtUpAreaSqft: 0, superBuiltUpAreaSqft: 0, plotAreaSqft: 0,
   askingPriceRupees: 0, negotiable: false, maintenancePerMonth: 0, transactionType: 'RESALE',
-  possessionStatus: 'READY', possessionDate: '', reraId: '', builderName: '', projectName: '',
+  possessionStatus: 'READY_TO_MOVE', possessionDate: '', reraId: '', builderName: '', projectName: '',
   amenities: [], waterSupply: 'CORPORATION', powerBackup: 'FULL', gatedCommunity: false,
   cornerProperty: false, vastuCompliant: false, petAllowed: false, overlooking: [],
   photos: [], floorPlan: null, videoTourUrl: '', brochureUrl: '',
@@ -181,8 +238,10 @@ function ProgressBar({ step, labels }: { step: number; labels: string[] }) {
 
 /* ── Main Wizard ──────────────────────────────────────────── */
 
-export default function SellPropertyWizard() {
+function SellPropertyWizardInner() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const editId = searchParams.get('edit');
   const [step, setStep] = useState(0);
   const [data, setData] = useState<SaleWizardData>(INITIAL_DATA);
   const [submitting, setSubmitting] = useState(false);
@@ -191,12 +250,44 @@ export default function SellPropertyWizard() {
   const [photoPreviews, setPhotoPreviews] = useState<string[]>([]);
   const [floorPlanPreview, setFloorPlanPreview] = useState<string>('');
   const [dragActive, setDragActive] = useState(false);
+  const [editLoading, setEditLoading] = useState(!!editId);
 
   useEffect(() => {
     const t = localStorage.getItem('access_token') ?? '';
     if (!t) { router.push('/auth?redirect=/sell'); return; }
     setToken(t);
-  }, [router]);
+
+    if (editId) {
+      api.getSaleProperty(editId).then((prop: any) => {
+        setData({
+          propertyType: prop.salePropertyType || prop.propertyType || '',
+          state: prop.state || '', city: prop.city || '', locality: prop.locality || '',
+          pincode: prop.pincode || '', address: prop.addressLine1 || '', lat: prop.lat?.toString() || '', lng: prop.lng?.toString() || '',
+          bhk: prop.bedrooms || 0, bathrooms: prop.bathrooms || 0, balconies: prop.balconies || 0,
+          floorNumber: prop.floorNumber || 0, totalFloors: prop.totalFloors || 0,
+          facing: prop.facingDirection || '', ageYears: prop.propertyAge || 0,
+          furnishing: prop.furnishing || 'SEMI_FURNISHED',
+          coveredParking: prop.coveredParking || 0, openParking: prop.openParking || 0,
+          carpetAreaSqft: prop.carpetAreaSqft || 0, builtUpAreaSqft: prop.builtUpAreaSqft || 0,
+          superBuiltUpAreaSqft: prop.superBuiltUpAreaSqft || 0, plotAreaSqft: prop.plotAreaSqft || 0,
+          askingPriceRupees: (prop.askingPricePaise || 0) / 100, negotiable: prop.negotiable || false,
+          maintenancePerMonth: (prop.maintenancePerMonthPaise || 0) / 100,
+          transactionType: prop.transactionType || 'RESALE',
+          possessionStatus: prop.possessionStatus || 'READY_TO_MOVE',
+          possessionDate: prop.possessionDate || '', reraId: prop.reraId || '',
+          builderName: prop.builderName || '', projectName: prop.projectName || '',
+          amenities: prop.amenities || [], waterSupply: prop.waterSupply || 'CORPORATION',
+          powerBackup: prop.powerBackup || 'FULL', gatedCommunity: prop.gatedCommunity || false,
+          cornerProperty: prop.cornerProperty || false, vastuCompliant: prop.vastuCompliant || false,
+          petAllowed: prop.petAllowed || false, overlooking: prop.overlooking || [],
+          photos: [], floorPlan: null, videoTourUrl: prop.videoTourUrl || '', brochureUrl: prop.brochureUrl || '',
+        });
+        if (prop.photoUrls?.length) setPhotoPreviews(prop.photoUrls);
+        if (prop.floorPlanUrl) setFloorPlanPreview(prop.floorPlanUrl);
+        setEditLoading(false);
+      }).catch(() => { setError('Failed to load property for editing'); setEditLoading(false); });
+    }
+  }, [router, editId]);
 
   function update(partial: Partial<SaleWizardData>) {
     setData(prev => ({ ...prev, ...partial }));
@@ -258,69 +349,127 @@ export default function SellPropertyWizard() {
     ? Math.round(data.askingPriceRupees / data.carpetAreaSqft)
     : 0;
 
-  const citiesForState = data.state ? (INDIAN_CITIES[data.state] || []) : [];
+  // City autocomplete handles city selection now
+
+  function getStepErrors(): string[] {
+    const errors: string[] = [];
+    switch (step) {
+      case 0:
+        if (!data.propertyType) errors.push('Select a property type');
+        break;
+      case 1:
+        if (!data.state) errors.push('State is required');
+        if (!data.city) errors.push('City is required');
+        if (!data.pincode || data.pincode.length !== 6) errors.push('Valid 6-digit pincode is required');
+        if (!data.address) errors.push('Full address is required');
+        break;
+      case 2:
+        if (data.propertyType !== 'PLOT') {
+          if (data.bhk < 1) errors.push('Select number of bedrooms');
+          if (data.bathrooms < 1) errors.push('Select number of bathrooms');
+          if (data.totalFloors < 1) errors.push('Total floors is required');
+        }
+        break;
+      case 3:
+        if (data.askingPriceRupees <= 0) errors.push('Asking price is required');
+        if (data.propertyType === 'PLOT') {
+          if (data.plotAreaSqft <= 0) errors.push('Plot area is required');
+        } else {
+          if (data.carpetAreaSqft <= 0 && data.builtUpAreaSqft <= 0) errors.push('Carpet area or built-up area is required');
+        }
+        if (!data.transactionType) errors.push('Transaction type is required');
+        break;
+      case 4:
+        if (!data.possessionStatus) errors.push('Possession status is required');
+        if ((data.possessionStatus === 'UNDER_CONSTRUCTION' || data.possessionStatus === 'NEW_LAUNCH') && !data.possessionDate) {
+          errors.push('Expected possession date is required');
+        }
+        break;
+      case 5:
+        break; // amenities are optional
+      case 6:
+        if (data.photos.length === 0 && data.propertyType !== 'PLOT') errors.push('At least one photo is required');
+        break;
+    }
+    return errors;
+  }
 
   function canProceed(): boolean {
-    switch (step) {
-      case 0: return !!data.propertyType;
-      case 1: return !!data.state && !!data.city && !!data.pincode && !!data.address;
-      case 2: return data.bhk > 0 || data.propertyType === 'PLOT';
-      case 3: return data.askingPriceRupees > 0 && (data.carpetAreaSqft > 0 || data.plotAreaSqft > 0);
-      case 4: return !!data.possessionStatus;
-      case 5: return true;
-      case 6: return data.photos.length > 0 || data.propertyType === 'PLOT';
-      default: return true;
-    }
+    return getStepErrors().length === 0;
   }
 
   async function handleSubmit() {
+    // Validate all required fields before submit
+    if (!data.propertyType) { setError('Property type is required. Go back to Step 1.'); return; }
+    if (!data.city || !data.state || !data.pincode || !data.address) { setError('Location details are incomplete. Go back to Step 2.'); return; }
+    if (data.askingPriceRupees <= 0) { setError('Asking price is required. Go back to Step 4.'); return; }
+    if (!data.possessionStatus) { setError('Possession status is required. Go back to Step 5.'); return; }
+
     setSubmitting(true);
     setError('');
     try {
+      const token = localStorage.getItem('access_token');
+      if (!token) { setError('Please login to list your property.'); setSubmitting(false); return; }
+
+      const typeLabel = PROPERTY_TYPES.find(p => p.value === data.propertyType)?.label || data.propertyType || 'Property';
+      const location = data.locality || data.city || data.state || 'India';
+      const title = `${data.bhk > 0 ? data.bhk + ' BHK ' : ''}${typeLabel} for Sale in ${location}`.trim();
+
       const payload = {
-        propertyType: data.propertyType,
+        title,
+        description: `${typeLabel} for sale in ${[data.locality, data.city, data.state].filter(Boolean).join(', ')}`,
+        salePropertyType: data.propertyType,
+        transactionType: data.transactionType || 'RESALE',
+        sellerType: 'OWNER',
         state: data.state,
         city: data.city,
         locality: data.locality,
         pincode: data.pincode,
-        address: data.address,
-        latitude: data.lat ? parseFloat(data.lat) : null,
-        longitude: data.lng ? parseFloat(data.lng) : null,
-        bhk: data.bhk,
-        bathrooms: data.bathrooms,
-        balconies: data.balconies,
-        floorNumber: data.floorNumber,
-        totalFloors: data.totalFloors,
-        facing: data.facing,
-        ageYears: data.ageYears,
-        furnishing: data.furnishing,
-        coveredParking: data.coveredParking,
-        openParking: data.openParking,
-        carpetAreaSqft: data.carpetAreaSqft,
-        builtUpAreaSqft: data.builtUpAreaSqft,
-        superBuiltUpAreaSqft: data.superBuiltUpAreaSqft,
-        plotAreaSqft: data.plotAreaSqft,
+        addressLine1: data.address,
+        lat: data.lat ? parseFloat(data.lat) : null,
+        lng: data.lng ? parseFloat(data.lng) : null,
+        bedrooms: data.bhk || null,
+        bathrooms: data.bathrooms || null,
+        balconies: data.balconies || null,
+        floorNumber: data.floorNumber || null,
+        totalFloors: data.totalFloors || null,
+        facing: data.facing || null,
+        propertyAgeYears: data.ageYears || null,
+        furnishing: data.furnishing || null,
+        parkingCovered: data.coveredParking || null,
+        parkingOpen: data.openParking || null,
+        carpetAreaSqft: data.carpetAreaSqft || null,
+        builtUpAreaSqft: data.builtUpAreaSqft || null,
+        superBuiltUpAreaSqft: data.superBuiltUpAreaSqft || null,
+        plotAreaSqft: data.plotAreaSqft || null,
         askingPricePaise: data.askingPriceRupees * 100,
-        negotiable: data.negotiable,
-        maintenancePerMonthPaise: data.maintenancePerMonth * 100,
-        transactionType: data.transactionType,
+        priceNegotiable: data.negotiable,
+        maintenancePaise: data.maintenancePerMonth ? data.maintenancePerMonth * 100 : null,
         possessionStatus: data.possessionStatus,
         possessionDate: data.possessionDate || null,
         reraId: data.reraId || null,
         builderName: data.builderName || null,
         projectName: data.projectName || null,
-        amenities: data.amenities,
-        waterSupply: data.waterSupply,
-        powerBackup: data.powerBackup,
+        amenities: data.amenities.length > 0 ? data.amenities : null,
+        waterSupply: data.waterSupply || null,
+        powerBackup: data.powerBackup || null,
         gatedCommunity: data.gatedCommunity,
         cornerProperty: data.cornerProperty,
         vastuCompliant: data.vastuCompliant,
         petAllowed: data.petAllowed,
-        overlooking: data.overlooking,
+        overlooking: data.overlooking.length > 0 ? data.overlooking : null,
         videoTourUrl: data.videoTourUrl || null,
         brochureUrl: data.brochureUrl || null,
       };
-      await api.createSaleProperty(payload, token);
+      if (editId) {
+        await api.updateSaleProperty(editId, payload, token);
+      } else {
+        const created = await api.createSaleProperty(payload, token);
+        // Auto-activate (publish) after creation so it appears in search
+        if (created?.id) {
+          try { await api.updateSalePropertyStatus(created.id, 'ACTIVE', token); } catch {}
+        }
+      }
       router.push('/host?tab=sales');
     } catch (e: any) {
       setError(e.message || 'Failed to publish property. Please try again.');
@@ -369,40 +518,19 @@ export default function SellPropertyWizard() {
         <p className="text-gray-500 mb-6">Help buyers find your property with accurate location details.</p>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">State *</label>
-            <select
+            <StateAutocomplete
               value={data.state}
-              onChange={e => update({ state: e.target.value, city: '' })}
-              className="w-full border rounded-xl px-4 py-3 focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none"
-            >
-              <option value="">Select State</option>
-              {INDIAN_STATES.map(s => (
-                <option key={s} value={s}>{s}</option>
-              ))}
-            </select>
+              onChange={(v: string) => update({ state: v, city: '' })}
+            />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">City *</label>
-            {citiesForState.length > 0 ? (
-              <select
-                value={data.city}
-                onChange={e => update({ city: e.target.value })}
-                className="w-full border rounded-xl px-4 py-3 focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none"
-              >
-                <option value="">Select City</option>
-                {citiesForState.map(c => (
-                  <option key={c} value={c}>{c}</option>
-                ))}
-              </select>
-            ) : (
-              <input
-                type="text"
-                value={data.city}
-                onChange={e => update({ city: e.target.value })}
-                placeholder="Enter city name"
-                className="w-full border rounded-xl px-4 py-3 focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none"
-              />
-            )}
+            <CityAutocomplete
+              value={data.city}
+              onChange={(v: string) => update({ city: v })}
+              label="City *"
+              placeholder="Type to search city..."
+              className="border rounded-xl px-4 py-3 focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none"
+            />
           </div>
           <div>
             <LocalityAutocomplete
@@ -410,7 +538,7 @@ export default function SellPropertyWizard() {
               value={data.locality}
               onChange={(v: string) => update({ locality: v })}
               label="Locality / Area"
-              placeholder="e.g. Banjara Hills, Koramangala"
+              placeholder="Type to search locality..."
               className="w-full border rounded-xl px-4 py-3 focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none"
             />
           </div>
@@ -435,25 +563,28 @@ export default function SellPropertyWizard() {
               className="w-full border rounded-xl px-4 py-3 focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none resize-none"
             />
           </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Latitude</label>
-            <input
-              type="text"
-              value={data.lat}
-              onChange={e => update({ lat: e.target.value })}
-              placeholder="e.g. 17.4401"
-              className="w-full border rounded-xl px-4 py-3 focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Longitude</label>
-            <input
-              type="text"
-              value={data.lng}
-              onChange={e => update({ lng: e.target.value })}
-              placeholder="e.g. 78.3489"
-              className="w-full border rounded-xl px-4 py-3 focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none"
-            />
+          <div className="sm:col-span-2">
+            <label className="block text-sm font-medium text-gray-700 mb-1">Pin Location on Map</label>
+            <p className="text-xs text-gray-500 mb-2">Search, click the map, or drag the pin to set the exact property location.</p>
+            <div className="h-72 rounded-xl overflow-hidden border border-gray-200">
+              <MapLocationPicker
+                lat={data.lat ? parseFloat(data.lat) : 0}
+                lng={data.lng ? parseFloat(data.lng) : 0}
+                onLocationChange={(loc) => {
+                  const updates: Record<string, string> = { lat: String(loc.lat), lng: String(loc.lng) };
+                  if (loc.city && !data.city) updates.city = loc.city;
+                  if (loc.state && !data.state) updates.state = loc.state;
+                  if (loc.pincode && !data.pincode) updates.pincode = loc.pincode;
+                  if (loc.address && !data.address) updates.address = loc.address;
+                  update(updates);
+                }}
+              />
+            </div>
+            {data.lat && data.lng && (
+              <p className="text-xs text-gray-400 mt-1">
+                Coordinates: {parseFloat(data.lat).toFixed(6)}, {parseFloat(data.lng).toFixed(6)}
+              </p>
+            )}
           </div>
         </div>
       </div>
@@ -544,7 +675,7 @@ export default function SellPropertyWizard() {
                 >
                   <option value="">Select</option>
                   {FACING_OPTIONS.map(f => (
-                    <option key={f} value={f}>{f}</option>
+                    <option key={f.value} value={f.value}>{f.label}</option>
                   ))}
                 </select>
               </div>
@@ -773,7 +904,7 @@ export default function SellPropertyWizard() {
           <label className="block text-sm font-medium text-gray-700 mb-2">Possession Status *</label>
           <div className="flex gap-3 flex-wrap">
             {[
-              { value: 'READY', label: 'Ready to Move' },
+              { value: 'READY_TO_MOVE', label: 'Ready to Move' },
               { value: 'UNDER_CONSTRUCTION', label: 'Under Construction' },
               { value: 'NEW_LAUNCH', label: 'New Launch' },
             ].map(opt => (
@@ -1103,7 +1234,7 @@ export default function SellPropertyWizard() {
           { label: 'Bathrooms', value: `${data.bathrooms}` },
           { label: 'Balconies', value: `${data.balconies}` },
           { label: 'Floor', value: `${data.floorNumber} of ${data.totalFloors}` },
-          ...(data.facing ? [{ label: 'Facing', value: data.facing }] : []),
+          ...(data.facing ? [{ label: 'Facing', value: FACING_OPTIONS.find(f => f.value === data.facing)?.label || data.facing }] : []),
           { label: 'Age', value: `${data.ageYears} years` },
           { label: 'Furnishing', value: data.furnishing.replace(/_/g, ' ').toLowerCase().replace(/^\w/, c => c.toUpperCase()) },
           { label: 'Parking', value: `${data.coveredParking} covered, ${data.openParking} open` },
@@ -1130,7 +1261,7 @@ export default function SellPropertyWizard() {
         title: 'Construction & Legal',
         step: 4,
         items: [
-          { label: 'Possession', value: data.possessionStatus === 'READY' ? 'Ready to Move' : data.possessionStatus === 'UNDER_CONSTRUCTION' ? 'Under Construction' : 'New Launch' },
+          { label: 'Possession', value: data.possessionStatus === 'READY_TO_MOVE' ? 'Ready to Move' : data.possessionStatus === 'UNDER_CONSTRUCTION' ? 'Under Construction' : 'New Launch' },
           ...(data.possessionDate ? [{ label: 'Possession Date', value: data.possessionDate }] : []),
           ...(data.reraId ? [{ label: 'RERA ID', value: data.reraId }] : []),
           ...(data.builderName ? [{ label: 'Builder', value: data.builderName }] : []),
@@ -1204,7 +1335,7 @@ export default function SellPropertyWizard() {
             disabled={submitting}
             className="px-8 py-3 bg-orange-500 text-white font-semibold rounded-xl hover:bg-orange-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
-            {submitting ? 'Publishing...' : 'Publish Property'}
+            {submitting ? (editId ? 'Saving...' : 'Publishing...') : (editId ? 'Save Changes' : 'Publish Property')}
           </button>
         </div>
       </div>
@@ -1221,12 +1352,16 @@ export default function SellPropertyWizard() {
           <Link href="/host?tab=sales" className="text-gray-500 hover:text-gray-700 text-sm font-medium">
             &larr; Back to Dashboard
           </Link>
-          <h1 className="text-lg font-bold text-gray-800">Sell Your Property</h1>
+          <h1 className="text-lg font-bold text-gray-800">{editId ? 'Edit Property' : 'Sell Your Property'}</h1>
           <div className="w-20" />
         </div>
       </div>
 
       <div className="max-w-4xl mx-auto px-4 py-8">
+        {editLoading ? (
+          <div className="text-center py-20 text-gray-500">Loading property...</div>
+        ) : (
+        <>
         <ProgressBar step={step} labels={STEP_LABELS} />
 
         <div className="bg-white rounded-xl border p-6 md:p-8 mb-6">
@@ -1234,6 +1369,16 @@ export default function SellPropertyWizard() {
         </div>
 
         {/* Navigation */}
+        {/* Validation errors */}
+        {getStepErrors().length > 0 && (
+          <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3 mb-4">
+            <p className="text-sm font-medium text-red-700 mb-1">Please fix the following:</p>
+            <ul className="list-disc list-inside text-sm text-red-600 space-y-0.5">
+              {getStepErrors().map((err, i) => <li key={i}>{err}</li>)}
+            </ul>
+          </div>
+        )}
+
         {step < 7 && (
           <div className="flex justify-between">
             <button
@@ -1252,7 +1397,17 @@ export default function SellPropertyWizard() {
             </button>
           </div>
         )}
+      </>
+        )}
       </div>
     </div>
+  );
+}
+
+export default function SellPropertyWizard() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-gray-50 flex items-center justify-center text-gray-500">Loading...</div>}>
+      <SellPropertyWizardInner />
+    </Suspense>
   );
 }

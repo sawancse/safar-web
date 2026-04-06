@@ -132,15 +132,15 @@ export default function Navbar() {
         <button onClick={handleLogout} className="ml-4 underline hover:no-underline">Exit</button>
       </div>
     )}
-    <nav className={`sticky top-0 z-50 border-b shadow-sm ${isInHostMode ? 'bg-gray-900' : 'bg-white'}`}>
+    <nav className={`sticky top-0 z-[60] border-b shadow-sm ${isInHostMode ? 'bg-gray-900' : 'bg-[#003B95]'}`}>
       <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
         {/* Logo */}
-        <Link href="/" className={`flex items-center gap-2 font-bold text-xl ${isInHostMode ? 'text-orange-400' : 'text-orange-500'}`}>
+        <Link href="/" className={`flex items-center gap-2 font-bold text-xl ${isInHostMode ? 'text-orange-400' : 'text-white'}`}>
           Safar{isInHostMode && <span className="text-xs font-normal text-gray-400 ml-1">hosting</span>}
         </Link>
 
         {/* Desktop center links */}
-        <div className={`hidden md:flex items-center gap-6 text-sm font-medium ${isInHostMode ? 'text-gray-300' : 'text-gray-600'}`}>
+        <div className={`hidden md:flex items-center gap-6 text-sm font-medium ${isInHostMode ? 'text-gray-300' : 'text-white/80'}`}>
           {isInHostMode ? (
             <>
               <Link href="/host" className={`hover:text-white transition ${pathname === '/host' && !pathname.includes('?') ? 'text-white' : ''}`}>
@@ -158,11 +158,11 @@ export default function Navbar() {
             </>
           ) : (
             <>
-              <Link href="/search" className="hover:text-orange-500 transition">
+              <Link href="/search" className="hover:text-white transition">
                 {t('nav.search')}
               </Link>
               <div className="relative group">
-                <button className="hover:text-orange-500 transition flex items-center gap-1">
+                <button className="hover:text-white transition flex items-center gap-1">
                   Services <span className="text-[10px]">▼</span>
                 </button>
                 <div className="absolute top-full left-0 mt-2 w-56 bg-white rounded-xl shadow-lg border border-gray-100 py-2 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50">
@@ -224,7 +224,7 @@ export default function Navbar() {
               className={`flex items-center gap-1.5 text-sm font-medium transition rounded-full px-3 py-1.5 ${
                 isInHostMode
                   ? 'text-gray-300 hover:text-white hover:bg-gray-800'
-                  : 'text-gray-600 hover:text-orange-500'
+                  : 'text-white/80 hover:text-white hover:bg-white/10'
               }`}
             >
               <SwapIcon />
@@ -234,14 +234,14 @@ export default function Navbar() {
           {isLoggedIn && !isHost && (
             <Link
               href="/host"
-              className="flex items-center gap-1.5 text-sm font-medium text-gray-600 hover:text-orange-500 transition"
+              className="flex items-center gap-1.5 text-sm font-medium text-white/80 hover:text-white transition"
             >
               <SwapIcon />
               Switch to hosting
             </Link>
           )}
           {!isLoggedIn && (
-            <Link href="/host" className="text-sm font-medium text-gray-600 hover:text-orange-500 transition">
+            <Link href="/host" className="text-sm font-medium text-white/80 hover:text-white transition">
               List your property
             </Link>
           )}
@@ -250,7 +250,7 @@ export default function Navbar() {
           {isLoggedIn && (
             <Link
               href="/messages"
-              className={`relative p-2 transition ${isInHostMode ? 'text-gray-400 hover:text-white' : 'text-gray-500 hover:text-orange-500'}`}
+              className={`relative p-2 transition ${isInHostMode ? 'text-gray-400 hover:text-white' : 'text-white/70 hover:text-white'}`}
               title="Messages"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -271,10 +271,10 @@ export default function Navbar() {
               <button
                 onClick={() => setUserMenuOpen(!userMenuOpen)}
                 className={`flex items-center gap-2 border rounded-full pl-3 pr-1 py-1 hover:shadow-md transition ${
-                  isInHostMode ? 'border-gray-600 bg-gray-800' : ''
+                  isInHostMode ? 'border-gray-600 bg-gray-800' : 'border-white/30 bg-white/10'
                 }`}
               >
-                <svg className={`w-4 h-4 ${isInHostMode ? 'text-gray-400' : 'text-gray-500'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className={`w-4 h-4 ${isInHostMode ? 'text-gray-400' : 'text-white/70'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
                 </svg>
                 {avatarSrc ? (

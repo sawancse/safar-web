@@ -27,15 +27,18 @@ interface SaleProperty {
   city: string;
   locality?: string;
   address?: string;
-  pricePaise: number;
+  askingPricePaise?: number;
+  pricePaise?: number;
   pricePerSqftPaise?: number;
   bedrooms?: number;
   bathrooms?: number;
   areaSqft?: number;
   carpetAreaSqft?: number;
+  builtUpAreaSqft?: number;
   floor?: number;
   totalFloors?: number;
-  propertyType: string;
+  salePropertyType?: string;
+  propertyType?: string;
   primaryPhotoUrl?: string;
   photos?: string[];
   possessionStatus?: string;
@@ -587,8 +590,8 @@ export default function BuySearchPage() {
                               {prop.bedrooms} BHK
                             </span>
                           )}
-                          {prop.areaSqft != null && (
-                            <span>{prop.areaSqft.toLocaleString('en-IN')} sqft</span>
+                          {(prop.carpetAreaSqft || prop.builtUpAreaSqft || prop.areaSqft) != null && (
+                            <span>{(prop.carpetAreaSqft || prop.builtUpAreaSqft || prop.areaSqft || 0).toLocaleString('en-IN')} sqft</span>
                           )}
                           {prop.floor != null && (
                             <span>Floor {prop.floor}{prop.totalFloors ? ` of ${prop.totalFloors}` : ''}</span>
@@ -605,7 +608,7 @@ export default function BuySearchPage() {
                       {/* Price row */}
                       <div className="flex items-end justify-between mt-4">
                         <div>
-                          <span className="text-xl font-bold text-slate-900">{formatSalePrice(prop.pricePaise)}</span>
+                          <span className="text-xl font-bold text-slate-900">{formatSalePrice(prop.askingPricePaise || prop.pricePaise || 0)}</span>
                           {prop.pricePerSqftPaise != null && (
                             <span className="text-xs text-slate-400 ml-2">{formatPricePerSqft(prop.pricePerSqftPaise)}</span>
                           )}

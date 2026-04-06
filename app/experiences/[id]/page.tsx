@@ -27,6 +27,7 @@ export default function ExperienceDetailPage() {
   const [selectedSession, setSelectedSession] = useState<ExperienceSession | null>(null);
   const [guests, setGuests] = useState(1);
   const [booking, setBooking] = useState(false);
+  const [requestedDate, setRequestedDate] = useState('');
 
   useEffect(() => {
     if (!id) return;
@@ -46,10 +47,18 @@ export default function ExperienceDetailPage() {
   }, [id]);
 
   async function handleBook() {
-    if (!selectedSession || !exp) return;
+    if (!exp) return;
+    const hasSession = !!selectedSession;
+    const hasDate = !!requestedDate;
+    if (!hasSession && !hasDate) return;
     setBooking(true);
     try {
-      await api.bookExperience({ sessionId: selectedSession.id, numGuests: guests });
+      await api.bookExperience({
+        experienceId: exp.id,
+        sessionId: selectedSession?.id,
+        numGuests: guests,
+        requestedDate: hasSession ? undefined : requestedDate,
+      });
       alert('Booking confirmed!');
       router.push('/experiences');
     } catch (err: any) {
@@ -305,7 +314,17 @@ export default function ExperienceDetailPage() {
                 </div>
               </div>
             ) : (
-              <p className="text-sm text-gray-400 text-center">No upcoming sessions</p>
+              <div>
+                <label className="text-sm font-medium text-gray-700 block mb-1">Pick a date</label>
+                <input
+                  type="date"
+                  value={requestedDate}
+                  min={new Date().toISOString().split('T')[0]}
+                  onChange={e => setRequestedDate(e.target.value)}
+                  className="w-full border rounded-lg px-3 py-2 text-sm focus:border-orange-400 outline-none"
+                />
+                <p className="text-xs text-gray-400 mt-1">Host will confirm your requested date</p>
+              </div>
             )}
 
             {/* Guest Count */}
@@ -349,7 +368,7 @@ export default function ExperienceDetailPage() {
             {/* Book Button */}
             <button
               onClick={handleBook}
-              disabled={!selectedSession || booking}
+              disabled={(!selectedSession && !requestedDate) || booking}
               className="w-full py-3 rounded-xl bg-orange-500 text-white font-semibold hover:bg-orange-600 transition disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {booking ? 'Booking...' : 'Reserve'}

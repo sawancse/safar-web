@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState, useRef } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { api } from '@/lib/api';
 import { formatPaise } from '@/lib/utils';
@@ -27,6 +27,7 @@ import HostPayoutsTab from '@/components/host/HostPayoutsTab';
 import HostSalesTab from '@/components/host/HostSalesTab';
 import HostBuilderTab from '@/components/host/HostBuilderTab';
 import HostExperiencesTab from './HostExperiencesTab';
+import HostTicketsTab from './HostTicketsTab';
 import EditListingModal from '@/components/EditListingModal';
 
 const STATUS_STYLE: Record<string, string> = {
@@ -60,8 +61,15 @@ interface UploadJob {
   mediaType: string;
 }
 
+type HostTab = 'listings' | 'bookings' | 'calendar' | 'roomTypes' | 'pricing' | 'packages' | 'reviews' | 'messages' | 'kyc' | 'earnings' | 'invoices' | 'analytics' | 'transactions' | 'occupancy' | 'roomBoard' | 'tickets' | 'settlement' | 'payouts' | 'sales' | 'builder' | 'experiences';
+
+const VALID_TABS: HostTab[] = ['listings', 'bookings', 'calendar', 'roomTypes', 'pricing', 'packages', 'reviews', 'messages', 'kyc', 'earnings', 'invoices', 'analytics', 'transactions', 'occupancy', 'roomBoard', 'tickets', 'settlement', 'payouts', 'sales', 'builder', 'experiences'];
+
 export default function HostPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const urlTab = searchParams.get('tab') as HostTab | null;
+
   const [listings, setListings] = useState<Listing[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
@@ -73,7 +81,9 @@ export default function HostPage() {
   const [subscription, setSubscription] = useState<HostSubscription | null>(null);
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
   const [upgradingTier, setUpgradingTier] = useState<SubscriptionTier | null>(null);
-  const [activeTab, setActiveTab] = useState<'listings' | 'bookings' | 'calendar' | 'roomTypes' | 'pricing' | 'packages' | 'reviews' | 'messages' | 'kyc' | 'earnings' | 'invoices' | 'analytics' | 'transactions' | 'occupancy' | 'roomBoard' | 'settlement' | 'payouts' | 'sales' | 'builder' | 'experiences'>('listings');
+  const [activeTab, setActiveTab] = useState<HostTab>(
+    urlTab && VALID_TABS.includes(urlTab) ? urlTab : 'listings'
+  );
   const [commissionInfo, setCommissionInfo] = useState<{ commissionPercent: number; tier: string } | null>(null);
   const [editingListing, setEditingListing] = useState<Listing | null>(null);
 
@@ -600,6 +610,14 @@ export default function HostPage() {
           Transactions
         </button>
         <button
+          onClick={() => setActiveTab('tickets')}
+          className={`flex-1 py-2 px-4 rounded-lg text-sm font-medium transition whitespace-nowrap ${
+            activeTab === 'tickets' ? 'bg-white shadow text-orange-600' : 'text-gray-500 hover:text-gray-700'
+          }`}
+        >
+          Tickets
+        </button>
+        <button
           onClick={() => setActiveTab('settlement')}
           className={`flex-1 py-2 px-4 rounded-lg text-sm font-medium transition whitespace-nowrap ${
             activeTab === 'settlement' ? 'bg-white shadow text-orange-600' : 'text-gray-500 hover:text-gray-700'
@@ -693,6 +711,9 @@ export default function HostPage() {
 
       {/* ── Transactions Tab ──────────────────────────────── */}
       {activeTab === 'transactions' && <HostTransactionsTab token={token} />}
+
+      {/* ── Tickets Tab ──────────────────────────────── */}
+      {activeTab === 'tickets' && <HostTicketsTab token={token} listings={listings.map(l => ({ id: l.id, title: l.title }))} />}
 
       {/* ── Settlement Tab ──────────────────────────────── */}
       {activeTab === 'settlement' && listings.length > 0 && (

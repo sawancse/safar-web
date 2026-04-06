@@ -14,6 +14,7 @@ import HostedBySection from '@/components/HostedBySection';
 import PropertyHighlights from '@/components/PropertyHighlights';
 import ExpandableText from '@/components/ExpandableText';
 import ListingBookingSection from '@/components/ListingBookingSection';
+import ListingSearchHeader from '@/components/ListingSearchHeader';
 import { notFound } from 'next/navigation';
 
 export const dynamic = 'force-dynamic';
@@ -91,7 +92,9 @@ export default async function ListingDetailPage({ params }: Props) {
     : (listing.pricingUnit === 'MONTH' || isPG) ? 'per month' : 'per night';
 
   return (
-    <div className="max-w-6xl mx-auto px-4 py-8">
+    <div>
+      <ListingSearchHeader city={listing.city} state={listing.state} type={listing.type} />
+      <div className="max-w-6xl mx-auto px-4 py-8">
       <TrackView listingId={params.id} />
 
       {/* Title & badges */}
@@ -432,6 +435,7 @@ export default async function ListingDetailPage({ params }: Props) {
           <ReviewsList reviews={reviewList} avgRating={listing.avgRating} stats={reviewStats} />
         </>}
       />
+    </div>
     </div>
   );
 }

@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { api } from '@/lib/api';
 import CityAutocomplete from '@/components/CityAutocomplete';
 import LocalityAutocomplete from '@/components/LocalityAutocomplete';
+import MapLocationPicker from '@/components/MapLocationPicker';
 
 const ALL_AMENITIES = [
   'Swimming Pool', 'Gym', 'Club House', 'Children\'s Play Area', 'Landscaped Gardens',
@@ -21,7 +22,11 @@ const PROJECT_STATUSES = [
   { value: 'READY_TO_MOVE', label: 'Ready to Move' },
 ];
 
-const FURNISHING_OPTIONS = ['Unfurnished', 'Semi-Furnished', 'Fully Furnished'];
+const FURNISHING_OPTIONS = [
+  { value: 'UNFURNISHED', label: 'Unfurnished' },
+  { value: 'SEMI_FURNISHED', label: 'Semi-Furnished' },
+  { value: 'FURNISHED', label: 'Fully Furnished' },
+];
 
 const STEP_LABELS = [
   'Builder Info',
@@ -36,7 +41,7 @@ interface UnitTypeForm {
   id: string;
   name: string;
   bhk: string;
-  areaSqft: string;
+  superBuiltUpAreaSqft: string;
   carpetAreaSqft: string;
   basePricePaise: string;
   floorRisePaise: string;
@@ -60,7 +65,7 @@ function createEmptyUnit(): UnitTypeForm {
     id: crypto.randomUUID(),
     name: '',
     bhk: '2',
-    areaSqft: '',
+    superBuiltUpAreaSqft: '',
     carpetAreaSqft: '',
     basePricePaise: '',
     floorRisePaise: '',
@@ -68,7 +73,7 @@ function createEmptyUnit(): UnitTypeForm {
     totalUnits: '',
     bathrooms: '2',
     balconies: '1',
-    furnishing: 'Unfurnished',
+    furnishing: 'UNFURNISHED',
     floorPlanFile: null,
     floorPlanPreview: '',
   };
@@ -111,6 +116,8 @@ export default function BuilderNewProjectPage() {
 
   /* Step 3: Unit Types */
   const [unitTypes, setUnitTypes] = useState<UnitTypeForm[]>([createEmptyUnit()]);
+  const [deletedUnitTypeIds, setDeletedUnitTypeIds] = useState<string[]>([]);
+  const [existingUnitTypeIds, setExistingUnitTypeIds] = useState<Set<string>>(new Set());
 
   /* Step 4: Amenities & Features */
   const [selectedAmenities, setSelectedAmenities] = useState<string[]>([]);
@@ -158,23 +165,25 @@ export default function BuilderNewProjectPage() {
         try { setPaymentPlans(JSON.parse(p.paymentPlansJson)); } catch {}
       }
       setBrochureUrl(p.brochureUrl || '');
-      setWalkthroughUrl(p.walkthroughVideoUrl || '');
-      setPhotoPreviews(p.photoUrls || []);
+      setWalkthroughUrl(p.walkthroughUrl || p.walkthroughVideoUrl || '');
       setMasterPlanPreview(p.masterPlanUrl || '');
+      setPhotoPreviews(p.photos || p.photoUrls || []);
       if (p.unitTypes?.length) {
+        const serverIds = new Set<string>(p.unitTypes.map((u: any) => u.id).filter(Boolean));
+        setExistingUnitTypeIds(serverIds);
         setUnitTypes(p.unitTypes.map((u: any) => ({
           id: u.id || crypto.randomUUID(),
           name: u.name || '',
           bhk: u.bhk?.toString() || '2',
-          areaSqft: u.areaSqft?.toString() || '',
+          superBuiltUpAreaSqft: u.superBuiltUpAreaSqft?.toString() || '',
           carpetAreaSqft: u.carpetAreaSqft?.toString() || '',
-          basePricePaise: u.basePricePaise?.toString() || '',
-          floorRisePaise: u.floorRisePaise?.toString() || '',
-          facingPremiumPaise: u.facingPremiumPaise?.toString() || '',
+          basePricePaise: u.basePricePaise ? (u.basePricePaise / 100).toString() : '',
+          floorRisePaise: u.floorRisePaise ? (u.floorRisePaise / 100).toString() : '',
+          facingPremiumPaise: u.facingPremiumPaise ? (u.facingPremiumPaise / 100).toString() : '',
           totalUnits: u.totalUnits?.toString() || '',
           bathrooms: u.bathrooms?.toString() || '2',
           balconies: u.balconies?.toString() || '1',
-          furnishing: u.furnishing || 'Unfurnished',
+          furnishing: u.furnishing || 'UNFURNISHED',
           floorPlanFile: null,
           floorPlanPreview: u.floorPlanUrl || '',
         })));
@@ -248,6 +257,10 @@ export default function BuilderNewProjectPage() {
 
   function removeUnitType(id: string) {
     if (unitTypes.length <= 1) return;
+    // Track server-side unit types that need deletion
+    if (existingUnitTypeIds.has(id)) {
+      setDeletedUnitTypeIds(prev => [...prev, id]);
+    }
     setUnitTypes(prev => prev.filter(u => u.id !== id));
   }
 
@@ -268,7 +281,7 @@ export default function BuilderNewProjectPage() {
       case 0: return builderName.trim().length > 0;
       case 1: return projectName.trim().length > 0 && !!projectStatus;
       case 2: return city.trim().length > 0;
-      case 3: return unitTypes.every(u => u.name.trim() && u.areaSqft && u.basePricePaise && u.totalUnits);
+      case 3: return unitTypes.every(u => u.name.trim() && u.superBuiltUpAreaSqft && u.basePricePaise && u.totalUnits);
       case 4: return true;
       case 5: return true;
       default: return true;
@@ -285,10 +298,40 @@ export default function BuilderNewProjectPage() {
         return;
       }
 
+      // Upload files to S3 before building project data
+      let uploadedLogoUrl = builderLogoPreview?.startsWith('blob:') ? undefined : builderLogoPreview;
+      let uploadedMasterPlanUrl = masterPlanPreview?.startsWith('blob:') ? undefined : masterPlanPreview;
+      const uploadedPhotoUrls: string[] = [];
+
+      if (builderLogoFile) {
+        try {
+          uploadedLogoUrl = await api.uploadGenericFile(builderLogoFile, 'builder-logos', token);
+        } catch (e) { console.warn('Logo upload failed, continuing without logo'); }
+      }
+
+      if (masterPlanFile) {
+        try {
+          uploadedMasterPlanUrl = await api.uploadGenericFile(masterPlanFile, 'builder-masterplans', token);
+        } catch (e) { console.warn('Master plan upload failed'); }
+      }
+
+      for (const file of photoFiles) {
+        try {
+          const url = await api.uploadGenericFile(file, 'builder-photos', token);
+          uploadedPhotoUrls.push(url);
+        } catch (e) { console.warn('Photo upload failed for', file.name); }
+      }
+      // Keep any existing non-blob URLs (from edit mode)
+      for (const url of photoPreviews) {
+        if (!url.startsWith('blob:') && !uploadedPhotoUrls.includes(url)) {
+          uploadedPhotoUrls.push(url);
+        }
+      }
+
       // Build the project data
       const projectData: any = {
         builderName,
-        builderLogoUrl: builderLogoPreview || undefined,
+        builderLogoUrl: uploadedLogoUrl || undefined,
         reraId: reraId || undefined,
         projectName,
         tagline: tagline || undefined,
@@ -310,9 +353,9 @@ export default function BuilderNewProjectPage() {
         bankApprovals: bankApprovals.length > 0 ? bankApprovals : undefined,
         paymentPlansJson: paymentPlans.length > 0 ? JSON.stringify(paymentPlans) : undefined,
         brochureUrl: brochureUrl || undefined,
-        walkthroughVideoUrl: walkthroughUrl || undefined,
-        photoUrls: photoPreviews.length > 0 ? photoPreviews : undefined,
-        masterPlanUrl: masterPlanPreview || undefined,
+        walkthroughUrl: walkthroughUrl || undefined,
+        photos: uploadedPhotoUrls.length > 0 ? uploadedPhotoUrls : undefined,
+        masterPlanUrl: uploadedMasterPlanUrl || undefined,
       };
 
       const result = isEdit
@@ -320,18 +363,29 @@ export default function BuilderNewProjectPage() {
         : await api.createBuilderProject(projectData, token);
       const projectId = result.id || editId;
 
-      // Add unit types (re-read token in case it was refreshed during create)
+      const freshToken = localStorage.getItem('access_token') || token;
+
+      // Delete removed unit types (edit mode)
+      if (isEdit) {
+        for (const delId of deletedUnitTypeIds) {
+          try { await api.deleteUnitType(delId, freshToken); } catch (e) { console.warn('Failed to delete unit type:', delId); }
+        }
+      }
+
+      // Add only NEW unit types (skip existing server-side ones in edit mode)
       for (const unit of unitTypes) {
         if (!unit.name.trim()) continue;
-        const freshToken = localStorage.getItem('access_token') || token;
+        // Skip existing unit types that haven't changed
+        if (isEdit && existingUnitTypeIds.has(unit.id)) continue;
+
         const unitData: any = {
           name: unit.name,
           bhk: Number(unit.bhk),
-          areaSqft: Number(unit.areaSqft),
+          superBuiltUpAreaSqft: Number(unit.superBuiltUpAreaSqft),
           carpetAreaSqft: unit.carpetAreaSqft ? Number(unit.carpetAreaSqft) : undefined,
-          basePricePaise: Number(unit.basePricePaise),
-          floorRisePaise: unit.floorRisePaise ? Number(unit.floorRisePaise) : undefined,
-          facingPremiumPaise: unit.facingPremiumPaise ? Number(unit.facingPremiumPaise) : undefined,
+          basePricePaise: Math.round(Number(unit.basePricePaise) * 100),
+          floorRisePaise: unit.floorRisePaise ? Math.round(Number(unit.floorRisePaise) * 100) : undefined,
+          facingPremiumPaise: unit.facingPremiumPaise ? Math.round(Number(unit.facingPremiumPaise) * 100) : undefined,
           totalUnits: Number(unit.totalUnits),
           bathrooms: unit.bathrooms ? Number(unit.bathrooms) : undefined,
           balconies: unit.balconies ? Number(unit.balconies) : undefined,
@@ -412,10 +466,16 @@ export default function BuilderNewProjectPage() {
                     </svg>
                   </div>
                 )}
-                <label className="cursor-pointer text-sm text-orange-500 hover:text-orange-600 font-medium">
-                  Upload Logo
-                  <input type="file" accept="image/*" onChange={handleLogoChange} className="hidden" />
-                </label>
+                <div>
+                  <button
+                    type="button"
+                    onClick={() => document.getElementById('builder-logo-input')?.click()}
+                    className="text-sm text-orange-500 hover:text-orange-600 font-medium cursor-pointer"
+                  >
+                    {builderLogoPreview ? 'Change Logo' : 'Upload Logo'}
+                  </button>
+                  <input id="builder-logo-input" type="file" accept="image/*" onChange={handleLogoChange} className="hidden" />
+                </div>
               </div>
             </div>
 
@@ -607,27 +667,31 @@ export default function BuilderNewProjectPage() {
               />
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Latitude</label>
-                <input
-                  type="text"
-                  value={latitude}
-                  onChange={e => setLatitude(e.target.value)}
-                  placeholder="e.g. 17.3850"
-                  className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400"
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Pin Location on Map</label>
+              <p className="text-xs text-gray-500 mb-2">
+                Search, click the map, or drag the pin to set the exact project location.
+              </p>
+              <div className="rounded-xl overflow-hidden border border-gray-200">
+                <MapLocationPicker
+                  lat={latitude ? parseFloat(latitude) : 0}
+                  lng={longitude ? parseFloat(longitude) : 0}
+                  className="h-72"
+                  onLocationChange={(loc) => {
+                    setLatitude(String(loc.lat));
+                    setLongitude(String(loc.lng));
+                    if (loc.city && !city) setCity(loc.city);
+                    if (loc.state && !state) setState(loc.state);
+                    if (loc.pincode && !pincode) setPincode(loc.pincode);
+                    if (loc.address && !address) setAddress(loc.address);
+                  }}
                 />
               </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Longitude</label>
-                <input
-                  type="text"
-                  value={longitude}
-                  onChange={e => setLongitude(e.target.value)}
-                  placeholder="e.g. 78.4867"
-                  className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400"
-                />
-              </div>
+              {latitude && longitude && (
+                <p className="text-xs text-gray-400 mt-1">
+                  Coordinates: {parseFloat(latitude).toFixed(6)}, {parseFloat(longitude).toFixed(6)}
+                </p>
+              )}
             </div>
           </div>
         )}
@@ -684,8 +748,8 @@ export default function BuilderNewProjectPage() {
                     <label className="block text-xs font-medium text-gray-500 mb-1">Super Built-Up Area (sqft) *</label>
                     <input
                       type="number"
-                      value={unit.areaSqft}
-                      onChange={e => updateUnit(unit.id, 'areaSqft', e.target.value)}
+                      value={unit.superBuiltUpAreaSqft}
+                      onChange={e => updateUnit(unit.id, 'superBuiltUpAreaSqft', e.target.value)}
                       placeholder="e.g. 1250"
                       className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400"
                     />
@@ -704,12 +768,12 @@ export default function BuilderNewProjectPage() {
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-gray-500 mb-1">Base Price (paise) *</label>
+                    <label className="block text-xs font-medium text-gray-500 mb-1">Base Price (₹) *</label>
                     <input
                       type="number"
                       value={unit.basePricePaise}
                       onChange={e => updateUnit(unit.id, 'basePricePaise', e.target.value)}
-                      placeholder="e.g. 450000000 (= ₹45L)"
+                      placeholder="e.g. 9000000 (= ₹90 Lakh)"
                       className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400"
                     />
                   </div>
@@ -727,22 +791,22 @@ export default function BuilderNewProjectPage() {
 
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                   <div>
-                    <label className="block text-xs font-medium text-gray-500 mb-1">Floor Rise (paise/floor)</label>
+                    <label className="block text-xs font-medium text-gray-500 mb-1">Floor Rise (₹/floor)</label>
                     <input
                       type="number"
                       value={unit.floorRisePaise}
                       onChange={e => updateUnit(unit.id, 'floorRisePaise', e.target.value)}
-                      placeholder="e.g. 5000000"
+                      placeholder="e.g. 50000"
                       className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400"
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-gray-500 mb-1">Facing Premium (paise)</label>
+                    <label className="block text-xs font-medium text-gray-500 mb-1">Facing Premium (₹)</label>
                     <input
                       type="number"
                       value={unit.facingPremiumPaise}
                       onChange={e => updateUnit(unit.id, 'facingPremiumPaise', e.target.value)}
-                      placeholder="e.g. 10000000"
+                      placeholder="e.g. 100000"
                       className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400"
                     />
                   </div>
@@ -754,7 +818,7 @@ export default function BuilderNewProjectPage() {
                       className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400"
                     >
                       {FURNISHING_OPTIONS.map(f => (
-                        <option key={f} value={f}>{f}</option>
+                        <option key={f.value} value={f.value}>{f.label}</option>
                       ))}
                     </select>
                   </div>

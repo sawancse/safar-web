@@ -9,9 +9,26 @@ const SETTLEMENT_STEPS = ['INITIATED', 'INSPECTION_DONE', 'APPROVED', 'REFUND_PR
 const STEP_LABELS: Record<string, string> = {
   INITIATED: 'Initiated',
   INSPECTION_DONE: 'Inspected',
+  DEDUCTIONS_CALCULATED: 'Deductions',
   APPROVED: 'Approved',
   REFUND_PROCESSING: 'Refund Processing',
   SETTLED: 'Settled',
+  DISPUTED: 'Disputed',
+  ADMIN_RESOLVED: 'Admin Resolved',
+};
+
+const INSPECTION_AREAS = [
+  'WALLS', 'FURNITURE', 'APPLIANCES', 'FIXTURES',
+  'FLOORING', 'BATHROOM', 'KITCHEN', 'CLEANLINESS',
+] as const;
+
+const INSPECTION_CONDITIONS = ['GOOD', 'FAIR', 'DAMAGED', 'MISSING'] as const;
+
+const CONDITION_COLORS: Record<string, string> = {
+  GOOD: 'bg-green-100 text-green-700',
+  FAIR: 'bg-yellow-100 text-yellow-700',
+  DAMAGED: 'bg-red-100 text-red-700',
+  MISSING: 'bg-red-200 text-red-800',
 };
 
 const DEDUCTION_CATEGORIES = [
@@ -48,6 +65,15 @@ export default function HostSettlementTab({ listingId }: { listingId: string }) 
   });
   const [inspectionNotes, setInspectionNotes] = useState('');
   const [actionLoading, setActionLoading] = useState(false);
+  const [showChecklistForm, setShowChecklistForm] = useState(false);
+  const [checklistForm, setChecklistForm] = useState({
+    area: 'WALLS' as string,
+    itemName: '',
+    condition: 'GOOD' as string,
+    damageDescription: '',
+    photoUrls: '',
+    deductionPaise: 0,
+  });
 
   useEffect(() => { loadData(); }, [listingId]);
 
@@ -169,6 +195,27 @@ export default function HostSettlementTab({ listingId }: { listingId: string }) 
       await loadData();
     } catch (e) {
       alert('Failed to mark settled: ' + e);
+    }
+    setActionLoading(false);
+  }
+
+  async function handleAddChecklistItem() {
+    if (!selectedTenancyId) return;
+    setActionLoading(true);
+    try {
+      await api.addChecklistItem(selectedTenancyId, {
+        area: checklistForm.area,
+        itemName: checklistForm.itemName,
+        condition: checklistForm.condition,
+        damageDescription: checklistForm.damageDescription || undefined,
+        photoUrls: checklistForm.photoUrls || undefined,
+        deductionPaise: checklistForm.deductionPaise,
+      }, token);
+      setShowChecklistForm(false);
+      setChecklistForm({ area: 'WALLS', itemName: '', condition: 'GOOD', damageDescription: '', photoUrls: '', deductionPaise: 0 });
+      await loadData();
+    } catch (e) {
+      alert('Failed to add checklist item: ' + e);
     }
     setActionLoading(false);
   }
@@ -357,6 +404,131 @@ export default function HostSettlementTab({ listingId }: { listingId: string }) 
             </div>
           </div>
 
+          {/* Refund Deadline & Dispute Info */}
+          {selectedSettlement.refundDeadlineDate && (
+            <div className={`rounded-xl p-4 border ${
+              selectedSettlement.isOverdue
+                ? 'bg-red-50 border-red-200'
+                : 'bg-blue-50 border-blue-200'
+            }`}>
+              <div className="flex justify-between items-center">
+                <div>
+                  <p className="text-sm font-medium text-gray-700">Refund Deadline</p>
+                  <p className={`text-lg font-bold ${selectedSettlement.isOverdue ? 'text-red-600' : 'text-blue-600'}`}>
+                    {new Date(selectedSettlement.refundDeadlineDate).toLocaleDateString('en-IN', { year: 'numeric', month: 'short', day: 'numeric' })}
+                  </p>
+                </div>
+                {selectedSettlement.isOverdue && (
+                  <span className="bg-red-500 text-white px-3 py-1 rounded-full text-xs font-bold animate-pulse">
+                    OVERDUE
+                  </span>
+                )}
+                {selectedSettlement.status === 'DISPUTED' && (
+                  <span className="bg-red-500 text-white px-3 py-1 rounded-full text-xs font-bold">
+                    DISPUTED
+                  </span>
+                )}
+              </div>
+              {selectedSettlement.disputeReason && (
+                <p className="text-sm text-red-600 mt-2">Dispute: {selectedSettlement.disputeReason}</p>
+              )}
+            </div>
+          )}
+
+          {/* Inspection Checklist */}
+          <div>
+            <div className="flex justify-between items-center mb-3">
+              <h4 className="font-semibold text-gray-700">Inspection Checklist</h4>
+              {(selectedSettlement.status === 'INITIATED' || selectedSettlement.status === 'INSPECTION_DONE') && (
+                <button
+                  onClick={() => setShowChecklistForm(!showChecklistForm)}
+                  className="bg-blue-600 text-white px-3 py-1.5 rounded-lg text-sm hover:bg-blue-700"
+                >
+                  + Add Item
+                </button>
+              )}
+            </div>
+
+            {showChecklistForm && (
+              <div className="bg-blue-50 rounded-xl p-4 mb-4 border border-blue-200">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Area</label>
+                    <select
+                      className="w-full border rounded-xl px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-blue-400"
+                      value={checklistForm.area}
+                      onChange={e => setChecklistForm(f => ({ ...f, area: e.target.value }))}
+                    >
+                      {INSPECTION_AREAS.map(a => <option key={a} value={a}>{a.replace('_', ' ')}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Condition</label>
+                    <div className="flex gap-1">
+                      {INSPECTION_CONDITIONS.map(c => (
+                        <button key={c} onClick={() => setChecklistForm(f => ({ ...f, condition: c }))}
+                          className={`flex-1 text-xs font-medium py-2 rounded-xl transition ${
+                            checklistForm.condition === c ? CONDITION_COLORS[c] + ' ring-2 ring-offset-1' : 'bg-gray-100 text-gray-600'
+                          }`}>{c}</button>
+                      ))}
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Item Name</label>
+                    <input type="text" className="w-full border rounded-xl px-3 py-2.5 text-sm outline-none"
+                      value={checklistForm.itemName} onChange={e => setChecklistForm(f => ({ ...f, itemName: e.target.value }))}
+                      placeholder="e.g., Bedroom wall, TV, Wardrobe" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Deduction (INR)</label>
+                    <input type="number" min={0} className="w-full border rounded-xl px-3 py-2.5 text-sm outline-none"
+                      value={checklistForm.deductionPaise / 100 || ''}
+                      onChange={e => setChecklistForm(f => ({ ...f, deductionPaise: Math.round(Number(e.target.value) * 100) }))}
+                      placeholder="0 if no damage" />
+                  </div>
+                  <div className="md:col-span-2">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Damage Description</label>
+                    <input type="text" className="w-full border rounded-xl px-3 py-2.5 text-sm outline-none"
+                      value={checklistForm.damageDescription} onChange={e => setChecklistForm(f => ({ ...f, damageDescription: e.target.value }))}
+                      placeholder="Describe damage if any" />
+                  </div>
+                </div>
+                <div className="mt-3 flex gap-2">
+                  <button onClick={handleAddChecklistItem}
+                    disabled={actionLoading || !checklistForm.itemName}
+                    className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-blue-700 disabled:opacity-50">
+                    Add Item
+                  </button>
+                  <button onClick={() => setShowChecklistForm(false)}
+                    className="px-4 py-2 rounded-lg text-sm text-gray-600 hover:bg-gray-100">Cancel</button>
+                </div>
+              </div>
+            )}
+
+            {selectedSettlement.checklistItems && selectedSettlement.checklistItems.length > 0 ? (
+              <div className="space-y-2">
+                {selectedSettlement.checklistItems.map((item: any) => (
+                  <div key={item.id} className="flex items-center justify-between bg-gray-50 rounded-xl px-4 py-3">
+                    <div className="flex items-center gap-3">
+                      <span className="text-xs font-medium px-2 py-0.5 rounded bg-gray-200 text-gray-700">{item.area}</span>
+                      <span className="text-sm font-medium">{item.itemName}</span>
+                      <span className={`text-xs font-medium px-2 py-0.5 rounded ${CONDITION_COLORS[item.condition] || 'bg-gray-100'}`}>
+                        {item.condition}
+                      </span>
+                    </div>
+                    <div className="text-right">
+                      {item.deductionPaise > 0 && (
+                        <span className="text-sm font-medium text-red-600">{formatPaise(item.deductionPaise)}</span>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-sm text-gray-400">No inspection items added yet. Add items during room inspection.</p>
+            )}
+          </div>
+
           {/* Deduction Line Items */}
           <div>
             <div className="flex justify-between items-center mb-3">
@@ -458,7 +630,15 @@ export default function HostSettlementTab({ listingId }: { listingId: string }) 
                           {CATEGORY_LABELS[d.category] || d.category}
                         </span>
                       </td>
-                      <td className="py-2 text-gray-700">{d.description}</td>
+                      <td className="py-2 text-gray-700">
+                        {d.description}
+                        {d.disputed && !d.disputeResolved && (
+                          <span className="ml-2 px-2 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-700">Disputed</span>
+                        )}
+                        {d.disputeResolved && (
+                          <span className="ml-2 px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-700">{d.adminDecision}</span>
+                        )}
+                      </td>
                       <td className="py-2 font-medium">{formatPaise(d.amountPaise)}</td>
                       <td className="py-2">
                         {d.evidenceUrl ? (

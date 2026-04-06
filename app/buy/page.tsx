@@ -1,434 +1,1110 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, useEffect, useRef, useCallback } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { api } from '@/lib/api';
+import CityAutocomplete from '@/components/CityAutocomplete';
 
-/* ── Price formatter for sale prices (paise → Lakh/Cr) ── */
+/* ── Price formatter (paise to Lakh/Cr) ── */
 function formatSalePrice(paise: number): string {
+  if (!paise) return 'Price on Request';
   const inr = paise / 100;
   if (inr >= 10000000) {
     const cr = inr / 10000000;
     return `₹${cr % 1 === 0 ? cr.toFixed(0) : cr.toFixed(2)} Cr`;
   }
   const lakh = inr / 100000;
-  return `₹${lakh % 1 === 0 ? lakh.toFixed(0) : lakh.toFixed(1)} Lakh`;
+  return `₹${lakh % 1 === 0 ? lakh.toFixed(0) : lakh.toFixed(1)} L`;
 }
 
-const CITIES = [
-  'Mumbai', 'Delhi', 'Bangalore', 'Hyderabad', 'Pune',
-  'Chennai', 'Kolkata', 'Jaipur', 'Ahmedabad', 'Goa',
+/* 1 Lakh INR = 1,00,000 INR = 10,000,000 paise */
+const LAKH_IN_PAISE = 10000000;
+const CR_IN_PAISE = 1000000000;
+
+const PRICE_OPTIONS = [
+  { label: 'No min', value: '' },
+  { label: '10 L', value: String(10 * LAKH_IN_PAISE) },
+  { label: '20 L', value: String(20 * LAKH_IN_PAISE) },
+  { label: '30 L', value: String(30 * LAKH_IN_PAISE) },
+  { label: '50 L', value: String(50 * LAKH_IN_PAISE) },
+  { label: '75 L', value: String(75 * LAKH_IN_PAISE) },
+  { label: '1 Cr', value: String(1 * CR_IN_PAISE) },
+  { label: '1.5 Cr', value: String(1.5 * CR_IN_PAISE) },
+  { label: '2 Cr', value: String(2 * CR_IN_PAISE) },
+  { label: '3 Cr', value: String(3 * CR_IN_PAISE) },
+  { label: '5 Cr', value: String(5 * CR_IN_PAISE) },
 ];
 
-const BUDGET_RANGES = [
-  { label: '₹5L - 25L', min: 500000, max: 2500000 },
-  { label: '₹25L - 50L', min: 2500000, max: 5000000 },
-  { label: '₹50L - 1Cr', min: 5000000, max: 10000000 },
-  { label: '₹1Cr - 2Cr', min: 10000000, max: 20000000 },
-  { label: '₹2Cr - 5Cr', min: 20000000, max: 50000000 },
-  { label: '₹5Cr+', min: 50000000, max: 0 },
+const PRICE_MAX_OPTIONS = [
+  { label: 'No max', value: '' },
+  ...PRICE_OPTIONS.slice(1),
 ];
 
-const BHK_OPTIONS = ['1', '2', '3', '4', '5+'];
+const TAB_OPTIONS = [
+  { key: 'all', label: 'All' },
+  { key: 'projects', label: 'New Projects' },
+  { key: 'resale', label: 'Resale' },
+  { key: 'plots', label: 'Plots' },
+] as const;
 
-const PROPERTY_TYPES = [
-  { value: 'APARTMENT', label: 'Apartment' },
-  { value: 'HOUSE', label: 'House' },
-  { value: 'VILLA', label: 'Villa' },
-  { value: 'PLOT', label: 'Plot' },
+type TabKey = typeof TAB_OPTIONS[number]['key'];
+
+const STATUS_OPTIONS = [
+  { value: '', label: 'All Status' },
+  { value: 'UPCOMING', label: 'Upcoming' },
+  { value: 'UNDER_CONSTRUCTION', label: 'Under Construction' },
+  { value: 'READY_TO_MOVE', label: 'Ready to Move' },
 ];
 
-const POPULAR_CITIES_DATA = [
-  { name: 'Mumbai', avgPrice: '₹18,500/sqft', image: '/cities/mumbai.jpg', gradient: 'from-blue-600 to-blue-900' },
-  { name: 'Delhi', avgPrice: '₹12,200/sqft', image: '/cities/delhi.jpg', gradient: 'from-amber-600 to-amber-900' },
-  { name: 'Bangalore', avgPrice: '₹8,800/sqft', image: '/cities/bangalore.jpg', gradient: 'from-green-600 to-green-900' },
-  { name: 'Hyderabad', avgPrice: '₹7,200/sqft', image: '/cities/hyderabad.jpg', gradient: 'from-purple-600 to-purple-900' },
-  { name: 'Pune', avgPrice: '₹9,500/sqft', image: '/cities/pune.jpg', gradient: 'from-orange-600 to-orange-900' },
-  { name: 'Chennai', avgPrice: '₹7,800/sqft', image: '/cities/chennai.jpg', gradient: 'from-teal-600 to-teal-900' },
-  { name: 'Kolkata', avgPrice: '₹5,400/sqft', image: '/cities/kolkata.jpg', gradient: 'from-rose-600 to-rose-900' },
-  { name: 'Jaipur', avgPrice: '₹4,900/sqft', image: '/cities/jaipur.jpg', gradient: 'from-pink-600 to-pink-900' },
-  { name: 'Ahmedabad', avgPrice: '₹5,200/sqft', image: '/cities/ahmedabad.jpg', gradient: 'from-indigo-600 to-indigo-900' },
-  { name: 'Goa', avgPrice: '₹11,000/sqft', image: '/cities/goa.jpg', gradient: 'from-cyan-600 to-cyan-900' },
+const SORT_OPTIONS = [
+  { value: 'relevance', label: 'Relevance' },
+  { value: 'price_asc', label: 'Price: Low to High' },
+  { value: 'price_desc', label: 'Price: High to Low' },
+  { value: 'newest', label: 'Newest First' },
 ];
 
-const QUICK_LINKS = [
-  { label: 'Buy Apartment', href: '/buy/search?type=APARTMENT' },
-  { label: 'New Projects', href: '/projects' },
-  { label: 'Plot / Land', href: '/buy/search?type=PLOT' },
-  { label: 'Villa', href: '/buy/search?type=VILLA' },
-  { label: 'Commercial', href: '/buy/search?type=COMMERCIAL' },
-];
-
-const WHY_BUY_FEATURES = [
+const QUICK_SERVICES = [
   {
-    icon: '0%',
-    title: 'Zero Brokerage',
-    desc: 'Buy directly from owners and builders. No middlemen, no hidden fees.',
-    accent: 'from-green-500/10 to-emerald-500/5',
-    border: 'border-green-200',
+    label: 'Builder Projects',
+    desc: 'RERA-verified new launches from top builders',
+    href: '/buy?tab=projects',
+    emoji: '🏗️',
+    gradient: 'from-blue-500 to-blue-700',
+    tag: 'Popular',
+    tagColor: 'bg-blue-500',
   },
   {
-    icon: '✓',
+    label: 'Buy Properties',
+    desc: 'Resale apartments, villas & independent houses',
+    href: '/buy?tab=resale',
+    emoji: '🏡',
+    gradient: 'from-green-500 to-emerald-700',
+    tag: null,
+    tagColor: '',
+  },
+  {
+    label: 'Sale Agreement',
+    desc: 'E-stamp, e-sign & registration in 48 hours',
+    href: '/services/agreement',
+    emoji: '📝',
+    gradient: 'from-orange-500 to-orange-700',
+    tag: 'Fast',
+    tagColor: 'bg-orange-500',
+  },
+  {
+    label: 'Home Loan',
+    desc: 'Compare rates from 15+ banks. Free eligibility check',
+    href: '/services/homeloan',
+    emoji: '🏦',
+    gradient: 'from-purple-500 to-purple-700',
+    tag: 'Free',
+    tagColor: 'bg-green-500',
+  },
+  {
+    label: 'Legal Services',
+    desc: 'Title search, due diligence & risk assessment',
+    href: '/services/legal',
+    emoji: '🛡️',
+    gradient: 'from-teal-500 to-teal-700',
+    tag: null,
+    tagColor: '',
+  },
+  {
+    label: 'Home Interiors',
+    desc: '3D design, materials & project management',
+    href: '/services/interiors',
+    emoji: '🎨',
+    gradient: 'from-pink-500 to-rose-700',
+    tag: 'New',
+    tagColor: 'bg-pink-500',
+  },
+];
+
+const POPULAR_CITIES = [
+  { name: 'Mumbai', count: '2,400+', gradient: 'from-blue-600 to-blue-800' },
+  { name: 'Bangalore', count: '3,100+', gradient: 'from-green-600 to-green-800' },
+  { name: 'Hyderabad', count: '1,800+', gradient: 'from-purple-600 to-purple-800' },
+  { name: 'Pune', count: '1,500+', gradient: 'from-orange-600 to-orange-800' },
+  { name: 'Chennai', count: '1,200+', gradient: 'from-teal-600 to-teal-800' },
+  { name: 'Delhi', count: '2,000+', gradient: 'from-amber-600 to-amber-800' },
+  { name: 'Kolkata', count: '900+', gradient: 'from-rose-600 to-rose-800' },
+  { name: 'Jaipur', count: '600+', gradient: 'from-pink-600 to-pink-800' },
+];
+
+const WHY_SAFAR = [
+  {
     title: 'RERA Verified',
-    desc: 'Every listed project is RERA-verified. Buy with confidence knowing your investment is legally protected.',
-    accent: 'from-blue-500/10 to-indigo-500/5',
-    border: 'border-blue-200',
+    desc: 'All projects are RERA-registered and verified for your safety and peace of mind.',
+    icon: <svg className="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" /></svg>,
+    color: 'text-green-600 bg-green-50 border-green-200',
   },
   {
-    icon: '📅',
-    title: 'Site Visit Scheduling',
-    desc: 'Schedule site visits directly from the listing. Get reminders and route directions automatically.',
-    accent: 'from-orange-500/10 to-amber-500/5',
-    border: 'border-orange-200',
+    title: 'Direct from Builders',
+    desc: 'Connect directly with builders and property owners. No middlemen, no brokerage.',
+    icon: <svg className="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" /></svg>,
+    color: 'text-blue-600 bg-blue-50 border-blue-200',
   },
   {
-    icon: '📊',
-    title: 'Rental History Data',
-    desc: 'See actual rental income data for properties that were listed on Safar. Make informed investment decisions.',
-    accent: 'from-purple-500/10 to-violet-500/5',
-    border: 'border-purple-200',
+    title: 'Price Transparency',
+    desc: 'Real-time pricing with floor rise, facing premium, and GST breakdowns included.',
+    icon: <svg className="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>,
+    color: 'text-orange-600 bg-orange-50 border-orange-200',
   },
   {
-    icon: '🧮',
-    title: 'EMI Calculator',
-    desc: 'Built-in EMI calculator with live bank rates. Know your monthly outflow before you decide.',
-    accent: 'from-teal-500/10 to-cyan-500/5',
-    border: 'border-teal-200',
-  },
-  {
-    icon: '📈',
-    title: 'Locality Trends',
-    desc: 'Price trends, infrastructure developments, and upcoming projects for every locality.',
-    accent: 'from-rose-500/10 to-pink-500/5',
-    border: 'border-rose-200',
+    title: 'Construction Tracking',
+    desc: 'Live construction progress updates with photos and possession timelines.',
+    icon: <svg className="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" /></svg>,
+    color: 'text-purple-600 bg-purple-50 border-purple-200',
   },
 ];
+
+/* ── Types ── */
+interface BuilderProject {
+  id: string;
+  projectName: string;
+  builderName: string;
+  builderLogoUrl?: string;
+  city: string;
+  locality?: string;
+  minPricePaise: number;
+  maxPricePaise: number;
+  minBhk: number;
+  maxBhk: number;
+  possessionDate?: string;
+  constructionProgressPercent: number;
+  projectStatus: string;
+  reraId?: string;
+  reraVerified?: boolean;
+  totalUnits?: number;
+  availableUnits?: number;
+  primaryPhotoUrl?: string;
+  amenities?: string[];
+}
 
 interface SaleProperty {
   id: string;
   title: string;
   city: string;
   locality?: string;
-  pricePaise: number;
+  askingPricePaise: number;
+  pricePaise?: number; // alias for backward compat
   pricePerSqftPaise?: number;
   bedrooms?: number;
   bathrooms?: number;
-  areaSqft?: number;
-  propertyType: string;
+  carpetAreaSqft?: number;
+  builtUpAreaSqft?: number;
+  areaSqft?: number; // alias
+  salePropertyType?: string;
+  propertyType?: string; // alias
+  transactionType?: string;
   primaryPhotoUrl?: string;
   possessionStatus?: string;
   reraVerified?: boolean;
+  furnishing?: string;
   sellerType?: string;
 }
 
-export default function BuyHomePage() {
-  const router = useRouter();
-  const [city, setCity] = useState('');
-  const [locality, setLocality] = useState('');
-  const [budgetIdx, setBudgetIdx] = useState(-1);
-  const [bhk, setBhk] = useState('');
-  const [propertyType, setPropertyType] = useState('');
-  const [recentProperties, setRecentProperties] = useState<SaleProperty[]>([]);
-  const [loadingRecent, setLoadingRecent] = useState(true);
+type MixedResult =
+  | { type: 'builder'; data: BuilderProject }
+  | { type: 'sale'; data: SaleProperty };
 
-  useEffect(() => {
-    (async () => {
-      try {
-        const res = await (api as any).searchSaleProperties({ sort: 'newest', size: 6 });
-        setRecentProperties(res?.content || res?.results || res || []);
-      } catch {
-        setRecentProperties([]);
-      } finally {
-        setLoadingRecent(false);
+interface AutocompleteSuggestion {
+  id: string;
+  label: string;
+  sublabel: string;
+  source: 'builder' | 'sale';
+}
+
+/* ── Component ── */
+export default function BuyPage() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+
+  /* Tab from URL */
+  const urlTab = searchParams.get('tab') as TabKey | null;
+  const [activeTab, setActiveTab] = useState<TabKey>(
+    urlTab && TAB_OPTIONS.some(t => t.key === urlTab) ? urlTab : 'all'
+  );
+
+  /* Filters */
+  const [searchQuery, setSearchQuery] = useState('');
+  const [city, setCity] = useState('');
+  const [priceMin, setPriceMin] = useState('');
+  const [priceMax, setPriceMax] = useState('');
+  const [minBhk, setMinBhk] = useState('');
+  const [maxBhk, setMaxBhk] = useState('');
+  const [status, setStatus] = useState('');
+  const [reraOnly, setReraOnly] = useState(false);
+  const [sortBy, setSortBy] = useState('relevance');
+  const [quickBhk, setQuickBhk] = useState<number | null>(null);
+
+  /* Results */
+  const [results, setResults] = useState<MixedResult[]>([]);
+  const [totalHits, setTotalHits] = useState(0);
+  const [page, setPage] = useState(0);
+  const [loading, setLoading] = useState(true);
+  const [searched, setSearched] = useState(false);
+
+  /* Autocomplete */
+  const [suggestions, setSuggestions] = useState<AutocompleteSuggestion[]>([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const searchRef = useRef<HTMLDivElement>(null);
+
+  const PAGE_SIZE = 12;
+  const totalPages = Math.ceil(totalHits / PAGE_SIZE);
+
+  /* ── Build params shared between builders and sale ── */
+  function buildBuilderParams(pageNum: number): Record<string, string> {
+    const params: Record<string, string> = { page: String(pageNum), size: String(PAGE_SIZE), sort: sortBy };
+    if (city) params.city = city;
+    if (searchQuery) params.query = searchQuery;
+    if (priceMin) params.priceMin = priceMin;
+    if (priceMax) params.priceMax = priceMax;
+    if (status) params.projectStatus = status;
+    if (reraOnly) params.reraVerified = 'true';
+    const bhkVal = quickBhk || (minBhk ? parseInt(minBhk) : 0);
+    const bhkMax = quickBhk || (maxBhk ? parseInt(maxBhk) : 0);
+    if (bhkVal || bhkMax) {
+      const list: string[] = [];
+      for (let i = (bhkVal || 1); i <= (bhkMax || 5); i++) list.push(String(i));
+      if (list.length) params.bhk = list.join(',');
+    }
+    return params;
+  }
+
+  function buildSaleParams(pageNum: number): Record<string, string> {
+    const params: Record<string, string> = { page: String(pageNum), size: String(PAGE_SIZE), sort: sortBy };
+    if (city) params.city = city;
+    if (searchQuery) params.query = searchQuery;
+    if (priceMin) params.priceMin = priceMin;
+    if (priceMax) params.priceMax = priceMax;
+    if (reraOnly) params.reraVerified = 'true';
+    if (status === 'READY_TO_MOVE') params.possessionStatus = 'READY_TO_MOVE';
+    if (status === 'UNDER_CONSTRUCTION') params.possessionStatus = 'UNDER_CONSTRUCTION';
+    const bhkVal = quickBhk || (minBhk ? parseInt(minBhk) : 0);
+    if (bhkVal) params.bedrooms = String(bhkVal);
+
+    if (activeTab === 'resale') params.transactionType = 'RESALE';
+    if (activeTab === 'plots') params.type = 'PLOT';
+
+    return params;
+  }
+
+  /* ── Fetch results ── */
+  const fetchResults = useCallback(async (pageNum = 0) => {
+    setLoading(true);
+    try {
+      const mixed: MixedResult[] = [];
+      let total = 0;
+
+      if (activeTab === 'all') {
+        const [builderRes, saleRes] = await Promise.all([
+          api.searchBuilderProjects(buildBuilderParams(pageNum)).catch(() => null),
+          api.searchSaleProperties(buildSaleParams(pageNum)).catch(() => null),
+        ]);
+        const builders = (builderRes?.content || []).map((d: BuilderProject) => ({ type: 'builder' as const, data: d }));
+        const sales = (saleRes?.content || []).map((d: SaleProperty) => ({ type: 'sale' as const, data: d }));
+        // Interleave: alternate builder and sale
+        const maxLen = Math.max(builders.length, sales.length);
+        for (let i = 0; i < maxLen; i++) {
+          if (i < builders.length) mixed.push(builders[i]);
+          if (i < sales.length) mixed.push(sales[i]);
+        }
+        total = (builderRes?.totalHits || builderRes?.totalElements || 0) + (saleRes?.totalHits || saleRes?.totalElements || 0);
+      } else if (activeTab === 'projects') {
+        const res = await api.searchBuilderProjects(buildBuilderParams(pageNum));
+        (res?.content || []).forEach((d: BuilderProject) => mixed.push({ type: 'builder', data: d }));
+        total = res?.totalHits || res?.totalElements || 0;
+      } else {
+        // resale or plots
+        const res = await api.searchSaleProperties(buildSaleParams(pageNum));
+        (res?.content || []).forEach((d: SaleProperty) => mixed.push({ type: 'sale', data: d }));
+        total = res?.totalHits || res?.totalElements || 0;
       }
-    })();
+
+      setResults(mixed);
+      setTotalHits(total);
+      setPage(pageNum);
+      setSearched(true);
+    } catch {
+      setResults([]);
+      setTotalHits(0);
+    } finally {
+      setLoading(false);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab, city, searchQuery, priceMin, priceMax, minBhk, maxBhk, status, reraOnly, sortBy, quickBhk]);
+
+  /* Initial load */
+  useEffect(() => { fetchResults(0); }, [fetchResults]);
+
+  /* ── Autocomplete ── */
+  useEffect(() => {
+    if (searchQuery.length < 2) { setSuggestions([]); return; }
+    const timer = setTimeout(async () => {
+      try {
+        const results: AutocompleteSuggestion[] = [];
+        if (activeTab === 'all' || activeTab === 'projects') {
+          const builderSugs = await api.autocompleteBuilderProjects(searchQuery).catch(() => []);
+          (builderSugs || []).forEach((s: any) => {
+            results.push({
+              id: s.id,
+              label: s.projectName || s.builderName || 'Project',
+              sublabel: [s.builderName, s.locality, s.city].filter(Boolean).join(', '),
+              source: 'builder',
+            });
+          });
+        }
+        if (activeTab === 'all' || activeTab === 'resale' || activeTab === 'plots') {
+          const saleSugs = await api.autocompleteSaleProperties(searchQuery).catch(() => []);
+          (saleSugs || []).forEach((s: any) => {
+            results.push({
+              id: s.id,
+              label: s.title || s.propertyType || 'Property',
+              sublabel: [s.locality, s.city].filter(Boolean).join(', '),
+              source: 'sale',
+            });
+          });
+        }
+        setSuggestions(results.slice(0, 10));
+        setShowSuggestions(true);
+      } catch {
+        setSuggestions([]);
+      }
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [searchQuery, activeTab]);
+
+  /* Close suggestions on outside click */
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (searchRef.current && !searchRef.current.contains(e.target as Node)) {
+        setShowSuggestions(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClick);
+    return () => document.removeEventListener('mousedown', handleClick);
   }, []);
 
   function handleSearch() {
-    const params = new URLSearchParams();
-    if (city) params.set('city', city);
-    if (locality) params.set('query', locality);
-    if (propertyType) params.set('type', propertyType);
-    if (bhk) params.set('bedrooms', bhk.replace('+', ''));
-    if (budgetIdx >= 0) {
-      const range = BUDGET_RANGES[budgetIdx];
-      params.set('priceMin', String(range.min * 100));
-      if (range.max > 0) params.set('priceMax', String(range.max * 100));
+    setShowSuggestions(false);
+    fetchResults(0);
+  }
+
+  function handleTabChange(tab: TabKey) {
+    setActiveTab(tab);
+    router.replace(`/buy?tab=${tab}`, { scroll: false });
+  }
+
+  function handleCityQuick(c: string) {
+    setCity(c);
+  }
+
+  function handleQuickBhk(n: number) {
+    if (quickBhk === n) {
+      setQuickBhk(null);
+      setMinBhk('');
+      setMaxBhk('');
+    } else {
+      setQuickBhk(n);
+      setMinBhk(String(n));
+      setMaxBhk(String(n));
     }
-    router.push(`/buy/search?${params.toString()}`);
+  }
+
+  function resetFilters() {
+    setSearchQuery('');
+    setCity('');
+    setPriceMin('');
+    setPriceMax('');
+    setMinBhk('');
+    setMaxBhk('');
+    setStatus('');
+    setReraOnly(false);
+    setSortBy('relevance');
+    setQuickBhk(null);
+  }
+
+  function statusLabel(s: string): string {
+    switch (s) {
+      case 'UPCOMING': return 'Upcoming';
+      case 'UNDER_CONSTRUCTION': return 'Under Construction';
+      case 'READY_TO_MOVE': return 'Ready to Move';
+      case 'COMPLETED': return 'Completed';
+      default: return s;
+    }
+  }
+
+  function possessionLabel(d?: string): string {
+    if (!d) return '';
+    try {
+      const date = new Date(d);
+      return date.toLocaleDateString('en-IN', { month: 'short', year: 'numeric' });
+    } catch {
+      return d;
+    }
+  }
+
+  const API_URL = process.env.NEXT_PUBLIC_API_URL || '';
+  function imgSrc(url?: string): string {
+    if (!url) return '';
+    return url.startsWith('http') ? url : `${API_URL}${url}`;
   }
 
   return (
-    <>
-      {/* ── Hero Section ── */}
-      <section className="relative overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-br from-slate-900 via-orange-950 to-slate-900" />
-        <div className="absolute top-[-20%] right-[-10%] w-[500px] h-[500px] bg-orange-500/20 rounded-full blur-[120px]" />
-        <div className="absolute bottom-[-30%] left-[-10%] w-[400px] h-[400px] bg-pink-500/15 rounded-full blur-[100px]" />
-        <div className="absolute top-[20%] left-[15%] w-[200px] h-[200px] bg-amber-400/10 rounded-full blur-[80px]" />
+    <div className="min-h-screen bg-gray-50">
 
-        <div className="relative z-10 max-w-5xl mx-auto px-4 pt-16 pb-20 sm:pt-24 sm:pb-28">
-          <div className="flex justify-center mb-6">
-            <span className="inline-flex items-center gap-2 bg-white/10 backdrop-blur-sm border border-white/10 text-orange-300 text-xs font-semibold px-4 py-1.5 rounded-full tracking-wide uppercase">
-              <span className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
-              Zero brokerage property marketplace
+      {/* ================================================================ */}
+      {/*  HERO — Booking.com style                                        */}
+      {/* ================================================================ */}
+      <section className="relative z-30 bg-[#003B95] text-white overflow-visible">
+        <div className="relative max-w-7xl mx-auto px-4 pt-8 pb-10 sm:pt-12 sm:pb-14">
+          {/* Header text */}
+          <div className="max-w-2xl mb-6">
+            <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold mb-2 leading-tight">
+              Find your dream property
+            </h1>
+            <p className="text-white/70 text-sm sm:text-base">
+              New launches, resale apartments, villas & plots — RERA verified, zero brokerage.
+            </p>
+          </div>
+
+          {/* Trust pills */}
+          <div className="flex flex-wrap items-center gap-2 mb-6">
+            <span className="bg-white/10 text-white/90 text-xs font-semibold px-3 py-1 rounded-full border border-white/20">
+              RERA Verified
+            </span>
+            <span className="bg-white/10 text-white/90 text-xs font-semibold px-3 py-1 rounded-full border border-white/20">
+              Zero Brokerage
+            </span>
+            <span className="bg-white/10 text-white/90 text-xs font-semibold px-3 py-1 rounded-full border border-white/20">
+              Direct from Builders
             </span>
           </div>
 
-          <h1 className="text-center text-4xl sm:text-5xl md:text-6xl font-extrabold tracking-tight leading-[1.1]">
-            <span className="text-white">Find Your </span>
-            <span className="bg-gradient-to-r from-orange-400 via-amber-300 to-orange-400 bg-clip-text text-transparent">
-              Dream Home
-            </span>
-            <br className="hidden sm:block" />
-            <span className="text-white"> on </span>
-            <span className="bg-gradient-to-r from-orange-400 to-pink-400 bg-clip-text text-transparent">
-              Safar
-            </span>
-          </h1>
-
-          <p className="text-center text-white/60 text-base sm:text-lg mt-5 mb-10 max-w-xl mx-auto leading-relaxed">
-            Apartments, villas, plots, houses — buy verified properties across India.
-            <br className="hidden sm:block" />
-            <span className="text-orange-300/80">Zero brokerage. RERA verified. Rental history data.</span>
-          </p>
-
-          {/* ── Search Bar ── */}
-          <div className="max-w-4xl mx-auto bg-white/10 backdrop-blur-md border border-white/15 rounded-2xl p-4 sm:p-6">
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
-              {/* City */}
-              <select
-                value={city}
-                onChange={(e) => setCity(e.target.value)}
-                className="bg-white/10 border border-white/20 text-white rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 appearance-none"
-              >
-                <option value="" className="text-slate-900">Select City</option>
-                {CITIES.map((c) => (
-                  <option key={c} value={c} className="text-slate-900">{c}</option>
-                ))}
-              </select>
-
-              {/* Locality */}
-              <input
-                type="text"
-                value={locality}
-                onChange={(e) => setLocality(e.target.value)}
-                placeholder="Locality / Area"
-                className="bg-white/10 border border-white/20 text-white placeholder-white/40 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500"
-              />
-
-              {/* Budget */}
-              <select
-                value={budgetIdx}
-                onChange={(e) => setBudgetIdx(Number(e.target.value))}
-                className="bg-white/10 border border-white/20 text-white rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 appearance-none"
-              >
-                <option value={-1} className="text-slate-900">Budget Range</option>
-                {BUDGET_RANGES.map((r, i) => (
-                  <option key={r.label} value={i} className="text-slate-900">{r.label}</option>
-                ))}
-              </select>
-
-              {/* BHK */}
-              <select
-                value={bhk}
-                onChange={(e) => setBhk(e.target.value)}
-                className="bg-white/10 border border-white/20 text-white rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 appearance-none"
-              >
-                <option value="" className="text-slate-900">BHK</option>
-                {BHK_OPTIONS.map((b) => (
-                  <option key={b} value={b} className="text-slate-900">{b} BHK</option>
-                ))}
-              </select>
-
-              {/* Property Type */}
-              <select
-                value={propertyType}
-                onChange={(e) => setPropertyType(e.target.value)}
-                className="bg-white/10 border border-white/20 text-white rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 appearance-none"
-              >
-                <option value="" className="text-slate-900">Property Type</option>
-                {PROPERTY_TYPES.map((t) => (
-                  <option key={t.value} value={t.value} className="text-slate-900">{t.label}</option>
-                ))}
-              </select>
+          {/* ── Search Card — yellow Booking.com style ── */}
+          <div className="bg-[#FFB700] rounded-xl p-1.5 max-w-5xl">
+            {/* Tabs — inside yellow bar */}
+            <div className="flex gap-1 mb-2 overflow-x-auto px-2 pt-2">
+              {TAB_OPTIONS.map(tab => (
+                <button
+                  key={tab.key}
+                  onClick={() => handleTabChange(tab.key)}
+                  className={`px-4 py-1.5 rounded-full text-sm font-semibold transition-all whitespace-nowrap ${
+                    activeTab === tab.key
+                      ? 'bg-[#003B95] text-white'
+                      : 'text-[#003B95]/70 hover:text-[#003B95] hover:bg-white/50'
+                  }`}
+                >
+                  {tab.label}
+                </button>
+              ))}
             </div>
 
+            {/* Search input row */}
+            <div className="flex flex-col sm:flex-row gap-1">
+            <div ref={searchRef} className="relative flex-1">
+              <div className="relative flex items-center bg-white rounded-lg">
+                <svg className="w-5 h-5 text-gray-400 absolute left-3.5 top-1/2 -translate-y-1/2 z-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={e => setSearchQuery(e.target.value)}
+                  onKeyDown={e => { if (e.key === 'Enter') handleSearch(); }}
+                  onFocus={() => suggestions.length > 0 && setShowSuggestions(true)}
+                  placeholder="Search by project, builder, city or locality..."
+                  className="w-full pl-11 pr-4 py-2.5 text-gray-800 text-sm outline-none bg-transparent rounded-lg"
+                />
+
+                {/* Autocomplete dropdown */}
+                {showSuggestions && suggestions.length > 0 && (
+                  <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-xl shadow-2xl max-h-72 overflow-y-auto z-50">
+                    {suggestions.map((s, i) => (
+                      <button
+                        key={`${s.source}-${s.id}-${i}`}
+                        type="button"
+                        onMouseDown={e => e.preventDefault()}
+                        onClick={() => {
+                          if (s.source === 'builder') {
+                            router.push(`/projects/${s.id}`);
+                          } else {
+                            router.push(`/buy/${s.id}`);
+                          }
+                          setShowSuggestions(false);
+                        }}
+                        className="w-full text-left px-4 py-3 hover:bg-orange-50 transition flex items-center gap-3 border-b border-gray-50 last:border-0"
+                      >
+                        <span className={`shrink-0 text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                          s.source === 'builder'
+                            ? 'bg-blue-100 text-blue-700'
+                            : 'bg-green-100 text-green-700'
+                        }`}>
+                          {s.source === 'builder' ? 'PROJECT' : 'PROPERTY'}
+                        </span>
+                        <div className="min-w-0">
+                          <p className="text-sm font-medium text-gray-800 truncate">{s.label}</p>
+                          <p className="text-xs text-gray-400 truncate">{s.sublabel}</p>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Search button inside yellow bar */}
             <button
+              type="button"
               onClick={handleSearch}
-              className="w-full mt-4 bg-orange-500 hover:bg-orange-600 text-white font-semibold py-3 rounded-xl transition text-sm shadow-lg shadow-orange-500/30"
+              className="bg-[#003B95] hover:bg-[#00296b] text-white font-semibold rounded-lg px-6 py-2.5 text-sm transition-all flex items-center gap-1.5 shrink-0"
             >
-              Search Properties
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
+              Search
             </button>
+            </div>
+
+            {/* Filter row */}
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-1 mt-1 px-1 pb-1">
+              <div>
+                <CityAutocomplete
+                  value={city}
+                  onChange={setCity}
+                  placeholder="Any city"
+                  label="City"
+                />
+              </div>
+              <div>
+                <label className="text-xs font-medium text-[#003B95]/70 mb-1 block">Price Min</label>
+                <select
+                  value={priceMin}
+                  onChange={e => setPriceMin(e.target.value)}
+                  className="w-full border-0 rounded-lg px-3 py-2 text-sm text-gray-800 bg-white outline-none"
+                >
+                  {PRICE_OPTIONS.map(o => (
+                    <option key={`min-${o.value}`} value={o.value}>{o.label}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="text-xs font-medium text-[#003B95]/70 mb-1 block">Price Max</label>
+                <select
+                  value={priceMax}
+                  onChange={e => setPriceMax(e.target.value)}
+                  className="w-full border-0 rounded-lg px-3 py-2 text-sm text-gray-800 bg-white outline-none"
+                >
+                  {PRICE_MAX_OPTIONS.map(o => (
+                    <option key={`max-${o.value}`} value={o.value}>{o.label}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="text-xs font-medium text-[#003B95]/70 mb-1 block">Min BHK</label>
+                <select
+                  value={minBhk}
+                  onChange={e => { setMinBhk(e.target.value); setQuickBhk(null); }}
+                  className="w-full border-0 rounded-lg px-3 py-2 text-sm text-gray-800 bg-white outline-none"
+                >
+                  <option value="">Any</option>
+                  {[1,2,3,4,5].map(n => <option key={n} value={n}>{n} BHK</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="text-xs font-medium text-[#003B95]/70 mb-1 block">Max BHK</label>
+                <select
+                  value={maxBhk}
+                  onChange={e => { setMaxBhk(e.target.value); setQuickBhk(null); }}
+                  className="w-full border-0 rounded-lg px-3 py-2 text-sm text-gray-800 bg-white outline-none"
+                >
+                  <option value="">Any</option>
+                  {[1,2,3,4,5].map(n => <option key={n} value={n}>{n} BHK</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="text-xs font-medium text-[#003B95]/70 mb-1 block">Status</label>
+                <select
+                  value={status}
+                  onChange={e => setStatus(e.target.value)}
+                  className="w-full border-0 rounded-lg px-3 py-2 text-sm text-gray-800 bg-white outline-none"
+                >
+                  {STATUS_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+                </select>
+              </div>
+            </div>
+
+          </div>
+
+          {/* Quick filters below yellow card */}
+          <div className="flex flex-wrap items-center gap-3 mt-4">
+            <label className="flex items-center gap-2 cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={reraOnly}
+                onChange={e => setReraOnly(e.target.checked)}
+                className="w-4 h-4 text-white border-white/40 rounded focus:ring-white bg-white/20"
+              />
+              <span className="text-sm text-white/90 font-medium">RERA Verified Only</span>
+            </label>
+            <div className="h-5 w-px bg-white/30" />
+            <div className="flex items-center gap-1.5">
+              {[1,2,3,4,5].map(n => (
+                <button
+                  key={n}
+                  onClick={() => handleQuickBhk(n)}
+                  className={`px-3 py-1 rounded-full text-xs font-semibold transition-all ${
+                    quickBhk === n
+                      ? 'bg-white text-[#003B95]'
+                      : 'bg-white/15 text-white/80 hover:bg-white/25 border border-white/20'
+                  }`}
+                >
+                  {n} BHK
+                </button>
+              ))}
+            </div>
+            <div className="ml-auto">
+              <button
+                onClick={resetFilters}
+                className="text-sm text-white/70 hover:text-white transition font-medium"
+              >
+                Reset All
+              </button>
+            </div>
           </div>
         </div>
       </section>
 
-      {/* ── Popular Cities ── */}
-      <section className="max-w-6xl mx-auto px-4 py-16">
-        <div className="text-center mb-10">
-          <p className="text-orange-500 text-sm font-semibold tracking-wide uppercase mb-2">Explore</p>
-          <h2 className="text-3xl sm:text-4xl font-extrabold text-slate-900">Popular Cities</h2>
-          <p className="text-slate-500 mt-3 max-w-lg mx-auto">
-            Browse properties in India&apos;s most sought-after cities
-          </p>
-        </div>
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
-          {POPULAR_CITIES_DATA.map((city) => (
+      {/* ================================================================ */}
+      {/*  QUICK SERVICES                                                  */}
+      {/* ================================================================ */}
+      {/* ── Services Grid — MagicBricks/Housing.com inspired ── */}
+      <section className="max-w-7xl mx-auto px-4 py-8 relative z-10 mb-4">
+        <h2 className="text-lg font-bold text-gray-900 mb-1">Property Services</h2>
+        <p className="text-sm text-gray-500 mb-5">Everything you need to buy, finance & design your dream home</p>
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+          {QUICK_SERVICES.map(svc => (
             <Link
-              key={city.name}
-              href={`/buy/search?city=${city.name}`}
-              className="group relative overflow-hidden rounded-xl aspect-[4/3] border border-slate-200 hover:shadow-lg transition-shadow"
+              key={svc.label}
+              href={svc.href}
+              className="relative bg-white rounded-2xl border border-gray-100 overflow-hidden hover:shadow-xl hover:-translate-y-1 transition-all duration-200 group"
             >
-              <div className={`absolute inset-0 bg-gradient-to-br ${city.gradient} opacity-90`} />
-              <div className="relative z-10 h-full flex flex-col justify-end p-4">
-                <h3 className="text-white font-bold text-lg group-hover:text-orange-300 transition-colors">{city.name}</h3>
-                <p className="text-white/70 text-xs mt-0.5">Avg {city.avgPrice}</p>
+              {/* Tag badge */}
+              {svc.tag && (
+                <span className={`absolute top-2.5 right-2.5 ${svc.tagColor} text-white text-[9px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider z-10`}>
+                  {svc.tag}
+                </span>
+              )}
+
+              {/* Gradient header with emoji */}
+              <div className={`bg-gradient-to-br ${svc.gradient} p-4 pb-5 flex items-center justify-center`}>
+                <span className="text-4xl drop-shadow-lg group-hover:scale-110 transition-transform duration-200">{svc.emoji}</span>
+              </div>
+
+              {/* Content */}
+              <div className="p-3 pb-4">
+                <h3 className="text-sm font-bold text-gray-900 group-hover:text-[#003B95] transition leading-tight">{svc.label}</h3>
+                <p className="text-[11px] text-gray-400 mt-1 leading-relaxed line-clamp-2">{svc.desc}</p>
+                <div className="mt-2.5 flex items-center gap-1 text-[#003B95] text-xs font-semibold opacity-0 group-hover:opacity-100 transition-opacity">
+                  Explore
+                  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" />
+                  </svg>
+                </div>
               </div>
             </Link>
           ))}
         </div>
       </section>
 
-      {/* ── Quick Links ── */}
-      <section className="bg-slate-50 py-12 px-4">
-        <div className="max-w-6xl mx-auto">
-          <h2 className="text-xl font-bold text-slate-900 mb-6 text-center">Quick Links</h2>
-          <div className="flex flex-wrap justify-center gap-3">
-            {QUICK_LINKS.map((link) => (
-              <Link
-                key={link.label}
-                href={link.href}
-                className="bg-white border border-slate-200 hover:border-orange-300 hover:bg-orange-50 text-slate-700 hover:text-orange-600 px-6 py-3 rounded-xl text-sm font-medium transition-colors"
-              >
-                {link.label}
-              </Link>
-            ))}
-          </div>
+      {/* ================================================================ */}
+      {/*  EXPLORE BY CITY                                                 */}
+      {/* ================================================================ */}
+      <section className="max-w-7xl mx-auto px-4 mb-12">
+        <h2 className="text-lg font-bold text-gray-900 mb-4">Explore by City</h2>
+        <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide">
+          {POPULAR_CITIES.map(c => (
+            <button
+              key={c.name}
+              onClick={() => handleCityQuick(c.name)}
+              className={`shrink-0 rounded-xl px-5 py-3 border transition-all ${
+                city === c.name
+                  ? 'bg-orange-500 text-white border-orange-500 shadow-md shadow-orange-200'
+                  : 'bg-white text-gray-700 border-gray-200 hover:border-orange-300 hover:shadow-sm'
+              }`}
+            >
+              <span className="text-sm font-semibold block">{c.name}</span>
+              <span className={`text-[11px] ${city === c.name ? 'text-orange-100' : 'text-gray-400'}`}>{c.count} properties</span>
+            </button>
+          ))}
         </div>
       </section>
 
-      {/* ── Why Buy on Safar ── */}
-      <section className="bg-gradient-to-b from-white to-slate-50 py-20 px-4">
-        <div className="max-w-6xl mx-auto">
-          <div className="text-center mb-14">
-            <p className="text-orange-500 text-sm font-semibold tracking-wide uppercase mb-2">Advantages</p>
-            <h2 className="text-3xl sm:text-4xl font-extrabold text-slate-900">
-              Why Buy on Safar?
+      {/* ================================================================ */}
+      {/*  RESULTS                                                         */}
+      {/* ================================================================ */}
+      <section className="max-w-7xl mx-auto px-4 pb-16">
+        {/* Results header */}
+        <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
+          <div>
+            <h2 className="text-lg font-bold text-gray-900">
+              {searched ? `${totalHits.toLocaleString('en-IN')} Properties Found` : 'Properties'}
             </h2>
-            <p className="text-slate-500 mt-3 max-w-lg mx-auto">
-              A smarter way to find and buy your next property
-            </p>
+            {city && <p className="text-sm text-gray-500">in {city}</p>}
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {WHY_BUY_FEATURES.map((item) => (
-              <div
-                key={item.title}
-                className={`relative overflow-hidden rounded-2xl border ${item.border} bg-gradient-to-br ${item.accent} p-8 hover:shadow-lg transition-shadow`}
-              >
-                <div className="w-12 h-12 rounded-xl bg-white shadow-sm flex items-center justify-center text-xl font-bold mb-4">
-                  {item.icon}
-                </div>
-                <h3 className="text-lg font-bold text-slate-900 mb-2">{item.title}</h3>
-                <p className="text-slate-600 text-sm leading-relaxed">{item.desc}</p>
-              </div>
-            ))}
+          <div className="flex items-center gap-3">
+            <label className="text-sm text-gray-500">Sort:</label>
+            <select
+              value={sortBy}
+              onChange={e => setSortBy(e.target.value)}
+              className="border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-1 focus:ring-orange-300 focus:border-orange-400 outline-none bg-white"
+            >
+              {SORT_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+            </select>
           </div>
         </div>
-      </section>
 
-      {/* ── Recently Listed Properties ── */}
-      <section className="max-w-6xl mx-auto px-4 py-16">
-        <div className="text-center mb-10">
-          <p className="text-orange-500 text-sm font-semibold tracking-wide uppercase mb-2">Fresh listings</p>
-          <h2 className="text-3xl sm:text-4xl font-extrabold text-slate-900">Recently Listed</h2>
-          <p className="text-slate-500 mt-3 max-w-lg mx-auto">
-            The newest properties added to our marketplace
-          </p>
-        </div>
-
-        {loadingRecent ? (
+        {/* Loading skeleton */}
+        {loading && (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {Array.from({ length: 6 }).map((_, i) => (
-              <div key={i} className="bg-white border border-slate-200 rounded-xl overflow-hidden animate-pulse">
-                <div className="bg-slate-200 h-48" />
-                <div className="p-4 space-y-3">
-                  <div className="h-4 bg-slate-200 rounded w-3/4" />
-                  <div className="h-3 bg-slate-200 rounded w-1/2" />
-                  <div className="h-5 bg-slate-200 rounded w-1/3" />
+              <div key={i} className="bg-white border border-gray-100 rounded-2xl overflow-hidden animate-pulse">
+                <div className="bg-gray-200 h-52" />
+                <div className="p-5 space-y-3">
+                  <div className="h-4 bg-gray-200 rounded w-3/4" />
+                  <div className="h-3 bg-gray-200 rounded w-1/2" />
+                  <div className="h-5 bg-gray-200 rounded w-1/3" />
                 </div>
               </div>
-            ))}
-          </div>
-        ) : recentProperties.length === 0 ? (
-          <p className="text-center text-slate-400 text-sm py-10">No properties listed yet. Check back soon!</p>
-        ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {recentProperties.map((prop) => (
-              <Link
-                key={prop.id}
-                href={`/buy/${prop.id}`}
-                className="bg-white border border-slate-200 rounded-xl overflow-hidden hover:shadow-lg transition-shadow group"
-              >
-                <div className="relative h-48 bg-slate-100 overflow-hidden">
-                  {prop.primaryPhotoUrl ? (
-                    <img
-                      src={prop.primaryPhotoUrl.startsWith('http') ? prop.primaryPhotoUrl : `${process.env.NEXT_PUBLIC_API_URL || ''}${prop.primaryPhotoUrl}`}
-                      alt={prop.title}
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                    />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center text-slate-300 text-4xl">
-                      🏠
-                    </div>
-                  )}
-                  {prop.reraVerified && (
-                    <span className="absolute top-3 left-3 bg-green-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">
-                      RERA
-                    </span>
-                  )}
-                  <span className="absolute top-3 right-3 bg-white/90 text-slate-700 text-[10px] font-semibold px-2 py-0.5 rounded-full capitalize">
-                    {prop.propertyType?.toLowerCase() || 'Property'}
-                  </span>
-                </div>
-                <div className="p-4">
-                  <h3 className="font-semibold text-slate-900 text-sm truncate group-hover:text-orange-600 transition-colors">
-                    {prop.title}
-                  </h3>
-                  <p className="text-slate-500 text-xs mt-1">
-                    {prop.locality ? `${prop.locality}, ` : ''}{prop.city}
-                  </p>
-                  <div className="flex items-center gap-3 mt-2 text-xs text-slate-500">
-                    {prop.bedrooms != null && <span>{prop.bedrooms} BHK</span>}
-                    {prop.areaSqft != null && <span>{prop.areaSqft.toLocaleString('en-IN')} sqft</span>}
-                  </div>
-                  <div className="mt-3 flex items-baseline gap-2">
-                    <span className="text-lg font-bold text-slate-900">{formatSalePrice(prop.pricePaise)}</span>
-                    {prop.pricePerSqftPaise != null && (
-                      <span className="text-xs text-slate-400">
-                        {formatSalePrice(prop.pricePerSqftPaise)}/sqft
-                      </span>
-                    )}
-                  </div>
-                </div>
-              </Link>
             ))}
           </div>
         )}
 
-        <div className="text-center mt-8">
-          <Link
-            href="/buy/search"
-            className="inline-flex items-center gap-2 bg-orange-500 hover:bg-orange-600 text-white font-semibold px-8 py-3 rounded-xl transition text-sm shadow-lg shadow-orange-500/20"
-          >
-            View All Properties
-            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
-            </svg>
+        {/* Empty state */}
+        {!loading && searched && results.length === 0 && (
+          <div className="text-center py-20">
+            <div className="w-20 h-20 rounded-full bg-gray-100 flex items-center justify-center mx-auto mb-4">
+              <svg className="w-10 h-10 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
+            </div>
+            <h3 className="text-lg font-semibold text-gray-700 mb-2">No properties found</h3>
+            <p className="text-sm text-gray-400 mb-6 max-w-md mx-auto">
+              Try adjusting your filters or searching in a different city.
+            </p>
+            <button
+              onClick={resetFilters}
+              className="bg-orange-500 hover:bg-orange-600 text-white px-6 py-2.5 rounded-xl text-sm font-semibold transition"
+            >
+              Reset All Filters
+            </button>
+          </div>
+        )}
+
+        {/* Results grid */}
+        {!loading && results.length > 0 && (
+          <>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+              {results.map((item, idx) => {
+                if (item.type === 'builder') {
+                  const p = item.data as BuilderProject;
+                  return (
+                    <Link
+                      key={`builder-${p.id}-${idx}`}
+                      href={`/projects/${p.id}`}
+                      className="bg-white border border-gray-100 rounded-2xl overflow-hidden hover:shadow-xl transition-shadow group"
+                    >
+                      <div className="relative h-52 bg-gray-100 overflow-hidden">
+                        {p.primaryPhotoUrl ? (
+                          <img src={imgSrc(p.primaryPhotoUrl)} alt={p.projectName} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-slate-100 to-slate-200">
+                            <svg className="w-16 h-16 text-slate-300" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" /></svg>
+                          </div>
+                        )}
+                        {/* Badge */}
+                        <span className="absolute top-3 left-3 bg-blue-600 text-white text-[10px] font-bold px-2.5 py-1 rounded-full tracking-wide shadow-sm">
+                          NEW PROJECT
+                        </span>
+                        {p.reraVerified && (
+                          <span className="absolute top-3 right-3 bg-green-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">
+                            RERA
+                          </span>
+                        )}
+                      </div>
+                      <div className="p-5">
+                        <h3 className="font-bold text-gray-900 text-sm truncate group-hover:text-orange-600 transition-colors">
+                          {p.projectName}
+                        </h3>
+                        <p className="text-xs text-gray-500 mt-1 truncate">
+                          by {p.builderName} {p.locality ? `| ${p.locality}` : ''}, {p.city}
+                        </p>
+                        <div className="flex items-center gap-3 mt-3 text-xs text-gray-500">
+                          {p.minBhk && p.maxBhk && (
+                            <span className="bg-gray-100 px-2 py-0.5 rounded-full font-medium">
+                              {p.minBhk === p.maxBhk ? `${p.minBhk} BHK` : `${p.minBhk}-${p.maxBhk} BHK`}
+                            </span>
+                          )}
+                          <span className="bg-gray-100 px-2 py-0.5 rounded-full font-medium capitalize">
+                            {statusLabel(p.projectStatus)}
+                          </span>
+                        </div>
+                        {/* Construction progress */}
+                        {p.constructionProgressPercent > 0 && (
+                          <div className="mt-3">
+                            <div className="flex items-center justify-between text-[11px] text-gray-500 mb-1">
+                              <span>Construction Progress</span>
+                              <span className="font-semibold text-gray-700">{p.constructionProgressPercent}%</span>
+                            </div>
+                            <div className="w-full bg-gray-100 rounded-full h-1.5">
+                              <div
+                                className="bg-gradient-to-r from-orange-400 to-orange-500 h-1.5 rounded-full transition-all"
+                                style={{ width: `${Math.min(p.constructionProgressPercent, 100)}%` }}
+                              />
+                            </div>
+                          </div>
+                        )}
+                        <div className="mt-3 flex items-baseline justify-between">
+                          <span className="text-lg font-bold text-gray-900">
+                            {formatSalePrice(p.minPricePaise)}
+                            {p.maxPricePaise && p.maxPricePaise !== p.minPricePaise && (
+                              <span className="text-sm font-medium text-gray-500"> - {formatSalePrice(p.maxPricePaise)}</span>
+                            )}
+                          </span>
+                          {p.possessionDate && (
+                            <span className="text-[11px] text-gray-400">
+                              Possession: {possessionLabel(p.possessionDate)}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </Link>
+                  );
+                } else {
+                  const p = item.data as SaleProperty;
+                  const propType = p.salePropertyType || p.propertyType || '';
+                  const badgeColor = p.transactionType === 'RESALE'
+                    ? 'bg-green-600'
+                    : propType === 'PLOT'
+                    ? 'bg-amber-600'
+                    : 'bg-purple-600';
+                  const badgeText = p.transactionType === 'RESALE'
+                    ? 'RESALE'
+                    : propType === 'PLOT'
+                    ? 'PLOT'
+                    : 'NEW BOOKING';
+                  return (
+                    <Link
+                      key={`sale-${p.id}-${idx}`}
+                      href={`/buy/${p.id}`}
+                      className="bg-white border border-gray-100 rounded-2xl overflow-hidden hover:shadow-xl transition-shadow group"
+                    >
+                      <div className="relative h-52 bg-gray-100 overflow-hidden">
+                        {p.primaryPhotoUrl ? (
+                          <img src={imgSrc(p.primaryPhotoUrl)} alt={p.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-slate-100 to-slate-200">
+                            <svg className="w-16 h-16 text-slate-300" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" /></svg>
+                          </div>
+                        )}
+                        <span className={`absolute top-3 left-3 ${badgeColor} text-white text-[10px] font-bold px-2.5 py-1 rounded-full tracking-wide shadow-sm`}>
+                          {badgeText}
+                        </span>
+                        {p.reraVerified && (
+                          <span className="absolute top-3 right-3 bg-green-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">
+                            RERA
+                          </span>
+                        )}
+                        <span className="absolute bottom-3 right-3 bg-white/90 text-gray-700 text-[10px] font-semibold px-2 py-0.5 rounded-full capitalize">
+                          {(propType || 'Property').toLowerCase().replace(/_/g, ' ')}
+                        </span>
+                      </div>
+                      <div className="p-5">
+                        <h3 className="font-bold text-gray-900 text-sm truncate group-hover:text-orange-600 transition-colors">
+                          {p.title}
+                        </h3>
+                        <p className="text-xs text-gray-500 mt-1 truncate">
+                          {p.locality ? `${p.locality}, ` : ''}{p.city}
+                        </p>
+                        <div className="flex items-center gap-3 mt-3 text-xs text-gray-500">
+                          {p.bedrooms != null && (
+                            <span className="bg-gray-100 px-2 py-0.5 rounded-full font-medium">{p.bedrooms} BHK</span>
+                          )}
+                          {p.bathrooms != null && (
+                            <span className="bg-gray-100 px-2 py-0.5 rounded-full font-medium">{p.bathrooms} Bath</span>
+                          )}
+                          {(p.carpetAreaSqft || p.builtUpAreaSqft || p.areaSqft) != null && (
+                            <span className="bg-gray-100 px-2 py-0.5 rounded-full font-medium">{(p.carpetAreaSqft || p.builtUpAreaSqft || p.areaSqft || 0).toLocaleString('en-IN')} sqft</span>
+                          )}
+                          {p.furnishing && (
+                            <span className="bg-gray-100 px-2 py-0.5 rounded-full font-medium capitalize">{p.furnishing.toLowerCase()}</span>
+                          )}
+                        </div>
+                        <div className="mt-3 flex items-baseline justify-between">
+                          <span className="text-lg font-bold text-gray-900">
+                            {formatSalePrice(p.askingPricePaise || p.pricePaise || 0)}
+                          </span>
+                          {p.pricePerSqftPaise != null && p.pricePerSqftPaise > 0 && (
+                            <span className="text-[11px] text-gray-400">
+                              {formatSalePrice(p.pricePerSqftPaise)}/sqft
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </Link>
+                  );
+                }
+              })}
+            </div>
+
+            {/* Pagination */}
+            {totalPages > 1 && (
+              <div className="flex items-center justify-center gap-2 mt-10">
+                <button
+                  onClick={() => fetchResults(page - 1)}
+                  disabled={page === 0}
+                  className="px-4 py-2 rounded-lg border border-gray-200 text-sm font-medium text-gray-600 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition"
+                >
+                  Previous
+                </button>
+                {Array.from({ length: Math.min(totalPages, 7) }, (_, i) => {
+                  let pageNum = i;
+                  if (totalPages > 7) {
+                    if (page < 4) pageNum = i;
+                    else if (page >= totalPages - 3) pageNum = totalPages - 7 + i;
+                    else pageNum = page - 3 + i;
+                  }
+                  return (
+                    <button
+                      key={pageNum}
+                      onClick={() => fetchResults(pageNum)}
+                      className={`w-10 h-10 rounded-lg text-sm font-medium transition ${
+                        page === pageNum
+                          ? 'bg-orange-500 text-white shadow-sm'
+                          : 'text-gray-600 hover:bg-gray-100'
+                      }`}
+                    >
+                      {pageNum + 1}
+                    </button>
+                  );
+                })}
+                <button
+                  onClick={() => fetchResults(page + 1)}
+                  disabled={page >= totalPages - 1}
+                  className="px-4 py-2 rounded-lg border border-gray-200 text-sm font-medium text-gray-600 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition"
+                >
+                  Next
+                </button>
+              </div>
+            )}
+          </>
+        )}
+      </section>
+
+      {/* ================================================================ */}
+      {/*  WHY SAFAR                                                       */}
+      {/* ================================================================ */}
+      <section className="bg-white py-16 px-4">
+        <div className="max-w-6xl mx-auto">
+          <div className="text-center mb-12">
+            <p className="text-orange-500 text-sm font-semibold tracking-wide uppercase mb-2">Advantages</p>
+            <h2 className="text-2xl sm:text-3xl font-extrabold text-gray-900">Why Buy on Safar?</h2>
+            <p className="text-gray-500 mt-3 max-w-md mx-auto text-sm">
+              A smarter way to find and buy your next property
+            </p>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            {WHY_SAFAR.map(item => (
+              <div key={item.title} className={`rounded-2xl border p-6 ${item.color} transition hover:shadow-lg`}>
+                <div className="mb-4">{item.icon}</div>
+                <h3 className="font-bold text-gray-900 mb-2">{item.title}</h3>
+                <p className="text-sm text-gray-600 leading-relaxed">{item.desc}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ================================================================ */}
+      {/*  CTA BANNER — 3 listing options                                  */}
+      {/* ================================================================ */}
+      <section className="bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 py-16 px-4">
+        <div className="max-w-5xl mx-auto text-center mb-10">
+          <h2 className="text-2xl sm:text-3xl font-bold text-white mb-2">List on Safar</h2>
+          <p className="text-slate-400 text-sm">Reach thousands of verified buyers and tenants across India</p>
+        </div>
+        <div className="max-w-5xl mx-auto grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+          {/* Sell Property */}
+          <Link href="/sell" className="group bg-slate-800/60 border border-slate-700 rounded-2xl p-6 hover:border-orange-500/50 hover:bg-slate-800 transition-all">
+            <div className="w-12 h-12 rounded-xl bg-orange-500/10 flex items-center justify-center mb-4 group-hover:bg-orange-500/20 transition">
+              <svg className="w-6 h-6 text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+              </svg>
+            </div>
+            <h3 className="text-lg font-bold text-white mb-1 group-hover:text-orange-400 transition">Sell Your Property</h3>
+            <p className="text-slate-400 text-sm leading-relaxed mb-4">List apartments, villas, plots or independent houses for resale</p>
+            <span className="text-orange-400 text-sm font-semibold flex items-center gap-1">
+              List Now
+              <svg className="w-4 h-4 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+              </svg>
+            </span>
+          </Link>
+
+          {/* Builder Project */}
+          <Link href="/builder/new-project" className="group bg-slate-800/60 border border-slate-700 rounded-2xl p-6 hover:border-blue-500/50 hover:bg-slate-800 transition-all">
+            <div className="w-12 h-12 rounded-xl bg-blue-500/10 flex items-center justify-center mb-4 group-hover:bg-blue-500/20 transition">
+              <svg className="w-6 h-6 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+              </svg>
+            </div>
+            <h3 className="text-lg font-bold text-white mb-1 group-hover:text-blue-400 transition">Builder Project</h3>
+            <p className="text-slate-400 text-sm leading-relaxed mb-4">List new launches, under-construction or ready-to-move projects</p>
+            <span className="text-blue-400 text-sm font-semibold flex items-center gap-1">
+              Add Project
+              <svg className="w-4 h-4 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+              </svg>
+            </span>
+          </Link>
+
+          {/* List for Rent */}
+          <Link href="/host/new" className="group bg-slate-800/60 border border-slate-700 rounded-2xl p-6 hover:border-green-500/50 hover:bg-slate-800 transition-all">
+            <div className="w-12 h-12 rounded-xl bg-green-500/10 flex items-center justify-center mb-4 group-hover:bg-green-500/20 transition">
+              <svg className="w-6 h-6 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+              </svg>
+            </div>
+            <h3 className="text-lg font-bold text-white mb-1 group-hover:text-green-400 transition">List for Rent</h3>
+            <p className="text-slate-400 text-sm leading-relaxed mb-4">List homes, PGs, hotels or commercial spaces for short or long-term rent</p>
+            <span className="text-green-400 text-sm font-semibold flex items-center gap-1">
+              Start Hosting
+              <svg className="w-4 h-4 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+              </svg>
+            </span>
+          </Link>
+
+          {/* Broker / Agent */}
+          <Link href="/broker" className="group bg-slate-800/60 border border-slate-700 rounded-2xl p-6 hover:border-purple-500/50 hover:bg-slate-800 transition-all">
+            <div className="w-12 h-12 rounded-xl bg-purple-500/10 flex items-center justify-center mb-4 group-hover:bg-purple-500/20 transition">
+              <svg className="w-6 h-6 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+              </svg>
+            </div>
+            <h3 className="text-lg font-bold text-white mb-1 group-hover:text-purple-400 transition">Broker / Agent</h3>
+            <p className="text-slate-400 text-sm leading-relaxed mb-4">List multiple properties, manage clients and earn commission on deals</p>
+            <span className="text-purple-400 text-sm font-semibold flex items-center gap-1">
+              Register as Broker
+              <svg className="w-4 h-4 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+              </svg>
+            </span>
           </Link>
         </div>
       </section>
-    </>
+    </div>
   );
 }

@@ -25,7 +25,7 @@ declare global {
   }
 }
 
-type Step = 'input' | 'password' | 'otp' | 'name' | 'set-password' | 'forgot-password';
+type Step = 'input' | 'password' | 'otp' | 'name' | 'set-password' | 'forgot-password' | 'pin' | 'set-pin';
 type AuthMethod = 'phone' | 'email';
 
 const COUNTRY_CODES = [
@@ -131,6 +131,14 @@ export default function AuthPage() {
   const [passwordError, setPasswordError] = useState('');
   const [pendingAuth, setPendingAuth] = useState<any>(null);
   const [failedAttempts, setFailedAttempts] = useState(0);
+
+  // PIN auth state
+  const [pin, setPin] = useState(['', '', '', '', '', '']);
+  const [newPin, setNewPin] = useState(['', '', '', '', '', '']);
+  const [hasPin, setHasPin] = useState(false);
+  const [pinError, setPinError] = useState('');
+  const pinRefs = useRef<(HTMLInputElement | null)[]>([]);
+  const newPinRefs = useRef<(HTMLInputElement | null)[]>([]);
 
   // -- Admin impersonation: handle tokens from admin portal --
   useEffect(() => {
@@ -259,11 +267,26 @@ export default function AuthPage() {
           setStep('otp');
         }
       } else {
-        // Phone: existing flow unchanged
-        await api.sendOtp(`${countryCode}${inputValue}`);
+        // Phone: check if user has PIN set for quick login
         setAuthMethod('phone');
+        const phone = `${countryCode}${inputValue}`;
+        try {
+          const pinStatus = await api.checkPinStatus(phone);
+          if (pinStatus.hasPin && !pinStatus.pinLocked) {
+            setHasPin(true);
+            setStep('pin');
+            setPin(['', '', '', '', '', '']);
+            setPinError('');
+            localStorage.setItem('last_login_phone', phone);
+            setTimeout(() => pinRefs.current[0]?.focus(), 100);
+            setLoading(false);
+            return;
+          }
+        } catch { /* PIN check failed, fall through to OTP */ }
+        // No PIN or PIN locked — send OTP
+        await api.sendOtp(phone);
         setStep('otp');
-        localStorage.setItem('last_login_phone', `${countryCode}${inputValue}`);
+        localStorage.setItem('last_login_phone', phone);
         setResendTimer(30);
         setOtp(['', '', '', '', '', '']);
         setTimeout(() => otpRefs.current[0]?.focus(), 100);
@@ -412,10 +435,18 @@ export default function AuthPage() {
 
       // For email users: check if they have a password. If not, offer to set one.
       if (authMethod === 'email' && !hasPasswordOption) {
-        // User logged in via OTP and has no password - offer to set one
         setPendingAuth(auth);
         setStep('set-password');
         setNewPassword('');
+        return;
+      }
+
+      // For phone users without PIN: offer to set one for quick login next time
+      if (authMethod === 'phone' && !hasPin) {
+        setPendingAuth(auth);
+        setStep('set-pin');
+        setNewPin(['', '', '', '', '', '']);
+        setTimeout(() => newPinRefs.current[0]?.focus(), 100);
         return;
       }
 
@@ -457,7 +488,11 @@ export default function AuthPage() {
         return;
       }
 
-      saveAuthAndRedirect(auth, router, redirect);
+      // Phone user — offer PIN setup
+      setPendingAuth(auth);
+      setStep('set-pin');
+      setNewPin(['', '', '', '', '', '']);
+      setTimeout(() => newPinRefs.current[0]?.focus(), 100);
     } catch (e: any) {
       setError(e.message || 'Registration failed');
     } finally {
@@ -482,6 +517,75 @@ export default function AuthPage() {
   }
 
   function handleSkipSetPassword() {
+    if (step === 'set-pin') {
+      saveAuthAndRedirect(pendingAuth, router, redirect);
+      return;
+    }
+    // After password skip, offer PIN setup
+    setStep('set-pin');
+    setNewPin(['', '', '', '', '', '']);
+    setTimeout(() => newPinRefs.current[0]?.focus(), 100);
+  }
+
+  // -- PIN sign-in --
+  async function handlePinSignIn() {
+    const pinStr = pin.join('');
+    if (pinStr.length < 4) {
+      setPinError('Please enter your PIN');
+      return;
+    }
+    setLoading(true);
+    setPinError('');
+    try {
+      const phone = `${countryCode}${inputValue}`;
+      const auth = await api.pinSignIn(pinStr, phone);
+      saveAuthAndRedirect(auth, router, redirect);
+    } catch (e: any) {
+      setPinError(e.message || 'Incorrect PIN');
+      setPin(['', '', '', '', '', '']);
+      setTimeout(() => pinRefs.current[0]?.focus(), 100);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  // -- Switch from PIN to OTP --
+  async function handleUseOtpFromPin() {
+    setLoading(true);
+    setPinError('');
+    try {
+      await api.sendOtp(`${countryCode}${inputValue}`);
+      setStep('otp');
+      setResendTimer(30);
+      setOtp(['', '', '', '', '', '']);
+      setTimeout(() => otpRefs.current[0]?.focus(), 100);
+    } catch (e: any) {
+      setPinError(e.message || 'Failed to send OTP');
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  // -- Set PIN (after OTP login) --
+  async function handleSetPin() {
+    const pinStr = newPin.join('');
+    if (pinStr.length < 4) {
+      setError('PIN must be at least 4 digits');
+      return;
+    }
+    setLoading(true);
+    setError('');
+    try {
+      await api.setPin(pinStr, pendingAuth.accessToken);
+      console.log('PIN set successfully');
+    } catch (e: any) {
+      console.error('Failed to set PIN:', e?.message || e);
+      // Still proceed — PIN is optional
+    }
+    saveAuthAndRedirect(pendingAuth, router, redirect);
+  }
+
+  function handleSkipSetPin() {
     saveAuthAndRedirect(pendingAuth, router, redirect);
   }
 
@@ -562,6 +666,17 @@ export default function AuthPage() {
       } else {
         setStep('input');
       }
+    } else if (step === 'pin') {
+      setStep('input');
+      setPin(['', '', '', '', '', '']);
+      setPinError('');
+    } else if (step === 'set-pin') {
+      // Skip PIN setup and proceed
+      if (pendingAuth) {
+        saveAuthAndRedirect(pendingAuth, router, redirect);
+      } else {
+        setStep('input');
+      }
     } else {
       setStep('input');
       setOtp(['', '', '', '', '', '']);
@@ -578,6 +693,8 @@ export default function AuthPage() {
       case 'name': return 'Finish signing up';
       case 'set-password': return 'Set a password';
       case 'forgot-password': return 'Reset your password';
+      case 'pin': return 'Enter your PIN';
+      case 'set-pin': return 'Set a quick login PIN';
     }
   }
 
@@ -1029,6 +1146,139 @@ export default function AuthPage() {
                     className="text-sm text-gray-500 hover:text-gray-700 underline"
                   >
                     Maybe later
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* == Step: PIN Login == */}
+            {step === 'pin' && (
+              <div className="space-y-5">
+                <p className="text-sm text-gray-600">
+                  Enter your PIN to sign in to{' '}
+                  <span className="font-semibold text-gray-900">{countryCode}{inputValue}</span>
+                </p>
+
+                {/* 6-digit PIN boxes */}
+                <div className="flex justify-center gap-2.5">
+                  {pin.map((digit, i) => (
+                    <input
+                      key={i}
+                      ref={el => { pinRefs.current[i] = el; }}
+                      type="password"
+                      inputMode="numeric"
+                      maxLength={1}
+                      value={digit}
+                      onChange={(e) => {
+                        const val = e.target.value.replace(/\D/g, '');
+                        const newArr = [...pin];
+                        newArr[i] = val;
+                        setPin(newArr);
+                        setPinError('');
+                        if (val && i < 5) pinRefs.current[i + 1]?.focus();
+                        // Auto-submit when all 6 digits entered — use newArr directly (not stale state)
+                        const full = newArr.join('');
+                        if (full.length === 6) {
+                          setTimeout(async () => {
+                            setLoading(true);
+                            setPinError('');
+                            try {
+                              const phone = `${countryCode}${inputValue}`;
+                              const auth = await api.pinSignIn(full, phone);
+                              saveAuthAndRedirect(auth, router, redirect);
+                            } catch (err: any) {
+                              setPinError(err.message || 'Incorrect PIN');
+                              setPin(['', '', '', '', '', '']);
+                              setTimeout(() => pinRefs.current[0]?.focus(), 100);
+                            } finally {
+                              setLoading(false);
+                            }
+                          }, 100);
+                        }
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Backspace' && !pin[i] && i > 0) pinRefs.current[i - 1]?.focus();
+                        if (e.key === 'Enter') handlePinSignIn();
+                      }}
+                      className={`w-12 h-14 text-center text-xl font-bold border-2 rounded-xl outline-none transition ${
+                        pinError ? 'border-red-400 bg-red-50' : 'border-gray-200 focus:border-orange-500 focus:ring-2 focus:ring-orange-200'
+                      }`}
+                    />
+                  ))}
+                </div>
+
+                {pinError && <p className="text-sm text-red-500 text-center">{pinError}</p>}
+
+                <button
+                  onClick={handlePinSignIn}
+                  disabled={loading || pin.join('').length < 4}
+                  className="w-full bg-gradient-to-r from-orange-500 to-rose-500 hover:from-orange-600 hover:to-rose-600 text-white font-semibold py-3.5 rounded-xl disabled:opacity-50 transition text-sm"
+                >
+                  {loading ? 'Signing in...' : 'Sign In with PIN'}
+                </button>
+
+                <div className="text-center space-y-2">
+                  <button onClick={handleUseOtpFromPin} className="text-sm text-orange-500 hover:text-orange-600 font-medium">
+                    Use OTP instead
+                  </button>
+                  <p className="text-xs text-gray-400">Forgot PIN? Use OTP to sign in and reset it.</p>
+                </div>
+              </div>
+            )}
+
+            {/* == Step: Set PIN (after OTP login) == */}
+            {step === 'set-pin' && (
+              <div className="space-y-5">
+                <div className="text-center">
+                  <div className="w-16 h-16 bg-orange-50 rounded-full flex items-center justify-center mx-auto mb-3">
+                    <svg className="w-8 h-8 text-orange-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                    </svg>
+                  </div>
+                  <p className="text-sm text-gray-600">
+                    Set a 4-6 digit PIN for instant sign-in next time.<br />
+                    <span className="text-gray-400">No OTP needed when you use your PIN.</span>
+                  </p>
+                </div>
+
+                {/* 6-digit PIN boxes */}
+                <div className="flex justify-center gap-2.5">
+                  {newPin.map((digit, i) => (
+                    <input
+                      key={i}
+                      ref={el => { newPinRefs.current[i] = el; }}
+                      type="password"
+                      inputMode="numeric"
+                      maxLength={1}
+                      value={digit}
+                      onChange={(e) => {
+                        const val = e.target.value.replace(/\D/g, '');
+                        const newArr = [...newPin];
+                        newArr[i] = val;
+                        setNewPin(newArr);
+                        setError('');
+                        if (val && i < 5) newPinRefs.current[i + 1]?.focus();
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Backspace' && !newPin[i] && i > 0) newPinRefs.current[i - 1]?.focus();
+                        if (e.key === 'Enter') handleSetPin();
+                      }}
+                      className="w-12 h-14 text-center text-xl font-bold border-2 border-gray-200 rounded-xl outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-200 transition"
+                    />
+                  ))}
+                </div>
+
+                <button
+                  onClick={handleSetPin}
+                  disabled={loading || newPin.join('').length < 4}
+                  className="w-full bg-gradient-to-r from-orange-500 to-rose-500 hover:from-orange-600 hover:to-rose-600 text-white font-semibold py-3.5 rounded-xl disabled:opacity-50 transition text-sm"
+                >
+                  {loading ? 'Setting PIN...' : 'Set PIN'}
+                </button>
+
+                <div className="text-center">
+                  <button onClick={handleSkipSetPin} className="text-sm text-gray-500 hover:text-gray-700 underline">
+                    Skip for now
                   </button>
                 </div>
               </div>

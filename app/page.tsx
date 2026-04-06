@@ -1,5 +1,4 @@
 import SearchBar from '@/components/SearchBar';
-import PropertyTypeBar from '@/components/PropertyTypeBar';
 import RecentSearches from '@/components/RecentSearches';
 import StillInterested from '@/components/StillInterested';
 import Recommendations from '@/components/Recommendations';
@@ -7,18 +6,19 @@ import TrendingListings from '@/components/TrendingListings';
 import { OrganizationJsonLd, WebsiteJsonLd } from '@/components/JsonLd';
 import Link from 'next/link';
 
-const TRUST_BADGES = [
-  { icon: '0%', label: 'Zero commission', sub: 'Hosts keep everything' },
-  { icon: '✓', label: 'Verified listings', sub: 'Every property checked' },
-  { icon: '⚡', label: 'Instant UPI', sub: 'Pay & get paid instantly' },
-  { icon: '🤖', label: 'AI-powered', sub: 'Smart pricing & messaging' },
-];
-
-const STATS = [
-  { value: '10K+', label: 'Listings' },
-  { value: '50+', label: 'Cities' },
-  { value: '4.8★', label: 'Avg Rating' },
-  { value: '₹0', label: 'Deposit' },
+const PROPERTY_TYPES = [
+  { key: 'HOME',       label: 'Homes',         icon: '🏡' },
+  { key: 'ROOM',       label: 'Rooms',         icon: '🛏️' },
+  { key: 'VILLA',      label: 'Villas',        icon: '🏰' },
+  { key: 'HOTEL',      label: 'Hotels',        icon: '🏨' },
+  { key: 'RESORT',     label: 'Resorts',       icon: '🌴' },
+  { key: 'HOMESTAY',   label: 'Homestays',     icon: '🏘️' },
+  { key: 'PG',         label: 'PG',            icon: '🛌' },
+  { key: 'COLIVING',   label: 'Co-living',     icon: '👥' },
+  { key: 'FARMSTAY',   label: 'Farm Stays',    icon: '🌾' },
+  { key: 'HOSTEL',     label: 'Hostels',       icon: '🎒' },
+  { key: 'UNIQUE',     label: 'Unique Stays',  icon: '✨' },
+  { key: 'COMMERCIAL', label: 'Commercial',    icon: '🏢' },
 ];
 
 export default async function HomePage() {
@@ -27,86 +27,71 @@ export default async function HomePage() {
     <>
       <OrganizationJsonLd />
       <WebsiteJsonLd />
-      {/* ── Hero Section ── */}
-      <section className="relative overflow-hidden">
-        {/* Background: deep gradient with texture */}
-        <div className="absolute inset-0 bg-gradient-to-br from-slate-900 via-orange-950 to-slate-900" />
-        {/* Decorative blobs */}
-        <div className="absolute top-[-20%] right-[-10%] w-[500px] h-[500px] bg-orange-500/20 rounded-full blur-[120px]" />
-        <div className="absolute bottom-[-30%] left-[-10%] w-[400px] h-[400px] bg-pink-500/15 rounded-full blur-[100px]" />
-        <div className="absolute top-[20%] left-[15%] w-[200px] h-[200px] bg-amber-400/10 rounded-full blur-[80px]" />
+      {/* ── Hero Section (Booking.com style) ── */}
+      <section className="relative z-50 overflow-visible bg-[#003B95]">
+        {/* Subtle pattern overlay */}
+        <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiNmZmZmZmYiIGZpbGwtb3BhY2l0eT0iMC4wMyI+PHBhdGggZD0iTTM2IDE4YzEuNjU3IDAgMy0xLjM0MyAzLTNzLTEuMzQzLTMtMy0zLTMgMS4zNDMtMyAzIDEuMzQzIDMgMyAzem0tMjQgMjRjMS42NTcgMCAzLTEuMzQzIDMtM3MtMS4zNDMtMy0zLTMtMyAxLjM0My0zIDMgMS4zNDMgMyAzIDN6Ii8+PC9nPjwvZz48L3N2Zz4=')] opacity-50" />
 
-        <div className="relative z-10 max-w-5xl mx-auto px-4 pt-16 pb-20 sm:pt-24 sm:pb-28">
-          {/* Eyebrow */}
-          <div className="flex justify-center mb-6">
-            <span className="inline-flex items-center gap-2 bg-white/10 backdrop-blur-sm border border-white/10 text-orange-300 text-xs font-semibold px-4 py-1.5 rounded-full tracking-wide uppercase">
-              <span className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
-              India&#39;s zero-commission travel platform
-            </span>
+        <div className="relative z-10 max-w-5xl mx-auto px-4 sm:px-6 pt-12 pb-14 sm:pt-16 sm:pb-16">
+          {/* Headline — left aligned like Booking.com */}
+          <div className="max-w-2xl">
+            <h1 className="text-white text-3xl sm:text-[42px] font-bold leading-tight tracking-[-0.02em]">
+              Find your next stay
+            </h1>
+            <p className="text-white/80 text-base sm:text-lg mt-2 leading-relaxed">
+              Search deals on homes, hotels, PGs & much more...
+            </p>
           </div>
 
-          {/* Headline */}
-          <h1 className="text-center text-4xl sm:text-5xl md:text-6xl font-extrabold tracking-tight leading-[1.1]">
-            <span className="text-white">Find your </span>
-            <span className="bg-gradient-to-r from-orange-400 via-amber-300 to-orange-400 bg-clip-text text-transparent">
-              perfect stay
-            </span>
-            <br className="hidden sm:block" />
-            <span className="text-white"> in </span>
-            <span className="bg-gradient-to-r from-orange-400 to-pink-400 bg-clip-text text-transparent">
-              India
-            </span>
-          </h1>
-
-          <p className="text-center text-white/60 text-base sm:text-lg mt-5 mb-10 max-w-xl mx-auto leading-relaxed">
-            Homes, villas, PGs, hotels — book verified stays across 50+ cities.
-            <br className="hidden sm:block" />
-            <span className="text-orange-300/80">Hosts keep 100% of earnings.</span>
-          </p>
-
-          {/* Search Bar */}
-          <div className="max-w-2xl mx-auto">
+          {/* Search Bar — full width */}
+          <div className="mt-8">
             <SearchBar />
           </div>
 
-          {/* Trust Badges */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-10 max-w-2xl mx-auto">
-            {TRUST_BADGES.map((badge) => (
-              <div key={badge.label}
-                className="flex items-center gap-2.5 bg-white/[0.06] backdrop-blur-sm border border-white/[0.08] rounded-xl px-3 py-2.5 hover:bg-white/[0.1] transition-colors">
-                <div className="w-9 h-9 rounded-lg bg-orange-500/20 flex items-center justify-center text-orange-300 font-bold text-sm shrink-0">
-                  {badge.icon}
-                </div>
-                <div className="min-w-0">
-                  <p className="text-white text-xs font-semibold truncate">{badge.label}</p>
-                  <p className="text-white/40 text-[10px] truncate">{badge.sub}</p>
-                </div>
-              </div>
+          {/* Property types — grid that wraps to fit all */}
+          <div className="flex flex-wrap gap-2 mt-8">
+            {PROPERTY_TYPES.map(({ key, label, icon }) => (
+              <Link key={key} href={`/search?type=${key}`}
+                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full whitespace-nowrap text-sm font-medium bg-white/95 text-[#003B95] hover:bg-white hover:shadow-md hover:scale-105 transition-all duration-150 shadow-sm">
+                <span className="text-base leading-none">{icon}</span>
+                <span>{label}</span>
+              </Link>
             ))}
-          </div>
-
-          {/* Stats Row */}
-          <div className="flex justify-center gap-8 sm:gap-14 mt-10">
-            {STATS.map((s) => (
-              <div key={s.label} className="text-center">
-                <p className="text-2xl sm:text-3xl font-extrabold text-white">{s.value}</p>
-                <p className="text-white/40 text-xs mt-0.5">{s.label}</p>
-              </div>
-            ))}
-          </div>
-
-          {/* CTA Button */}
-          <div className="mt-10 flex justify-center">
-            <Link href="/search"
-              className="bg-white text-slate-900 font-semibold px-8 py-3 rounded-xl hover:bg-orange-50 transition text-sm shadow-lg shadow-black/20">
-              Explore stays
-            </Link>
           </div>
         </div>
       </section>
 
-      {/* Property Type Bar — Airbnb-style sticky category row */}
-      <PropertyTypeBar />
+      {/* ── Zero Commission Banner (below hero, like Genius strip) ── */}
+      <section className="bg-gradient-to-r from-orange-500 to-amber-500">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 py-4 flex flex-col sm:flex-row items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center shrink-0">
+              <span className="text-white font-extrabold text-sm">0%</span>
+            </div>
+            <div>
+              <p className="text-white font-bold text-sm sm:text-base">Zero Commission Platform</p>
+              <p className="text-white/80 text-xs sm:text-sm">Hosts keep 100% of earnings. Verified listings across 50+ Indian cities.</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-4 sm:gap-6 shrink-0">
+            <div className="text-center">
+              <p className="text-white font-extrabold text-lg">10K+</p>
+              <p className="text-white/70 text-[10px] uppercase tracking-wide">Listings</p>
+            </div>
+            <div className="w-px h-8 bg-white/30" />
+            <div className="text-center">
+              <p className="text-white font-extrabold text-lg">4.8</p>
+              <p className="text-white/70 text-[10px] uppercase tracking-wide">Avg Rating</p>
+            </div>
+            <div className="w-px h-8 bg-white/30" />
+            <div className="text-center">
+              <p className="text-white font-extrabold text-lg">50+</p>
+              <p className="text-white/70 text-[10px] uppercase tracking-wide">Cities</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
 
       {/* Recent Searches */}
       <RecentSearches />

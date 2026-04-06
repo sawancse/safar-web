@@ -1,9 +1,16 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { api } from '@/lib/api';
-import { formatPaise } from '@/lib/utils';
+
+type TicketComment = {
+  id: string;
+  authorName: string;
+  authorRole: string;
+  commentText: string;
+  createdAt: string;
+};
 
 type MaintenanceRequest = {
   id: string;
@@ -16,17 +23,22 @@ type MaintenanceRequest = {
   photoUrls?: string[];
   rating?: number;
   feedback?: string;
+  slaDeadlineAt?: string;
+  slaBreached?: boolean;
+  escalationLevel?: number;
+  reopenCount?: number;
   createdAt: string;
   updatedAt: string;
 };
 
-const STATUS_TABS = ['ALL', 'OPEN', 'IN_PROGRESS', 'RESOLVED'] as const;
+const STATUS_TABS = ['ALL', 'OPEN', 'ASSIGNED', 'IN_PROGRESS', 'RESOLVED', 'REOPENED', 'CLOSED'] as const;
 
 const STATUS_COLORS: Record<string, string> = {
   OPEN: 'bg-red-100 text-red-700',
-  ACKNOWLEDGED: 'bg-yellow-100 text-yellow-700',
+  ASSIGNED: 'bg-yellow-100 text-yellow-700',
   IN_PROGRESS: 'bg-blue-100 text-blue-700',
   RESOLVED: 'bg-green-100 text-green-700',
+  REOPENED: 'bg-purple-100 text-purple-700',
   CLOSED: 'bg-gray-100 text-gray-500',
 };
 
@@ -37,6 +49,12 @@ const PRIORITY_COLORS: Record<string, string> = {
   URGENT: 'bg-red-100 text-red-700',
 };
 
+const ESCALATION_COLORS: Record<number, string> = {
+  1: 'bg-green-100 text-green-700',
+  2: 'bg-yellow-100 text-yellow-700',
+  3: 'bg-red-100 text-red-700',
+};
+
 const CATEGORIES = [
   'PLUMBING',
   'ELECTRICAL',
@@ -44,10 +62,47 @@ const CATEGORIES = [
   'APPLIANCE',
   'CLEANING',
   'PEST_CONTROL',
+  'HOUSEKEEPING',
+  'FOOD_MEALS',
+  'WIFI_INTERNET',
+  'WATER',
+  'ELECTRICITY',
+  'SECURITY',
+  'NOISE_COMPLAINT',
+  'ROOMMATE_ISSUE',
+  'BILLING_PAYMENT',
+  'AC_COOLING',
+  'COMMON_AREA',
+  'PARKING',
+  'LAUNDRY',
   'OTHER',
 ] as const;
 
 const PRIORITIES = ['LOW', 'MEDIUM', 'HIGH', 'URGENT'] as const;
+
+function formatCategoryLabel(cat: string) {
+  return cat.replace(/_/g, ' ');
+}
+
+function getSlaRemainingText(deadlineStr: string): string {
+  const now = Date.now();
+  const deadline = new Date(deadlineStr).getTime();
+  const diff = deadline - now;
+  if (diff <= 0) return 'Overdue';
+  const hours = Math.floor(diff / (1000 * 60 * 60));
+  const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+  if (hours > 24) {
+    const days = Math.floor(hours / 24);
+    return `${days}d ${hours % 24}h left`;
+  }
+  return hours > 0 ? `${hours}h ${minutes}m left` : `${minutes}m left`;
+}
+
+function isWithin48Hours(dateStr: string): boolean {
+  const resolved = new Date(dateStr).getTime();
+  const now = Date.now();
+  return now - resolved < 48 * 60 * 60 * 1000;
+}
 
 export default function MaintenancePage() {
   const router = useRouter();
@@ -69,6 +124,24 @@ export default function MaintenancePage() {
   // Rate form
   const [rateStars, setRateStars] = useState(5);
   const [rateFeedback, setRateFeedback] = useState('');
+
+  // Reopen modal
+  const [showReopenModal, setShowReopenModal] = useState<string | null>(null);
+  const [reopenReason, setReopenReason] = useState('');
+
+  // Comment thread state
+  const [expandedTicket, setExpandedTicket] = useState<string | null>(null);
+  const [comments, setComments] = useState<Record<string, TicketComment[]>>({});
+  const [commentsLoading, setCommentsLoading] = useState<string | null>(null);
+  const [newComment, setNewComment] = useState('');
+  const [commentSubmitting, setCommentSubmitting] = useState(false);
+
+  // SLA countdown refresh
+  const [, setTick] = useState(0);
+  useEffect(() => {
+    const interval = setInterval(() => setTick((t) => t + 1), 60000);
+    return () => clearInterval(interval);
+  }, []);
 
   useEffect(() => {
     loadData();
@@ -150,6 +223,83 @@ export default function MaintenancePage() {
     }
   }
 
+  async function handleReopen(requestId: string) {
+    const token = localStorage.getItem('access_token');
+    if (!token || !tenancyId || !reopenReason.trim()) return;
+    setSubmitting(true);
+    try {
+      await api.reopenTicket(tenancyId, requestId, reopenReason);
+      setShowReopenModal(null);
+      setReopenReason('');
+      setLoading(true);
+      await loadData();
+    } catch {
+      alert('Failed to reopen ticket');
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  async function handleClose(requestId: string) {
+    const token = localStorage.getItem('access_token');
+    if (!token || !tenancyId) return;
+    if (!confirm('Confirm this issue has been resolved?')) return;
+    try {
+      await api.closeTicket(tenancyId, requestId);
+      setLoading(true);
+      await loadData();
+    } catch {
+      alert('Failed to close ticket');
+    }
+  }
+
+  async function loadComments(requestId: string) {
+    const token = localStorage.getItem('access_token');
+    if (!token || !tenancyId) return;
+    setCommentsLoading(requestId);
+    try {
+      const data = await api.getTicketComments(tenancyId, requestId);
+      setComments((prev) => ({ ...prev, [requestId]: Array.isArray(data) ? data : data?.content ?? [] }));
+    } catch {
+      setComments((prev) => ({ ...prev, [requestId]: [] }));
+    } finally {
+      setCommentsLoading(null);
+    }
+  }
+
+  function toggleComments(requestId: string) {
+    if (expandedTicket === requestId) {
+      setExpandedTicket(null);
+    } else {
+      setExpandedTicket(requestId);
+      if (!comments[requestId]) {
+        loadComments(requestId);
+      }
+    }
+  }
+
+  async function handleAddComment(requestId: string) {
+    const token = localStorage.getItem('access_token');
+    if (!token || !tenancyId || !newComment.trim()) return;
+    setCommentSubmitting(true);
+    try {
+      await api.addTicketComment(tenancyId, requestId, { commentText: newComment.trim() });
+      setNewComment('');
+      await loadComments(requestId);
+    } catch {
+      alert('Failed to add comment');
+    } finally {
+      setCommentSubmitting(false);
+    }
+  }
+
+  const ROLE_BADGE_COLORS: Record<string, string> = {
+    TENANT: 'bg-blue-100 text-blue-700',
+    MANAGER: 'bg-orange-100 text-orange-700',
+    MAINTENANCE: 'bg-green-100 text-green-700',
+    ADMIN: 'bg-red-100 text-red-700',
+  };
+
   if (loading) {
     return (
       <div className="max-w-4xl mx-auto px-4 py-20 text-center text-gray-400">
@@ -186,7 +336,7 @@ export default function MaintenancePage() {
                 : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
             }`}
           >
-            {tab.replace('_', ' ')}
+            {tab.replace(/_/g, ' ')}
           </button>
         ))}
       </div>
@@ -199,7 +349,7 @@ export default function MaintenancePage() {
           <p className="text-xs text-gray-400 mt-1">
             {activeTab === 'ALL'
               ? 'Submit a request when something needs fixing'
-              : `No ${activeTab.replace('_', ' ').toLowerCase()} requests`}
+              : `No ${activeTab.replace(/_/g, ' ').toLowerCase()} requests`}
           </p>
         </div>
       ) : (
@@ -218,13 +368,14 @@ export default function MaintenancePage() {
                     STATUS_COLORS[req.status] || 'bg-gray-100 text-gray-500'
                   }`}
                 >
-                  {req.status.replace('_', ' ')}
+                  {req.status.replace(/_/g, ' ')}
                 </span>
               </div>
 
-              <div className="flex flex-wrap items-center gap-2 mb-3">
+              {/* Category + Priority badges */}
+              <div className="flex flex-wrap items-center gap-2 mb-2">
                 <span className="text-xs font-medium px-2 py-0.5 rounded bg-gray-100 text-gray-600">
-                  {req.category.replace('_', ' ')}
+                  {formatCategoryLabel(req.category)}
                 </span>
                 <span
                   className={`text-xs font-medium px-2 py-0.5 rounded ${
@@ -240,6 +391,35 @@ export default function MaintenancePage() {
                 )}
               </div>
 
+              {/* SLA + Escalation info line */}
+              <div className="flex flex-wrap items-center gap-2 mb-3">
+                {req.slaDeadlineAt && (
+                  req.slaBreached ? (
+                    <span className="text-xs font-semibold px-2 py-0.5 rounded bg-red-100 text-red-700">
+                      SLA Breached
+                    </span>
+                  ) : (
+                    <span className="text-xs font-medium px-2 py-0.5 rounded bg-emerald-100 text-emerald-700">
+                      {getSlaRemainingText(req.slaDeadlineAt)}
+                    </span>
+                  )
+                )}
+                {req.escalationLevel != null && req.escalationLevel > 0 && (
+                  <span
+                    className={`text-xs font-semibold px-2 py-0.5 rounded ${
+                      ESCALATION_COLORS[req.escalationLevel] || 'bg-gray-100 text-gray-600'
+                    }`}
+                  >
+                    L{req.escalationLevel}
+                  </span>
+                )}
+                {req.reopenCount != null && req.reopenCount > 0 && (
+                  <span className="text-xs font-medium px-2 py-0.5 rounded bg-purple-100 text-purple-700">
+                    Reopened {req.reopenCount}x
+                  </span>
+                )}
+              </div>
+
               <div className="flex items-center justify-between">
                 <span className="text-xs text-gray-400">
                   {new Date(req.createdAt).toLocaleDateString('en-IN', {
@@ -249,24 +429,127 @@ export default function MaintenancePage() {
                   })}
                 </span>
 
-                {req.status === 'RESOLVED' && !req.rating && (
+                <div className="flex items-center gap-3">
+                  {/* Reopen button - only on RESOLVED within 48hr */}
+                  {req.status === 'RESOLVED' && isWithin48Hours(req.updatedAt) && (
+                    <button
+                      onClick={() => {
+                        setShowReopenModal(req.id);
+                        setReopenReason('');
+                      }}
+                      className="text-xs font-semibold text-purple-600 hover:text-purple-700"
+                    >
+                      Reopen
+                    </button>
+                  )}
+
+                  {/* Close button - on RESOLVED tickets */}
+                  {req.status === 'RESOLVED' && (
+                    <button
+                      onClick={() => handleClose(req.id)}
+                      className="text-xs font-semibold text-gray-500 hover:text-gray-700"
+                    >
+                      Close
+                    </button>
+                  )}
+
+                  {/* Rate button */}
+                  {req.status === 'RESOLVED' && !req.rating && (
+                    <button
+                      onClick={() => {
+                        setShowRateModal(req.id);
+                        setRateStars(5);
+                        setRateFeedback('');
+                      }}
+                      className="text-xs font-semibold text-orange-500 hover:text-orange-600"
+                    >
+                      Rate Resolution
+                    </button>
+                  )}
+                  {req.rating && (
+                    <span className="text-xs text-gray-500">
+                      Rated: {'★'.repeat(req.rating)}{'☆'.repeat(5 - req.rating)}
+                    </span>
+                  )}
+
+                  {/* Comments toggle */}
                   <button
-                    onClick={() => {
-                      setShowRateModal(req.id);
-                      setRateStars(5);
-                      setRateFeedback('');
-                    }}
+                    onClick={() => toggleComments(req.id)}
                     className="text-xs font-semibold text-orange-500 hover:text-orange-600"
                   >
-                    Rate Resolution
+                    {expandedTicket === req.id ? 'Hide Comments' : 'Comments'}
                   </button>
-                )}
-                {req.rating && (
-                  <span className="text-xs text-gray-500">
-                    Rated: {'★'.repeat(req.rating)}{'☆'.repeat(5 - req.rating)}
-                  </span>
-                )}
+                </div>
               </div>
+
+              {/* Comment Thread */}
+              {expandedTicket === req.id && (
+                <div className="mt-4 pt-4 border-t">
+                  {commentsLoading === req.id ? (
+                    <p className="text-xs text-gray-400 text-center py-4">Loading comments...</p>
+                  ) : (
+                    <>
+                      {(comments[req.id] ?? []).length === 0 ? (
+                        <p className="text-xs text-gray-400 text-center py-3">No comments yet</p>
+                      ) : (
+                        <div className="space-y-3 mb-4 max-h-64 overflow-y-auto">
+                          {(comments[req.id] ?? []).map((c) => (
+                            <div key={c.id} className="flex gap-2">
+                              <div className="flex-1">
+                                <div className="flex items-center gap-2 mb-0.5">
+                                  <span className="text-xs font-semibold text-gray-800">
+                                    {c.authorName}
+                                  </span>
+                                  <span
+                                    className={`text-[10px] font-medium px-1.5 py-0.5 rounded ${
+                                      ROLE_BADGE_COLORS[c.authorRole] || 'bg-gray-100 text-gray-600'
+                                    }`}
+                                  >
+                                    {c.authorRole}
+                                  </span>
+                                  <span className="text-[10px] text-gray-400">
+                                    {new Date(c.createdAt).toLocaleString('en-IN', {
+                                      month: 'short',
+                                      day: 'numeric',
+                                      hour: '2-digit',
+                                      minute: '2-digit',
+                                    })}
+                                  </span>
+                                </div>
+                                <p className="text-sm text-gray-700">{c.commentText}</p>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+
+                      {/* Add comment input */}
+                      <div className="flex gap-2">
+                        <input
+                          type="text"
+                          value={newComment}
+                          onChange={(e) => setNewComment(e.target.value)}
+                          placeholder="Add a comment..."
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter' && !e.shiftKey) {
+                              e.preventDefault();
+                              handleAddComment(req.id);
+                            }
+                          }}
+                          className="flex-1 border rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500"
+                        />
+                        <button
+                          onClick={() => handleAddComment(req.id)}
+                          disabled={commentSubmitting || !newComment.trim()}
+                          className="bg-orange-500 text-white px-4 py-2 rounded-xl text-sm font-semibold hover:bg-orange-600 disabled:opacity-50"
+                        >
+                          {commentSubmitting ? '...' : 'Send'}
+                        </button>
+                      </div>
+                    </>
+                  )}
+                </div>
+              )}
             </div>
           ))}
         </div>
@@ -288,7 +571,7 @@ export default function MaintenancePage() {
                 >
                   {CATEGORIES.map((c) => (
                     <option key={c} value={c}>
-                      {c.replace('_', ' ')}
+                      {formatCategoryLabel(c)}
                     </option>
                   ))}
                 </select>
@@ -419,6 +702,45 @@ export default function MaintenancePage() {
                 className="flex-1 bg-orange-500 text-white rounded-xl py-2.5 text-sm font-semibold hover:bg-orange-600 disabled:opacity-50"
               >
                 {submitting ? 'Submitting...' : 'Submit Rating'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Reopen Modal */}
+      {showReopenModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+          <div className="bg-white rounded-2xl w-full max-w-md mx-4 p-6">
+            <h2 className="text-lg font-bold mb-4">Reopen Ticket</h2>
+            <p className="text-sm text-gray-500 mb-4">
+              Please explain why the issue is not resolved. You can reopen within 48 hours of resolution.
+            </p>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Reason</label>
+              <textarea
+                value={reopenReason}
+                onChange={(e) => setReopenReason(e.target.value)}
+                rows={3}
+                placeholder="Describe why this needs to be reopened..."
+                className="w-full border rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 resize-none"
+              />
+            </div>
+
+            <div className="flex gap-3 mt-6">
+              <button
+                onClick={() => setShowReopenModal(null)}
+                className="flex-1 border rounded-xl py-2.5 text-sm font-medium text-gray-600 hover:bg-gray-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => handleReopen(showReopenModal)}
+                disabled={submitting || !reopenReason.trim()}
+                className="flex-1 bg-purple-600 text-white rounded-xl py-2.5 text-sm font-semibold hover:bg-purple-700 disabled:opacity-50"
+              >
+                {submitting ? 'Reopening...' : 'Reopen Ticket'}
               </button>
             </div>
           </div>

@@ -39,6 +39,7 @@ export default function ChefDashboardPage() {
   const [events, setEvents] = useState<any[]>([]);
   const [subscriptions, setSubscriptions] = useState<any[]>([]);
   const [activeTab, setActiveTab] = useState('overview');
+  const [bookingsError, setBookingsError] = useState('');
   const [quoteModal, setQuoteModal] = useState<string | null>(null);
   const [quoteAmount, setQuoteAmount] = useState('');
 
@@ -50,14 +51,19 @@ export default function ChefDashboardPage() {
       .then(async (profile) => {
         setChef(profile);
         // Now load bookings
-        const [b, e, s] = await Promise.all([
-          api.getChefIncomingBookings(token).catch(() => []),
-          api.getChefIncomingEvents(token).catch(() => []),
-          api.getChefIncomingSubscriptions(token).catch(() => []),
-        ]);
-        setBookings(b || []);
-        setEvents(e || []);
-        setSubscriptions(s || []);
+        try {
+          const [b, e, s] = await Promise.all([
+            api.getChefIncomingBookings(token),
+            api.getChefIncomingEvents(token).catch(() => []),
+            api.getChefIncomingSubscriptions(token).catch(() => []),
+          ]);
+          setBookings(b || []);
+          setEvents(e || []);
+          setSubscriptions(s || []);
+        } catch (err: any) {
+          console.error('Failed to load chef bookings:', err);
+          setBookingsError(err?.message || 'Failed to load bookings');
+        }
         setViewState('ready');
       })
       .catch((err) => {
@@ -204,7 +210,7 @@ export default function ChefDashboardPage() {
 
   // ── Dashboard data ────────────────────────────────────────────
 
-  const pendingBookings = bookings.filter(b => b.status === 'PENDING');
+  const pendingBookings = bookings.filter(b => b.status === 'PENDING' || b.status === 'PENDING_PAYMENT');
   const activeBookings = bookings.filter(b => ['CONFIRMED', 'IN_PROGRESS'].includes(b.status));
   const inquiryEvents = events.filter(e => e.status === 'INQUIRY');
   const completedBookings = bookings.filter(b => b.status === 'COMPLETED');
@@ -282,6 +288,16 @@ export default function ChefDashboardPage() {
         {/* ── Overview ──────────────────────────────────────────── */}
         {activeTab === 'overview' && (
           <div className="space-y-6">
+            {bookingsError && (
+              <div className="bg-red-50 border border-red-200 rounded-xl p-4 flex items-start gap-3">
+                <span className="text-red-500 text-lg">!</span>
+                <div>
+                  <p className="text-sm font-semibold text-red-700">Failed to load bookings</p>
+                  <p className="text-xs text-red-600 mt-0.5">{bookingsError}</p>
+                  <button onClick={() => window.location.reload()} className="text-xs text-red-700 underline mt-1">Retry</button>
+                </div>
+              </div>
+            )}
             {/* Stats Grid */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
               <StatCard icon="🔔" label="Pending" value={pendingBookings.length} sub="need confirmation" accent="orange" />
@@ -301,12 +317,16 @@ export default function ChefDashboardPage() {
                     amount={b.chefEarningsPaise}
                     status={b.status}
                     actions={
-                      <>
-                        <button onClick={() => handleConfirm(b.id)}
-                          className="text-xs bg-green-500 hover:bg-green-600 text-white px-4 py-1.5 rounded-lg font-medium transition">Accept</button>
-                        <button onClick={() => handleCancelBooking(b.id)}
-                          className="text-xs border border-red-200 text-red-600 px-4 py-1.5 rounded-lg hover:bg-red-50 transition">Decline</button>
-                      </>
+                      b.status === 'PENDING' ? (
+                        <>
+                          <button onClick={() => handleConfirm(b.id)}
+                            className="text-xs bg-green-500 hover:bg-green-600 text-white px-4 py-1.5 rounded-lg font-medium transition">Accept</button>
+                          <button onClick={() => handleCancelBooking(b.id)}
+                            className="text-xs border border-red-200 text-red-600 px-4 py-1.5 rounded-lg hover:bg-red-50 transition">Decline</button>
+                        </>
+                      ) : (
+                        <span className="text-xs text-amber-600 font-medium">Awaiting customer payment</span>
+                      )
                     }
                   />
                 ))}
@@ -370,7 +390,14 @@ export default function ChefDashboardPage() {
         {/* ── Bookings Tab ──────────────────────────────────────── */}
         {activeTab === 'bookings' && (
           <div className="space-y-3">
-            {bookings.length === 0 ? (
+            {bookingsError ? (
+              <div className="text-center py-16 bg-white rounded-2xl border">
+                <span className="text-5xl block mb-3">⚠️</span>
+                <p className="text-gray-700 font-medium">Could not load bookings</p>
+                <p className="text-sm text-red-500 mt-1">{bookingsError}</p>
+                <button onClick={() => window.location.reload()} className="mt-3 text-sm text-orange-500 underline">Retry</button>
+              </div>
+            ) : bookings.length === 0 ? (
               <EmptyState icon="📋" title="No bookings yet" sub="When customers book you, their requests will appear here." />
             ) : bookings.map(b => (
               <div key={b.id} className="bg-white border rounded-2xl p-5 hover:shadow-sm transition">

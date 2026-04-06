@@ -20,6 +20,7 @@ interface SaleProperty {
   status: string;
   views: number;
   inquiryCount: number;
+  photos: string[];
   photoUrls: string[];
   createdAt: string;
 }
@@ -27,6 +28,7 @@ interface SaleProperty {
 interface SaleInquiry {
   id: string;
   propertyId: string;
+  salePropertyId: string;
   propertyTitle: string;
   buyerName: string;
   buyerPhone: string;
@@ -41,14 +43,17 @@ interface SaleInquiry {
 
 interface SiteVisit {
   id: string;
-  propertyId: string;
+  salePropertyId: string;
   propertyTitle: string;
-  buyerName: string;
-  buyerPhone: string;
-  visitDate: string;
-  visitTime: string;
+  propertyLocality: string;
+  propertyCity: string;
+  buyerId: string;
+  sellerId: string;
+  scheduledAt: string;
+  durationMinutes: number;
   status: string;
-  feedback: string;
+  buyerFeedback: string;
+  sellerFeedback: string;
   rating: number | null;
   createdAt: string;
 }
@@ -74,7 +79,7 @@ const INQUIRY_STATUS_COLORS: Record<string, string> = {
 };
 
 const VISIT_STATUS_COLORS: Record<string, string> = {
-  SCHEDULED: 'bg-blue-100 text-blue-700',
+  REQUESTED: 'bg-blue-100 text-blue-700',
   CONFIRMED: 'bg-green-100 text-green-700',
   COMPLETED: 'bg-purple-100 text-purple-700',
   CANCELLED: 'bg-red-100 text-red-600',
@@ -107,6 +112,11 @@ export default function HostSalesTab({ token }: { token: string }) {
   const [visits, setVisits] = useState<SiteVisit[]>([]);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
+  const [visitModal, setVisitModal] = useState<{ propertyId: string; propertyTitle: string; buyerName?: string; buyerPhone?: string; inquiryId?: string } | null>(null);
+  const [visitDate, setVisitDate] = useState('');
+  const [visitTime, setVisitTime] = useState('10:00');
+  const [visitDuration, setVisitDuration] = useState(30);
+  const [visitNotes, setVisitNotes] = useState('');
 
   useEffect(() => {
     loadData();
@@ -153,6 +163,34 @@ export default function HostSalesTab({ token }: { token: string }) {
     setActionLoading(null);
   }
 
+  async function handleScheduleVisit() {
+    if (!visitModal || !visitDate || !visitTime) return;
+    setActionLoading('schedule-visit');
+    try {
+      const scheduledAt = new Date(`${visitDate}T${visitTime}:00`).toISOString();
+      await api.scheduleSiteVisit({
+        salePropertyId: visitModal.propertyId,
+        inquiryId: visitModal.inquiryId || null,
+        scheduledAt,
+        durationMinutes: visitDuration,
+        notes: visitNotes || null,
+      }, token);
+      // Also update inquiry status if linked
+      if (visitModal.inquiryId) {
+        await api.updateInquiryStatus(visitModal.inquiryId, 'VISIT_SCHEDULED', token).catch(() => {});
+      }
+      setVisitModal(null);
+      setVisitDate('');
+      setVisitTime('10:00');
+      setVisitNotes('');
+      alert('Site visit scheduled!');
+      await loadData();
+    } catch (e: any) {
+      alert(e?.message || 'Failed to schedule visit');
+    }
+    setActionLoading(null);
+  }
+
   async function handleVisitAction(id: string, status: string) {
     setActionLoading(id);
     try {
@@ -169,8 +207,8 @@ export default function HostSalesTab({ token }: { token: string }) {
   const totalListed = properties.length;
   const activeCount = properties.filter(p => p.status === 'ACTIVE').length;
   const soldCount = properties.filter(p => p.status === 'SOLD').length;
-  const totalViews = properties.reduce((sum, p) => sum + (p.views || 0), 0);
-  const totalInquiries = properties.reduce((sum, p) => sum + (p.inquiryCount || 0), 0);
+  const totalViews = properties.reduce((sum, p) => sum + (p.viewsCount || p.views || 0), 0);
+  const totalInquiries = properties.reduce((sum, p) => sum + (p.inquiriesCount || p.inquiryCount || 0), 0);
 
   /* ── Sub-tab renderers ───────────────────────────────────── */
 
@@ -233,8 +271,8 @@ export default function HostSalesTab({ token }: { token: string }) {
                 <div className="flex flex-col md:flex-row gap-4">
                   {/* Photo */}
                   <div className="w-full md:w-40 h-32 bg-gray-100 rounded-xl overflow-hidden flex-shrink-0">
-                    {prop.photoUrls && prop.photoUrls.length > 0 ? (
-                      <img src={prop.photoUrls[0]} alt={prop.title || 'Property'} className="w-full h-full object-cover" />
+                    {(prop.photos || prop.photoUrls)?.length > 0 ? (
+                      <img src={(prop.photos || prop.photoUrls)[0]} alt={prop.title || 'Property'} className="w-full h-full object-cover" />
                     ) : (
                       <div className="w-full h-full flex items-center justify-center text-gray-400 text-3xl">🏠</div>
                     )}
@@ -244,7 +282,7 @@ export default function HostSalesTab({ token }: { token: string }) {
                   <div className="flex-1 min-w-0">
                     <div className="flex items-start justify-between gap-2 mb-1">
                       <h3 className="font-semibold text-gray-800 truncate">
-                        {prop.title || `${prop.bhk} BHK ${prop.propertyType?.replace(/_/g, ' ')}`}
+                        {prop.title || `${prop.bhk || prop.bedrooms} BHK ${(prop.propertyType || prop.salePropertyType)?.replace(/_/g, ' ')}`}
                       </h3>
                       <span className={`px-2 py-0.5 rounded-full text-xs font-medium whitespace-nowrap ${PROPERTY_STATUS_COLORS[prop.status] || 'bg-gray-100 text-gray-600'}`}>
                         {prop.status}
@@ -267,8 +305,8 @@ export default function HostSalesTab({ token }: { token: string }) {
                       )}
                     </p>
                     <div className="flex items-center gap-4 text-sm text-gray-500">
-                      <span>{prop.views || 0} views</span>
-                      <span>{prop.inquiryCount || 0} inquiries</span>
+                      <span>{prop.viewsCount || prop.views || 0} views</span>
+                      <span>{prop.inquiriesCount || prop.inquiryCount || 0} inquiries</span>
                       <span>Listed {formatDate(prop.createdAt)}</span>
                     </div>
                   </div>
@@ -281,6 +319,17 @@ export default function HostSalesTab({ token }: { token: string }) {
                     >
                       Edit
                     </Link>
+                    {prop.status === 'ACTIVE' && (
+                      <button
+                        onClick={() => setVisitModal({
+                          propertyId: prop.id,
+                          propertyTitle: prop.title || `${prop.bhk} BHK ${prop.propertyType?.replace(/_/g, ' ')}`,
+                        })}
+                        className="px-4 py-2 border border-orange-300 text-orange-600 rounded-xl text-sm font-medium hover:bg-orange-50 transition-colors"
+                      >
+                        Schedule Visit
+                      </button>
+                    )}
                     {prop.status === 'ACTIVE' && (
                       <button
                         onClick={() => handlePropertyAction(prop.id, 'SOLD')}
@@ -299,13 +348,13 @@ export default function HostSalesTab({ token }: { token: string }) {
                         {actionLoading === prop.id ? '...' : 'Pause'}
                       </button>
                     )}
-                    {prop.status === 'PAUSED' && (
+                    {(prop.status === 'DRAFT' || prop.status === 'PAUSED') && (
                       <button
                         onClick={() => handlePropertyAction(prop.id, 'ACTIVE')}
                         disabled={actionLoading === prop.id}
                         className="px-4 py-2 bg-green-500 text-white rounded-xl text-sm font-medium hover:bg-green-600 disabled:opacity-50 transition-colors"
                       >
-                        {actionLoading === prop.id ? '...' : 'Activate'}
+                        {actionLoading === prop.id ? '...' : prop.status === 'DRAFT' ? 'Publish' : 'Activate'}
                       </button>
                     )}
                   </div>
@@ -372,7 +421,16 @@ export default function HostSalesTab({ token }: { token: string }) {
             <div className="flex gap-2 flex-wrap">
               {(inq.status === 'NEW' || inq.status === 'CONTACTED') && (
                 <button
-                  onClick={() => handleInquiryAction(inq.id, 'VISIT_SCHEDULED')}
+                  onClick={() => {
+                    setVisitModal({
+                      propertyId: inq.salePropertyId || inq.propertyId,
+                      propertyTitle: inq.propertyTitle,
+                      buyerName: inq.buyerName,
+                      buyerPhone: inq.buyerPhone,
+                      inquiryId: inq.id,
+                    });
+                    if (inq.preferredVisitDate) setVisitDate(inq.preferredVisitDate.split('T')[0]);
+                  }}
                   disabled={actionLoading === inq.id}
                   className="px-4 py-2 bg-orange-500 text-white rounded-xl text-sm font-medium hover:bg-orange-600 disabled:opacity-50 transition-colors"
                 >
@@ -417,7 +475,7 @@ export default function HostSalesTab({ token }: { token: string }) {
     }
 
     const now = new Date();
-    const upcoming = visits.filter(v => v.status === 'SCHEDULED' || v.status === 'CONFIRMED');
+    const upcoming = visits.filter(v => v.status === 'REQUESTED' || v.status === 'CONFIRMED');
     const past = visits.filter(v => v.status === 'COMPLETED' || v.status === 'CANCELLED' || v.status === 'NO_SHOW');
 
     return (
@@ -431,26 +489,30 @@ export default function HostSalesTab({ token }: { token: string }) {
             </div>
           ) : (
             <div className="space-y-3">
-              {upcoming.map(visit => (
+              {upcoming.map(visit => {
+                const visitDate = new Date(visit.scheduledAt);
+                const timeStr = visitDate.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
+                return (
                 <div key={visit.id} className="bg-white rounded-xl border p-5 hover:shadow-md transition-shadow">
                   <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
                     <div>
                       <div className="flex items-center gap-2 mb-1">
-                        <span className="font-semibold text-gray-800">{visit.buyerName}</span>
+                        <span className="font-semibold text-gray-800">{visit.propertyTitle || 'Property Visit'}</span>
                         <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${VISIT_STATUS_COLORS[visit.status] || 'bg-gray-100 text-gray-600'}`}>
                           {visit.status}
                         </span>
                       </div>
                       <p className="text-sm text-gray-500 mb-1">
-                        Property: <span className="text-gray-700 font-medium">{visit.propertyTitle}</span>
+                        {[visit.propertyLocality, visit.propertyCity].filter(Boolean).join(', ')}
                       </p>
                       <div className="flex items-center gap-3 text-sm text-gray-600">
-                        <span className="font-medium">{formatDate(visit.visitDate)}</span>
-                        {visit.visitTime && <span>{visit.visitTime}</span>}
+                        <span className="font-medium">{formatDate(visit.scheduledAt)}</span>
+                        <span>{timeStr}</span>
+                        {visit.durationMinutes && <span className="text-gray-400">({visit.durationMinutes} min)</span>}
                       </div>
                     </div>
                     <div className="flex gap-2">
-                      {visit.status === 'SCHEDULED' && (
+                      {visit.status === 'REQUESTED' && (
                         <button
                           onClick={() => handleVisitAction(visit.id, 'CONFIRMED')}
                           disabled={actionLoading === visit.id}
@@ -459,7 +521,7 @@ export default function HostSalesTab({ token }: { token: string }) {
                           {actionLoading === visit.id ? '...' : 'Confirm'}
                         </button>
                       )}
-                      {(visit.status === 'SCHEDULED' || visit.status === 'CONFIRMED') && (
+                      {(visit.status === 'REQUESTED' || visit.status === 'CONFIRMED') && (
                         <button
                           onClick={() => handleVisitAction(visit.id, 'CANCELLED')}
                           disabled={actionLoading === visit.id}
@@ -471,7 +533,8 @@ export default function HostSalesTab({ token }: { token: string }) {
                     </div>
                   </div>
                 </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>
@@ -490,15 +553,15 @@ export default function HostSalesTab({ token }: { token: string }) {
                   <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
                     <div>
                       <div className="flex items-center gap-2 mb-1">
-                        <span className="font-semibold text-gray-800">{visit.buyerName}</span>
+                        <span className="font-semibold text-gray-800">{visit.propertyTitle || 'Property Visit'}</span>
                         <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${VISIT_STATUS_COLORS[visit.status] || 'bg-gray-100 text-gray-600'}`}>
                           {visit.status}
                         </span>
                       </div>
                       <p className="text-sm text-gray-500 mb-1">
-                        Property: <span className="text-gray-700 font-medium">{visit.propertyTitle}</span>
+                        {[visit.propertyLocality, visit.propertyCity].filter(Boolean).join(', ')}
                       </p>
-                      <p className="text-sm text-gray-500">{formatDate(visit.visitDate)} {visit.visitTime || ''}</p>
+                      <p className="text-sm text-gray-500">{formatDate(visit.scheduledAt)}</p>
                     </div>
                     {visit.rating !== null && visit.rating !== undefined && (
                       <div className="text-right">
@@ -512,10 +575,10 @@ export default function HostSalesTab({ token }: { token: string }) {
                       </div>
                     )}
                   </div>
-                  {visit.feedback && (
+                  {(visit.buyerFeedback || visit.sellerFeedback) && (
                     <div className="mt-3 bg-gray-50 rounded-lg p-3">
                       <p className="text-xs text-gray-400 mb-1">Feedback</p>
-                      <p className="text-sm text-gray-700">{visit.feedback}</p>
+                      <p className="text-sm text-gray-700">{visit.sellerFeedback || visit.buyerFeedback}</p>
                     </div>
                   )}
                 </div>
@@ -563,6 +626,142 @@ export default function HostSalesTab({ token }: { token: string }) {
       {subTab === 'properties' && renderProperties()}
       {subTab === 'inquiries' && renderInquiries()}
       {subTab === 'visits' && renderVisits()}
+
+      {/* Schedule Visit Modal */}
+      {visitModal && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={() => setVisitModal(null)}>
+          <div className="bg-white rounded-2xl p-6 max-w-lg w-full shadow-xl max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+            {/* Header */}
+            <div className="flex items-center gap-3 mb-5">
+              <div className="w-10 h-10 rounded-xl bg-orange-100 flex items-center justify-center text-lg">🏠</div>
+              <div>
+                <h3 className="text-lg font-bold text-gray-900">Schedule Site Visit</h3>
+                <p className="text-sm text-gray-500">{visitModal.propertyTitle}</p>
+              </div>
+            </div>
+
+            {/* Buyer Info (if from inquiry) */}
+            {visitModal.buyerName && (
+              <div className="bg-blue-50 rounded-xl p-4 mb-5">
+                <p className="text-xs text-blue-500 font-medium mb-1">Buyer Details</p>
+                <p className="text-sm font-semibold text-gray-800">{visitModal.buyerName}</p>
+                {visitModal.buyerPhone && (
+                  <p className="text-sm text-gray-600">{visitModal.buyerPhone}</p>
+                )}
+              </div>
+            )}
+
+            <div className="space-y-4">
+              {/* Date & Time Row */}
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Visit Date *</label>
+                  <input
+                    type="date"
+                    value={visitDate}
+                    min={new Date().toISOString().split('T')[0]}
+                    onChange={e => setVisitDate(e.target.value)}
+                    className="w-full border rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Time *</label>
+                  <input
+                    type="time"
+                    value={visitTime}
+                    onChange={e => setVisitTime(e.target.value)}
+                    className="w-full border rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none"
+                  />
+                </div>
+              </div>
+
+              {/* Quick Time Slots */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Quick Select</label>
+                <div className="flex gap-2 flex-wrap">
+                  {['09:00', '10:00', '11:00', '14:00', '15:00', '16:00', '17:00'].map(t => (
+                    <button
+                      key={t}
+                      type="button"
+                      onClick={() => setVisitTime(t)}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition ${
+                        visitTime === t
+                          ? 'bg-orange-50 border-orange-500 text-orange-600'
+                          : 'border-gray-200 text-gray-600 hover:bg-gray-50'
+                      }`}
+                    >
+                      {t.replace(':00', '')}:00 {parseInt(t) < 12 ? 'AM' : 'PM'}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Duration */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Duration</label>
+                <div className="flex gap-2">
+                  {[30, 45, 60, 90].map(d => (
+                    <button
+                      key={d}
+                      type="button"
+                      onClick={() => setVisitDuration(d)}
+                      className={`flex-1 py-2.5 rounded-xl text-sm font-medium border transition ${
+                        visitDuration === d
+                          ? 'bg-orange-50 border-orange-500 text-orange-600'
+                          : 'border-gray-200 text-gray-600 hover:bg-gray-50'
+                      }`}
+                    >
+                      {d} min
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Notes */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Notes (optional)</label>
+                <textarea
+                  value={visitNotes}
+                  onChange={e => setVisitNotes(e.target.value)}
+                  rows={2}
+                  placeholder="E.g., Gate code, parking info, meet at lobby..."
+                  className="w-full border rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none resize-none"
+                />
+              </div>
+            </div>
+
+            {/* Summary */}
+            {visitDate && visitTime && (
+              <div className="bg-gray-50 rounded-xl p-4 mt-4">
+                <p className="text-xs text-gray-500 mb-1">Visit Summary</p>
+                <p className="text-sm font-semibold text-gray-800">
+                  {new Date(`${visitDate}T${visitTime}`).toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
+                  {' at '}
+                  {visitTime.replace(':00', '')}:00 {parseInt(visitTime) < 12 ? 'AM' : 'PM'}
+                  {' '}({visitDuration} min)
+                </p>
+              </div>
+            )}
+
+            {/* Actions */}
+            <div className="flex gap-3 mt-5">
+              <button
+                onClick={() => { setVisitModal(null); setVisitDate(''); setVisitTime('10:00'); setVisitNotes(''); }}
+                className="flex-1 border rounded-xl py-3 text-sm font-medium hover:bg-gray-50 transition"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleScheduleVisit}
+                disabled={!visitDate || !visitTime || actionLoading === 'schedule-visit'}
+                className="flex-1 bg-orange-500 hover:bg-orange-600 text-white rounded-xl py-3 text-sm font-semibold transition disabled:opacity-40"
+              >
+                {actionLoading === 'schedule-visit' ? 'Scheduling...' : 'Confirm Visit'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

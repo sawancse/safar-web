@@ -4,7 +4,24 @@ import { useSearchParams, useRouter } from 'next/navigation';
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { api } from '@/lib/api';
 import ListingCard from '@/components/ListingCard';
+import Link from 'next/link';
 import type { Listing, FilterAggregations } from '@/types';
+
+const SEARCH_PROPERTY_TYPES = [
+  { key: 'ALL',        label: 'All',           icon: '🏠' },
+  { key: 'HOME',       label: 'Homes',         icon: '🏡' },
+  { key: 'ROOM',       label: 'Rooms',         icon: '🛏️' },
+  { key: 'VILLA',      label: 'Villas',        icon: '🏰' },
+  { key: 'HOTEL',      label: 'Hotels',        icon: '🏨' },
+  { key: 'RESORT',     label: 'Resorts',       icon: '🌴' },
+  { key: 'HOMESTAY',   label: 'Homestays',     icon: '🏘️' },
+  { key: 'PG',         label: 'PG',            icon: '🛌' },
+  { key: 'COLIVING',   label: 'Co-living',     icon: '👥' },
+  { key: 'FARMSTAY',   label: 'Farm Stays',    icon: '🌾' },
+  { key: 'HOSTEL',     label: 'Hostels',       icon: '🎒' },
+  { key: 'UNIQUE',     label: 'Unique Stays',  icon: '✨' },
+  { key: 'COMMERCIAL', label: 'Commercial',    icon: '🏢' },
+];
 
 /* ── Debounce hook ─────────────────────────────────────────── */
 function useDebounce(value: string, delay: number) {
@@ -659,13 +676,16 @@ export default function SearchPage() {
   );
 
   return (
-    <div className="max-w-[1400px] mx-auto px-4 py-6">
-      {/* Search bar — city + dates + guests */}
-      <form onSubmit={handleSearchSubmit}
-        className="flex flex-col sm:flex-row gap-2 mb-4 bg-white border border-gray-200 rounded-2xl p-2 shadow-sm">
+    <div>
+      {/* Blue header strip with search bar — Booking.com style */}
+      <div className="bg-[#003B95] relative z-30 overflow-visible">
+        <div className="max-w-[1400px] mx-auto px-4 pt-4 pb-6">
+          <h2 className="text-white text-lg font-bold mb-3">Search</h2>
+          <form onSubmit={handleSearchSubmit}
+            className="flex flex-col sm:flex-row gap-2 bg-[#FFB700] rounded-xl p-1.5 shadow-lg">
         {/* City with autocomplete */}
         <div ref={cityWrapRef} className="relative flex-1">
-          <div className="flex items-center">
+          <div className="flex items-center bg-white rounded-lg">
             <span className="pl-2 text-gray-400">
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
@@ -778,7 +798,7 @@ export default function SearchPage() {
         {/* ── Airbnb-style unified date range picker ── */}
         <div ref={dateRef} className="relative">
           <button type="button" onClick={() => setShowDatePicker(!showDatePicker)}
-            className="flex items-center gap-2 px-3 py-2.5 text-sm text-gray-700 hover:bg-gray-50 rounded-lg transition">
+            className="flex items-center gap-2 px-3 py-2.5 text-sm text-gray-700 bg-white hover:bg-gray-50 rounded-lg transition">
             <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
                 d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
@@ -896,7 +916,7 @@ export default function SearchPage() {
         {/* ── Guest picker (fixed overflow) ── */}
         <div ref={guestRef} className="relative">
           <button type="button" onClick={() => setShowGuestPicker(!showGuestPicker)}
-            className="px-3 py-2.5 text-sm text-gray-700 whitespace-nowrap flex items-center gap-1">
+            className="px-3 py-2.5 text-sm text-gray-700 bg-white rounded-lg whitespace-nowrap flex items-center gap-1">
             <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
                 d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
@@ -941,7 +961,7 @@ export default function SearchPage() {
 
         {/* Search button */}
         <button type="submit"
-          className="bg-orange-500 hover:bg-orange-600 text-white font-semibold rounded-xl px-5 py-2.5 text-sm transition-colors flex items-center gap-1.5">
+          className="bg-[#003B95] hover:bg-[#00296b] text-white font-semibold rounded-lg px-5 py-2.5 text-sm transition-all flex items-center gap-1.5">
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
           </svg>
@@ -949,60 +969,194 @@ export default function SearchPage() {
         </button>
       </form>
 
-      {/* Top bar: Sort + filter count + mobile filter toggle */}
-      <div className="flex items-center gap-2 mb-4">
-        {/* Sort dropdown */}
-        <div ref={sortRef} className="relative">
-          <button onClick={() => setShowSort(!showSort)}
-            className={`inline-flex items-center gap-1.5 border rounded-full px-4 py-2 text-sm font-medium whitespace-nowrap transition-colors ${
-              sort ? 'border-orange-400 bg-orange-50 text-orange-600' : 'border-gray-200 text-gray-600 hover:border-gray-300'
-            }`}>
-            {sort ? SORT_OPTIONS.find(o => o.value === sort)?.label : 'Sort'}
-            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-            </svg>
-          </button>
-          {showSort && (
-            <div className="absolute top-full left-0 mt-2 bg-white border rounded-xl shadow-lg z-20 min-w-[200px] py-1">
-              {SORT_OPTIONS.map((opt) => (
-                <button key={opt.value}
-                  onClick={() => { updateParam('sort', opt.value); setShowSort(false); }}
-                  className={`w-full text-left px-4 py-2.5 text-sm flex items-center justify-between hover:bg-gray-50 ${
-                    sort === opt.value ? 'text-orange-600 font-semibold bg-orange-50' : 'text-gray-700'
+          {/* Property type tabs — wrapping pills inside blue header */}
+          <div className="flex flex-wrap gap-2 mt-4 pb-1">
+            {SEARCH_PROPERTY_TYPES.map(({ key, label, icon }) => {
+              const isActive = key === 'ALL'
+                ? selectedTypes.length === 0
+                : selectedTypes.includes(key);
+              return (
+                <button key={key} onClick={() => {
+                  const params = new URLSearchParams(searchParams.toString());
+                  params.delete('type');
+                  if (key !== 'ALL') params.set('type', key);
+                  params.set('page', '0');
+                  router.push(`/search?${params.toString()}`);
+                }}
+                  className={`inline-flex items-center gap-1.5 px-4 py-2 rounded-full whitespace-nowrap transition-all duration-150 text-sm shadow-sm ${
+                    isActive
+                      ? 'bg-white text-[#003B95] font-semibold shadow-md ring-2 ring-white/50'
+                      : 'bg-white/90 text-[#003B95]/80 hover:bg-white hover:shadow-md hover:scale-105 font-medium'
                   }`}>
-                  {opt.label}
+                  <span className="text-base leading-none">{icon}</span>
+                  <span>{label}</span>
                 </button>
-              ))}
-            </div>
-          )}
+              );
+            })}
+          </div>
         </div>
+      </div>
 
-        {/* Mobile filter button */}
-        <button onClick={() => setShowMobileFilters(true)}
-          className="lg:hidden inline-flex items-center gap-1.5 border border-gray-200 rounded-full px-4 py-2 text-sm font-medium text-gray-600 hover:border-gray-300">
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 010 2H4a1 1 0 01-1-1zm4 6a1 1 0 011-1h8a1 1 0 010 2H8a1 1 0 01-1-1zm2 6a1 1 0 011-1h4a1 1 0 010 2h-4a1 1 0 01-1-1z" />
-          </svg>
-          Filters
-          {activeFilterCount > 0 && (
-            <span className="bg-orange-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
-              {activeFilterCount}
-            </span>
-          )}
-        </button>
+      {/* Results area */}
+      <div className="max-w-[1400px] mx-auto px-4 py-6">
 
-        {/* Result count */}
-        <div className="flex-1 text-right">
-          <span className="text-sm text-gray-600">
-            {loading ? 'Searching...' : `${total.toLocaleString('en-IN')} ${total === 1 ? 'stay' : 'stays'}${city ? ` in ${city}` : ''}`}
-          </span>
-        </div>
+      {/* Top bar: Sort + filter chips + mobile filter — Booking.com style */}
+      <div className="mb-4 space-y-3">
+        {/* Row 1: Sort + mobile filter + result count */}
+        <div className="flex items-center gap-2">
+          <div ref={sortRef} className="relative">
+            <button onClick={() => setShowSort(!showSort)}
+              className={`inline-flex items-center gap-1.5 border rounded-lg px-4 py-2 text-sm font-medium whitespace-nowrap transition-colors ${
+                sort ? 'border-[#003B95] bg-blue-50 text-[#003B95]' : 'border-gray-200 text-gray-600 hover:border-gray-300'
+              }`}>
+              {sort ? SORT_OPTIONS.find(o => o.value === sort)?.label : 'Sort by: Relevance'}
+              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+              </svg>
+            </button>
+            {showSort && (
+              <div className="absolute top-full left-0 mt-2 bg-white border rounded-xl shadow-lg z-20 min-w-[200px] py-1">
+                {SORT_OPTIONS.map((opt) => (
+                  <button key={opt.value}
+                    onClick={() => { updateParam('sort', opt.value); setShowSort(false); }}
+                    className={`w-full text-left px-4 py-2.5 text-sm flex items-center justify-between hover:bg-gray-50 ${
+                      sort === opt.value ? 'text-[#003B95] font-semibold bg-blue-50' : 'text-gray-700'
+                    }`}>
+                    {opt.label}
+                    {sort === opt.value && <svg className="w-4 h-4 text-[#003B95]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
 
-        {activeFilterCount > 0 && (
-          <button onClick={clearAllFilters}
-            className="border border-red-200 bg-red-50 text-red-500 rounded-full px-3 py-1.5 text-xs font-medium hover:bg-red-100 transition-colors">
-            Clear all ({activeFilterCount})
+          <button onClick={() => setShowMobileFilters(true)}
+            className="lg:hidden inline-flex items-center gap-1.5 border border-gray-200 rounded-lg px-4 py-2 text-sm font-medium text-gray-600 hover:border-gray-300">
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 010 2H4a1 1 0 01-1-1zm4 6a1 1 0 011-1h8a1 1 0 010 2H8a1 1 0 01-1-1zm2 6a1 1 0 011-1h4a1 1 0 010 2h-4a1 1 0 01-1-1z" />
+            </svg>
+            Filters
+            {activeFilterCount > 0 && (
+              <span className="bg-[#003B95] text-white text-xs rounded-full w-5 h-5 flex items-center justify-center ml-1">
+                {activeFilterCount}
+              </span>
+            )}
           </button>
+
+          <div className="flex-1 text-right">
+            <span className="text-sm text-gray-500 font-medium">
+              {loading ? 'Searching...' : `${city ? city + ': ' : ''}${total.toLocaleString('en-IN')} ${total === 1 ? 'property' : 'properties'} found`}
+            </span>
+          </div>
+        </div>
+
+        {/* Row 2: Active filter chips — Booking.com style removable pills */}
+        {activeFilterCount > 0 && (
+          <div className="flex flex-wrap items-center gap-2">
+            {selectedTypes.map(t => (
+              <button key={t} onClick={() => toggleArrayParam('type', t)}
+                className="inline-flex items-center gap-1.5 bg-blue-50 border border-[#003B95]/30 text-[#003B95] rounded-lg px-3 py-1.5 text-xs font-medium hover:bg-blue-100 transition">
+                {TYPE_LABELS[t] || t}
+                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+              </button>
+            ))}
+            {freeCancellation && (
+              <button onClick={() => updateParam('freeCancellation', '')}
+                className="inline-flex items-center gap-1.5 bg-green-50 border border-green-300 text-green-700 rounded-lg px-3 py-1.5 text-xs font-medium hover:bg-green-100 transition">
+                Free cancellation
+                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+              </button>
+            )}
+            {instantBook && (
+              <button onClick={() => updateParam('instantBook', '')}
+                className="inline-flex items-center gap-1.5 bg-blue-50 border border-blue-300 text-blue-700 rounded-lg px-3 py-1.5 text-xs font-medium hover:bg-blue-100 transition">
+                Instant book
+                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+              </button>
+            )}
+            {petFriendly && (
+              <button onClick={() => updateParam('petFriendly', '')}
+                className="inline-flex items-center gap-1.5 bg-blue-50 border border-blue-300 text-blue-700 rounded-lg px-3 py-1.5 text-xs font-medium hover:bg-blue-100 transition">
+                Pet friendly
+                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+              </button>
+            )}
+            {noPrepayment && (
+              <button onClick={() => updateParam('noPrepayment', '')}
+                className="inline-flex items-center gap-1.5 bg-blue-50 border border-blue-300 text-blue-700 rounded-lg px-3 py-1.5 text-xs font-medium hover:bg-blue-100 transition">
+                No prepayment
+                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+              </button>
+            )}
+            {medicalStay && (
+              <button onClick={() => updateParam('medicalStay', '')}
+                className="inline-flex items-center gap-1.5 bg-purple-50 border border-purple-300 text-purple-700 rounded-lg px-3 py-1.5 text-xs font-medium hover:bg-purple-100 transition">
+                Medical stay
+                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+              </button>
+            )}
+            {(minPrice || maxPrice) && (
+              <button onClick={() => { updateParam('minPrice', ''); updateParam('maxPrice', ''); }}
+                className="inline-flex items-center gap-1.5 bg-blue-50 border border-[#003B95]/30 text-[#003B95] rounded-lg px-3 py-1.5 text-xs font-medium hover:bg-blue-100 transition">
+                {minPrice && maxPrice ? `₹${Number(minPrice).toLocaleString('en-IN')} – ₹${Number(maxPrice).toLocaleString('en-IN')}` : minPrice ? `From ₹${Number(minPrice).toLocaleString('en-IN')}` : `Up to ₹${Number(maxPrice).toLocaleString('en-IN')}`}
+                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+              </button>
+            )}
+            {minRating && (
+              <button onClick={() => updateParam('minRating', '')}
+                className="inline-flex items-center gap-1.5 bg-yellow-50 border border-yellow-300 text-yellow-700 rounded-lg px-3 py-1.5 text-xs font-medium hover:bg-yellow-100 transition">
+                {minRating}+ rating
+                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+              </button>
+            )}
+            {starRating && (
+              <button onClick={() => updateParam('starRating', '')}
+                className="inline-flex items-center gap-1.5 bg-yellow-50 border border-yellow-300 text-yellow-700 rounded-lg px-3 py-1.5 text-xs font-medium hover:bg-yellow-100 transition">
+                {'★'.repeat(Number(starRating))} star
+                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+              </button>
+            )}
+            {mealPlan && (
+              <button onClick={() => updateParam('mealPlan', '')}
+                className="inline-flex items-center gap-1.5 bg-blue-50 border border-blue-300 text-blue-700 rounded-lg px-3 py-1.5 text-xs font-medium hover:bg-blue-100 transition">
+                {MEAL_LABELS[mealPlan] || mealPlan}
+                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+              </button>
+            )}
+            {minBedrooms && (
+              <button onClick={() => updateParam('minBedrooms', '')}
+                className="inline-flex items-center gap-1.5 bg-blue-50 border border-[#003B95]/30 text-[#003B95] rounded-lg px-3 py-1.5 text-xs font-medium hover:bg-blue-100 transition">
+                {minBedrooms}+ bedrooms
+                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+              </button>
+            )}
+            {minBathrooms && (
+              <button onClick={() => updateParam('minBathrooms', '')}
+                className="inline-flex items-center gap-1.5 bg-blue-50 border border-[#003B95]/30 text-[#003B95] rounded-lg px-3 py-1.5 text-xs font-medium hover:bg-blue-100 transition">
+                {minBathrooms}+ bathrooms
+                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+              </button>
+            )}
+            {selectedAmenities.map(a => (
+              <button key={a} onClick={() => toggleArrayParam('amenities', a)}
+                className="inline-flex items-center gap-1.5 bg-blue-50 border border-[#003B95]/30 text-[#003B95] rounded-lg px-3 py-1.5 text-xs font-medium hover:bg-blue-100 transition">
+                {a.replace(/_/g, ' ')}
+                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+              </button>
+            ))}
+            {sort && (
+              <button onClick={() => updateParam('sort', '')}
+                className="inline-flex items-center gap-1.5 bg-gray-100 border border-gray-300 text-gray-600 rounded-lg px-3 py-1.5 text-xs font-medium hover:bg-gray-200 transition">
+                Sort: {SORT_OPTIONS.find(o => o.value === sort)?.label}
+                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+              </button>
+            )}
+            {/* Clear all */}
+            <button onClick={clearAllFilters}
+              className="inline-flex items-center gap-1 text-[#003B95] text-xs font-semibold hover:underline ml-1">
+              Clear all filters
+            </button>
+          </div>
         )}
       </div>
 
@@ -1078,6 +1232,7 @@ export default function SearchPage() {
           </div>
         </div>
       )}
+      </div>
     </div>
   );
 }

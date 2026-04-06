@@ -97,6 +97,7 @@ export default function BuyPropertyDetailPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const [showPhone, setShowPhone] = useState(false);
+  const [sellerPhone, setSellerPhone] = useState<string | null>(null);
   const [showInquiry, setShowInquiry] = useState(false);
   const [showVisit, setShowVisit] = useState(false);
   const [descExpanded, setDescExpanded] = useState(false);
@@ -131,7 +132,19 @@ export default function BuyPropertyDetailPage() {
     (async () => {
       setLoading(true);
       try {
-        const prop = await (api as any).getSaleProperty(id);
+        const raw = await (api as any).getSaleProperty(id);
+        const prop = {
+          ...raw,
+          pricePaise: raw.pricePaise ?? raw.askingPricePaise,
+          pricePerSqftPaise: raw.pricePerSqftPaise ?? raw.pricePerSqftPaise,
+          maintenancePaise: raw.maintenancePaise ?? raw.maintenancePaise,
+          negotiable: raw.negotiable ?? raw.priceNegotiable,
+          bedrooms: raw.bedrooms ?? raw.bhk,
+          areaSqft: raw.areaSqft ?? raw.carpetAreaSqft,
+          photos: raw.photos ?? raw.photoUrls ?? [],
+          latitude: raw.latitude ?? raw.lat,
+          longitude: raw.longitude ?? raw.lng,
+        };
         setProperty(prop);
         if (prop.pricePaise) {
           setLoanAmount(String(Math.round(prop.pricePaise * 0.8 / 100)));
@@ -203,12 +216,11 @@ export default function BuyPropertyDetailPage() {
     setVisitSending(true);
     try {
       const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+      // Combine date + time into ISO 8601 scheduledAt for backend
+      const scheduledAt = `${visitDate}T${visitTime}:00+05:30`;
       await (api as any).scheduleSiteVisit({
         salePropertyId: id,
-        visitDate,
-        visitTime,
-        name: visitName,
-        phone: visitPhone,
+        scheduledAt,
       }, token);
       setVisitSuccess(true);
     } catch {
@@ -761,10 +773,20 @@ export default function BuyPropertyDetailPage() {
 
               {/* Show Number */}
               <button
-                onClick={() => setShowPhone(true)}
+                onClick={async () => {
+                  if (sellerPhone) { setShowPhone(true); return; }
+                  try {
+                    const contact = await api.getSellerContact(property.id);
+                    setSellerPhone(contact?.phone || 'Not available');
+                    setShowPhone(true);
+                  } catch {
+                    setSellerPhone('Not available');
+                    setShowPhone(true);
+                  }
+                }}
                 className="w-full bg-orange-500 hover:bg-orange-600 text-white font-semibold py-3 rounded-xl transition text-sm"
               >
-                {showPhone && property.sellerPhone ? property.sellerPhone : 'Show Number'}
+                {showPhone ? (sellerPhone || 'Not available') : 'Show Number'}
               </button>
 
               {/* Send Inquiry */}
