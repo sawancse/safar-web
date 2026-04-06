@@ -40,6 +40,7 @@ const LOCATION_TYPE_ICONS: Record<string, string> = {
   COLLEGE: '\u{1F393}',         // 🎓
   HOSPITAL: '\u{1F3E5}',        // 🏥
   TRANSIT: '\u{1F689}',         // 🚉
+  LISTING: '\u{1F3E0}',         // 🏠
 };
 
 const LOCATION_TYPE_LABELS: Record<string, string> = {
@@ -49,6 +50,7 @@ const LOCATION_TYPE_LABELS: Record<string, string> = {
   COLLEGE: 'Colleges & Universities',
   HOSPITAL: 'Hospitals',
   TRANSIT: 'Transit',
+  LISTING: 'Properties',
 };
 
 const LOCATION_TYPE_SUGGESTION: Record<string, Suggestion['type']> = {
@@ -58,6 +60,7 @@ const LOCATION_TYPE_SUGGESTION: Record<string, Suggestion['type']> = {
   COLLEGE: 'landmark',
   HOSPITAL: 'landmark',
   TRANSIT: 'landmark',
+  LISTING: 'landmark',
 };
 
 /* ── Popular Destinations (India) ──────────────────────────── */
@@ -205,29 +208,49 @@ function SuggestionDropdown({
       return;
     }
     setLoading(true);
+    const fetchAutocomplete = () => {
+      api.autocomplete(debouncedQuery)
+        .then(items => {
+          const fallback: Record<string, LocationSuggestion[]> = {};
+          // Separate cities from listing titles
+          // Cities: typically 1-2 capitalized words (e.g., "Bangalore", "New Delhi")
+          // Listings: longer names, often with lowercase words (e.g., "zolo hoodi bangalore")
+          const knownCityPattern = /^[A-Z][a-z]+(\s[A-Z][a-z]+)?$/;
+          const cities: string[] = [];
+          const listings: string[] = [];
+          for (const item of items) {
+            if (knownCityPattern.test(item) || item.split(' ').length === 1)
+              cities.push(item);
+            else
+              listings.push(item);
+          }
+          if (cities.length > 0) {
+            fallback['CITY'] = cities.slice(0, 5).map(c => ({
+              id: c, name: c, displayName: c + ', India',
+              type: 'CITY', city: c, lat: 0, lng: 0, defaultRadiusKm: 0,
+            }));
+          }
+          if (listings.length > 0) {
+            fallback['LISTING'] = listings.slice(0, 5).map(t => ({
+              id: t, name: t, displayName: t,
+              type: 'LISTING', city: '', lat: 0, lng: 0, defaultRadiusKm: 0,
+            }));
+          }
+          setApiResults(fallback);
+        })
+        .catch(() => setApiResults({}));
+    };
+
     api.locationSuggest(debouncedQuery)
-      .then(results => setApiResults(results || {}))
-      .catch(() => {
-        // Fallback to old autocomplete API
-        api.autocomplete(debouncedQuery)
-          .then(cities => {
-            const fallback: Record<string, LocationSuggestion[]> = {};
-            if (cities.length > 0) {
-              fallback['CITY'] = cities.slice(0, 8).map(c => ({
-                id: c,
-                name: c,
-                displayName: c + ', India',
-                type: 'CITY',
-                city: c,
-                lat: 0,
-                lng: 0,
-                defaultRadiusKm: 0,
-              }));
-            }
-            setApiResults(fallback);
-          })
-          .catch(() => setApiResults({}));
+      .then(results => {
+        // If location suggest returns empty, fall back to autocomplete
+        if (!results || Object.keys(results).length === 0) {
+          fetchAutocomplete();
+        } else {
+          setApiResults(results);
+        }
       })
+      .catch(() => fetchAutocomplete())
       .finally(() => setLoading(false));
   }, [debouncedQuery]);
 
@@ -299,18 +322,20 @@ function SuggestionDropdown({
 
   if (query.length >= 2 && Object.keys(apiResults).length > 0) {
     // Grouped API results - maintain order: CITY, LOCALITY, IT_PARK, COLLEGE, HOSPITAL, TRANSIT
-    const typeOrder = ['CITY', 'LOCALITY', 'IT_PARK', 'COLLEGE', 'HOSPITAL', 'TRANSIT'];
+    const typeOrder = ['CITY', 'LOCALITY', 'IT_PARK', 'COLLEGE', 'HOSPITAL', 'TRANSIT', 'LISTING'];
     for (const locType of typeOrder) {
       const items = apiResults[locType];
       if (!items || items.length === 0) continue;
       for (const item of items) {
         const icon = LOCATION_TYPE_ICONS[locType] || '\u{1F4CD}';
         const suggType = LOCATION_TYPE_SUGGESTION[locType] || 'landmark';
-        const subtitle = item.state ? `${item.city}, ${item.state}` : item.city;
+        const subtitle = locType === 'LISTING' ? 'Property'
+          : locType === 'CITY' ? (item.state || 'India')
+          : item.state ? `${item.city}, ${item.state}` : item.city;
         suggestions.push({
           type: suggType,
           label: item.displayName || item.name,
-          subtitle: locType === 'CITY' ? (item.state || 'India') : subtitle,
+          subtitle,
           icon,
           city: item.city,
           lat: item.lat || undefined,

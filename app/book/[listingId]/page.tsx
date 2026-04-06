@@ -6,6 +6,7 @@ import { api } from '@/lib/api';
 import RazorpayButton from '@/components/RazorpayButton';
 import { formatPaise } from '@/lib/utils';
 import type { Listing, Booking, RoomType, RoomTypeInclusion } from '@/types';
+import RoomTypeSelector, { type RoomSelection } from '@/components/RoomTypeSelector';
 import GuestListForm, { type GuestInfo } from '@/components/GuestListForm';
 
 function fmtDate(iso: string) {
@@ -31,11 +32,18 @@ export default function BookPage() {
   const preselectedRoomTypeId = searchParams.get('roomTypeId');
 
   // Parse multi-room selections from URL
-  const urlRoomSelections: { id: string; c: number }[] = (() => {
+  // Shape: { id, c (total guests), rooms, gpr (guests per room) }
+  const urlRoomSelections: { id: string; c: number; rooms: number; gpr: number }[] = (() => {
     try {
       const raw = searchParams.get('roomSelections');
       if (!raw) return [];
-      return JSON.parse(raw);
+      const parsed = JSON.parse(raw);
+      return parsed.map((s: any) => ({
+        id: s.id,
+        rooms: s.rooms ?? 1,
+        gpr: s.gpr ?? s.c ?? 1,
+        c: s.c ?? (s.rooms ?? 1) * (s.gpr ?? 1),
+      }));
     } catch { return []; }
   })();
 
@@ -111,26 +119,53 @@ export default function BookPage() {
     fetchFn
       .then((types) => {
         setRoomTypes(types);
-        // Pre-select room type from URL param
-        if (preselectedRoomTypeId && !selectedRoomType) {
+        // Pre-select room type from URL param (auto-add to stepper selections)
+        if (preselectedRoomTypeId) {
           const match = types.find(t => t.id === preselectedRoomTypeId);
-          if (match) setSelectedRoomType(match);
+          if (match) {
+            setSelectedRoomType(match);
+            setSelectedRoomSelections(prev =>
+              prev.find(s => s.id === match.id) ? prev : [...prev, { id: match.id, c: 1, rooms: 1, gpr: 1 }]
+            );
+          }
         }
-        // Auto-select if only one room type and it wasn't selected before
-        else if (types.length === 1 && !selectedRoomType) {
+        // Auto-select if only one room type
+        else if (types.length === 1 && selectedRoomSelections.length === 0) {
           setSelectedRoomType(types[0]);
-        }
-        // If previously selected room type is no longer available, deselect
-        if (selectedRoomType && !types.find(t => t.id === selectedRoomType.id)) {
-          setSelectedRoomType(null);
+          setSelectedRoomSelections([{ id: types[0].id, c: 1, rooms: 1, gpr: 1 }]);
         }
       })
       .catch(() => setRoomTypes([]));
   }, [listingId, checkIn, checkOut]);
 
+  // Sync selectedRoomType from stepper selections (for deposit/request building)
+  useEffect(() => {
+    if (selectedRoomSelections.length === 0) {
+      setSelectedRoomType(null);
+    } else {
+      // Use first selected type for deposit/single-room backward compat
+      const firstSel = selectedRoomSelections[0];
+      const match = roomTypes.find(r => r.id === firstSel.id);
+      if (match && selectedRoomType?.id !== match.id) {
+        setSelectedRoomType(match);
+      }
+    }
+  }, [selectedRoomSelections, roomTypes]);
+
   // PG / Hotel helpers
   const isPG = listing?.type === 'PG' || listing?.type === 'COLIVING';
   const isHotel = listing?.type === 'HOTEL' || listing?.type === 'BUDGET_HOTEL';
+
+  // PG/Hotel: auto-sync adults count to match total beds selected
+  // Each room selection count = beds, so occupants = sum of all counts
+  useEffect(() => {
+    if (!isPG && !isHotel) return;
+    const totalBeds = selectedRoomSelections.reduce((s, r) => s + r.c, 0);
+    if (totalBeds > 0 && adults !== totalBeds) {
+      setAdults(totalBeds);
+      setRooms(totalBeds);
+    }
+  }, [selectedRoomSelections, isPG, isHotel]);
 
   // ── Pricing unit from listing (source of truth) ──
   // PG/Co-living always uses MONTH even if listing has NIGHT default
@@ -155,10 +190,16 @@ export default function BookPage() {
   const hasMultiRoom = selectedRoomSelections.length > 0 && roomTypes.length > 0;
   const baseRate = selectedRoomType ? selectedRoomType.basePricePaise : (listing?.basePricePaise ?? 0);
 
-  // Calculate subtotal based on pricing unit
+  // ── PG Billing Model ──
+  // PG/Co-living: price per room type is PER BED PER MONTH.
+  // Room selection count = number of beds (persons) you're booking for that type.
+  // Rent = price × count × duration (NO separate adults multiplier)
+  // Deposit = room_deposit × count
+  // Total occupants = sum of all sel.c = adults (enforced by validation)
+
+  // Calculate rent subtotal
   let roomSubtotalPaise = 0;
   if (hasMultiRoom) {
-    // Multi-room: sum each room type × count × duration
     for (const sel of selectedRoomSelections) {
       const rt = roomTypes.find(r => r.id === sel.id);
       const price = rt?.basePricePaise ?? baseRate;
@@ -180,9 +221,26 @@ export default function BookPage() {
     }
   }
 
-  // PG/Co-living: deposit is per bed (per adult), multiply by adults count
-  const perBedDeposit = listing?.securityDepositPaise ?? 0;
-  const securityDepositPaise = isPG && adults > 1 ? perBedDeposit * adults : perBedDeposit;
+  // Security deposit: per-bed for each room type × count
+  const listingDeposit = listing?.securityDepositPaise ?? 0;
+  let securityDepositPaise = 0;
+  if (hasMultiRoom) {
+    for (const sel of selectedRoomSelections) {
+      const rt = roomTypes.find(r => r.id === sel.id);
+      const rtDeposit = (rt?.securityDepositPaise ?? 0) > 0 ? rt!.securityDepositPaise! : listingDeposit;
+      securityDepositPaise += rtDeposit * sel.c;
+    }
+  } else {
+    const perBedDeposit = (selectedRoomType?.securityDepositPaise ?? 0) > 0
+      ? selectedRoomType!.securityDepositPaise!
+      : listingDeposit;
+    securityDepositPaise = perBedDeposit * rooms;
+  }
+
+  // For PG: total beds selected = required occupants
+  const totalBedsSelected = hasMultiRoom
+    ? selectedRoomSelections.reduce((s, r) => s + r.c, 0)
+    : rooms;
   const cleaningFeePaise = isMonthly ? 0 : (listing?.cleaningFeePaise ?? 0);
   const maintenancePaise = isMonthly && !(listing?.maintenanceIncluded) ? ((listing?.maintenanceChargePaise ?? 0) * Math.max(1, fullMonths)) : 0;
   const insurancePaise = listing?.insuranceEnabled ? (listing?.insuranceAmountPaise ?? 0) : 0;
@@ -200,9 +258,8 @@ export default function BookPage() {
       ? `${hours} hour${hours !== 1 ? 's' : ''}`
       : `${nights} night${nights > 1 ? 's' : ''}`;
 
-  // Room type is required for PG/hotel listings that have room types defined
-  const needsRoomType = roomTypes.length > 0 && selectedRoomSelections.length === 0;
-  const roomTypeSelected = !needsRoomType || selectedRoomType != null;
+  // Room type is required for listings that have room types defined
+  const roomTypeSelected = roomTypes.length === 0 || selectedRoomSelections.length > 0;
   const isFormValid = firstName.trim() && lastName.trim() && email.trim() && phone.trim() && (isMonthly ? leaseMonths > 0 : isHourly ? hours > 0 : nights > 0) && roomTypeSelected;
 
   const guestLabel = [
@@ -227,7 +284,9 @@ export default function BookPage() {
           childrenCount,
           infantsCount: infants,
           petsCount: pets,
-          roomsCount: rooms,
+          roomsCount: selectedRoomSelections.length > 0
+            ? selectedRoomSelections.reduce((s, r) => s + (r.rooms ?? r.c), 0)
+            : rooms,
           roomTypeId: selectedRoomType?.id,
           guestFirstName: firstName.trim(),
           guestLastName: lastName.trim(),
@@ -240,7 +299,7 @@ export default function BookPage() {
           arrivalTime: arrivalTime || undefined,
           selectedInclusionIds: selectedInclusionIds.length > 0 ? selectedInclusionIds : undefined,
           roomSelections: selectedRoomSelections.length > 0
-            ? selectedRoomSelections.map(s => ({ roomTypeId: s.id, count: s.c }))
+            ? selectedRoomSelections.map(s => ({ roomTypeId: s.id, count: s.c, guests: s.c }))
             : undefined,
           guests: guestList.length > 0
             ? guestList.filter(g => g.fullName.trim()).map(g => ({
@@ -368,127 +427,26 @@ export default function BookPage() {
             </label>
           </div>
 
-          {/* Multi-room selections summary (from listing page) */}
-          {selectedRoomSelections.length > 0 && roomTypes.length > 0 && (
-            <div className="border rounded-2xl p-5 space-y-3">
-              <h3 className="font-semibold text-sm">Your Room Selection</h3>
-              <div className="space-y-2">
-                {selectedRoomSelections.map((sel) => {
-                  const rt = roomTypes.find(r => r.id === sel.id);
-                  if (!rt) return null;
-                  return (
-                    <div key={sel.id} className="flex items-center justify-between bg-orange-50 border border-orange-200 rounded-xl p-3">
-                      <div className="flex items-center gap-3">
-                        {rt.primaryPhotoUrl && (
-                          <img src={rt.primaryPhotoUrl.startsWith('http') ? rt.primaryPhotoUrl : `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080'}${rt.primaryPhotoUrl}`}
-                            alt={rt.name} className="w-14 h-10 rounded-lg object-cover" />
-                        )}
-                        <div>
-                          <p className="text-sm font-medium text-gray-800">{rt.name}</p>
-                          <p className="text-xs text-gray-500">Max {rt.maxGuests} guests · {rt.bedType || 'Standard bed'}</p>
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <p className="text-sm font-bold text-orange-600">{sel.c} room{sel.c > 1 ? 's' : ''}</p>
-                        <p className="text-xs text-gray-500">{formatPaise(rt.basePricePaise)}/{isMonthly ? 'month' : isHourly ? 'hour' : 'night'} each</p>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-              <p className="text-xs text-gray-400">
-                Total: {selectedRoomSelections.reduce((s, r) => s + r.c, 0)} room{selectedRoomSelections.reduce((s, r) => s + r.c, 0) > 1 ? 's' : ''}
-              </p>
-            </div>
-          )}
-
-          {/* Room type picker (single select — shown when no multi-room selections) */}
-          {selectedRoomSelections.length === 0 && roomTypes.length > 0 && (
-            <div className="border rounded-2xl p-5 space-y-3">
-              <h3 className="font-semibold text-sm">Select room type</h3>
-              <p className="text-xs text-gray-400">Choose the room type for your stay</p>
-              <div className="space-y-2">
-                {roomTypes.map((rt) => (
-                  <label key={rt.id}
-                    className={`flex items-start gap-3 p-3 border rounded-xl cursor-pointer transition ${
-                      selectedRoomType?.id === rt.id ? 'border-orange-500 bg-orange-50' : 'hover:border-gray-400'
-                    }`}>
-                    <input
-                      type="radio"
-                      name="roomType"
-                      checked={selectedRoomType?.id === rt.id}
-                      onChange={() => { setSelectedRoomType(rt); setSelectedInclusionIds([]); }}
-                      className="mt-1 accent-orange-500"
-                    />
-                    {/* Room type photo */}
-                    {rt.primaryPhotoUrl && (
-                      <img src={rt.primaryPhotoUrl.startsWith('http') ? rt.primaryPhotoUrl : `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080'}${rt.primaryPhotoUrl}`} alt={rt.name}
-                        className="w-20 h-16 rounded-lg object-cover shrink-0" />
-                    )}
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center justify-between">
-                        <p className="font-medium text-sm">{rt.name}</p>
-                        <p className="font-semibold text-sm text-orange-600">{formatPaise(rt.basePricePaise)}/{unitLabel}</p>
-                      </div>
-                      {rt.description && <p className="text-xs text-gray-500 mt-0.5">{rt.description}</p>}
-                      <div className="flex flex-wrap gap-2 mt-1.5">
-                        {rt.bedType && (
-                          <span className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded">
-                            {rt.bedType}{rt.bedCount && rt.bedCount > 1 ? ` x${rt.bedCount}` : ''}
-                          </span>
-                        )}
-                        <span className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded">
-                          Max {rt.maxGuests} guest{rt.maxGuests > 1 ? 's' : ''}
-                        </span>
-                        {rt.areaSqft && (
-                          <span className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded">{rt.areaSqft} sq ft</span>
-                        )}
-                        {rt.availableCount != null && (
-                          <span className={`text-xs px-2 py-0.5 rounded ${
-                            rt.availableCount <= 2 ? 'bg-red-100 text-red-600' : 'bg-green-100 text-green-600'
-                          }`}>
-                            {rt.availableCount} left
-                          </span>
-                        )}
-                      </div>
-                      {rt.amenities && rt.amenities.length > 0 && (
-                        <p className="text-xs text-gray-400 mt-1">{rt.amenities.join(', ')}</p>
-                      )}
-                      {/* Inclusions highlights */}
-                      {rt.inclusions && rt.inclusions.length > 0 && (
-                        <div className="mt-2 space-y-1">
-                          {rt.inclusions.filter(i => i.inclusionMode === 'INCLUDED' || i.inclusionMode === 'COMPLIMENTARY').map(inc => (
-                            <span key={inc.id} className="inline-flex items-center gap-1 text-xs text-green-700 bg-green-50 px-2 py-0.5 rounded mr-1">
-                              &#10003; {inc.name}
-                            </span>
-                          ))}
-                          {rt.inclusions.filter(i => i.inclusionMode === 'PAID_ADDON').map(inc => (
-                            <label key={inc.id}
-                              className="flex items-center gap-1.5 text-xs text-blue-700 bg-blue-50 px-2 py-1 rounded cursor-pointer hover:bg-blue-100 transition"
-                              onClick={e => e.stopPropagation()}>
-                              <input type="checkbox"
-                                checked={selectedInclusionIds.includes(inc.id)}
-                                onChange={e => {
-                                  if (!selectedRoomType || selectedRoomType.id !== rt.id) setSelectedRoomType(rt);
-                                  setSelectedInclusionIds(prev =>
-                                    e.target.checked ? [...prev, inc.id] : prev.filter(id => id !== inc.id)
-                                  );
-                                }}
-                                className="rounded border-blue-300 text-blue-600 focus:ring-blue-500" />
-                              + {inc.name}
-                              {inc.chargePaise > 0 && (
-                                <span className="text-blue-500 font-medium ml-auto">
-                                  +{formatPaise(inc.chargePaise)}/{inc.chargeType.replace('PER_', '').toLowerCase()}
-                                </span>
-                              )}
-                            </label>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  </label>
-                ))}
-              </div>
+          {/* Room type picker — unified component */}
+          {roomTypes.length > 0 && (
+            <div>
+              <RoomTypeSelector
+                roomTypes={roomTypes}
+                perNightLabel={`per ${unitLabel}`}
+                listingId={listingId}
+                isPG={isPG}
+                initialSelections={urlRoomSelections.length > 0 ? urlRoomSelections.map(s => ({
+                  roomTypeId: s.id,
+                  rooms: s.rooms ?? 1,
+                  guestsPerRoom: s.gpr ?? s.c ?? 1,
+                })) : undefined}
+                onSelect={(selections) => {
+                  setSelectedRoomSelections(selections.map(s => ({
+                    id: s.roomTypeId, c: s.count, rooms: Math.ceil(s.count / s.maxGuests) || 1,
+                    gpr: s.maxGuests > 0 ? Math.min(s.count, s.maxGuests) : s.count,
+                  })));
+                }}
+              />
             </div>
           )}
 
@@ -556,7 +514,7 @@ export default function BookPage() {
           {error && <div className="bg-red-50 text-red-600 rounded-xl px-4 py-3 text-sm">{error}</div>}
 
           {/* Action button */}
-          {needsRoomType && !selectedRoomType && (
+          {roomTypes.length > 0 && selectedRoomSelections.length === 0 && (
             <p className="text-xs text-red-500 font-medium text-center mb-2">Please select a room type above to continue</p>
           )}
           {!booking ? (
@@ -720,142 +678,155 @@ export default function BookPage() {
               </div>
             )}
 
-            {/* Rooms & Guests — editable */}
+            {/* Rooms & Guests */}
             <div className="border-t pt-3">
-              <div className="flex items-center justify-between mb-2">
-                <p className="text-xs font-semibold text-gray-500 uppercase">{isMonthly ? 'Occupants' : 'Rooms & Guests'}</p>
-                {!booking && (
-                  <button type="button" onClick={() => setEditingGuests(!editingGuests)}
-                    className="text-xs text-orange-600 hover:text-orange-700 font-semibold">
-                    {editingGuests ? 'Done' : 'Change'}
-                  </button>
-                )}
-              </div>
-              {editingGuests ? (
-                <div className="space-y-3">
-                  {(() => {
-                    // Per-room capacity: room type > derived from listing > default 2
-                    const lTotalRooms = listing.totalRooms ?? 1;
-                    // Per-room max: use selected room type(s), fallback to listing
-                    let perRoomMax: number;
-                    let maxGuestTotal: number;
-                    let maxRooms: number;
-
-                    if (selectedRoomSelections.length > 0) {
-                      // Multi-room: max guests = sum of each (roomType.maxGuests × count)
-                      maxGuestTotal = selectedRoomSelections.reduce((sum, sel) => {
-                        const rt = roomTypes.find(r => r.id === sel.id);
-                        return sum + (rt?.maxGuests ?? 2) * sel.c;
-                      }, 0);
-                      // Per-room = min across selected types (for display label)
-                      perRoomMax = Math.min(...selectedRoomSelections.map(sel => {
-                        const rt = roomTypes.find(r => r.id === sel.id);
-                        return rt?.maxGuests ?? 2;
-                      }));
-                      maxRooms = selectedRoomSelections.reduce((s, sel) => s + sel.c, 0);
-                    } else if (selectedRoomType) {
-                      perRoomMax = selectedRoomType.maxGuests;
-                      maxGuestTotal = perRoomMax * rooms;
-                      maxRooms = selectedRoomType.count ?? listing.totalRooms ?? 10;
-                    } else {
-                      perRoomMax = lTotalRooms > 1 && listing.maxGuests
-                        ? Math.max(1, Math.floor(listing.maxGuests / lTotalRooms))
-                        : Math.min(listing.maxGuests ?? 2, 4);
-                      maxGuestTotal = perRoomMax * rooms;
-                      maxRooms = listing.totalRooms ?? 10;
-                    }
-
-                    // Auto-adjust rooms when guests increase beyond capacity
-                    const setAdultsAuto = (val: number) => {
-                      setAdults(val);
-                      const needed = Math.ceil((val + childrenCount) / perRoomMax);
-                      if (needed > rooms && needed <= maxRooms) setRooms(needed);
-                    };
-                    const setChildrenAuto = (val: number) => {
-                      setChildrenCount(val);
-                      const needed = Math.ceil((adults + val) / perRoomMax);
-                      if (needed > rooms && needed <= maxRooms) setRooms(needed);
-                    };
-                    // Auto-adjust guests when rooms change
-                    const setRoomsAuto = (val: number) => {
-                      setRooms(val);
-                      const maxTotal = val * perRoomMax;
-                      // Rooms increased: ensure at least 1 adult per room
-                      if (adults < val) setAdults(val);
-                      // Rooms decreased: cap guests to new capacity
-                      const totalNow = adults + childrenCount;
-                      if (totalNow > maxTotal) {
-                        const excessChildren = Math.max(0, childrenCount - Math.max(0, maxTotal - adults));
-                        const newChildren = childrenCount - excessChildren;
-                        const newAdults = Math.min(adults, maxTotal - newChildren);
-                        setAdults(Math.max(1, newAdults));
-                        setChildrenCount(newChildren);
-                      }
-                    };
-
-                    const guestRows = [
-                      { key: 'rooms', label: 'Rooms', sub: `${perRoomMax} guests per room`, value: rooms,
-                        set: setRoomsAuto, min: 1, max: maxRooms },
-                      { key: 'adults', label: 'Adults', sub: 'Age 13+', value: adults,
-                        set: setAdultsAuto, min: 1, max: maxGuestTotal - childrenCount },
-                      { key: 'children', label: 'Children', sub: 'Age 2-12', value: childrenCount,
-                        set: setChildrenAuto, min: 0, max: maxGuestTotal - adults },
-                      { key: 'infants', label: 'Infants', sub: 'Under 2', value: infants,
-                        set: setInfants, min: 0, max: 5 },
-                    ];
-                    return guestRows.map(row => (
-                      <div key={row.key} className="flex items-center justify-between">
-                        <div>
-                          <p className="text-sm font-medium text-gray-800">{row.label}</p>
-                          <p className="text-xs text-gray-400">{row.sub}</p>
+              {/* PG/Hotel with room selections: occupants auto-derived, read-only */}
+              {(isPG || isHotel) && selectedRoomSelections.length > 0 ? (
+                <>
+                  <p className="text-xs font-semibold text-gray-500 uppercase mb-2">Occupants</p>
+                  <div className="space-y-1.5 text-sm">
+                    <div className="flex justify-between">
+                      <span className="text-gray-500">Beds</span>
+                      <span className="font-medium">{totalBedsSelected}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-500">Occupants</span>
+                      <span className="font-medium">{adults} adult{adults > 1 ? 's' : ''}</span>
+                    </div>
+                    {selectedRoomSelections.map(sel => {
+                      const rt = roomTypes.find(r => r.id === sel.id);
+                      return (
+                        <div key={sel.id} className="flex justify-between text-xs text-gray-400">
+                          <span>{rt?.name ?? 'Room'}</span>
+                          <span>{sel.c} bed{sel.c > 1 ? 's' : ''}</span>
                         </div>
-                        <div className="flex items-center gap-3">
-                          <button type="button"
-                            onClick={() => row.set(Math.max(row.min, row.value - 1))}
-                            disabled={row.value <= row.min}
-                            className="w-8 h-8 rounded-full border border-gray-300 text-gray-600 flex items-center justify-center hover:border-gray-500 disabled:opacity-30 transition text-sm">
-                            -
-                          </button>
-                          <span className="w-6 text-center text-sm font-semibold">{row.value}</span>
-                          <button type="button"
-                            onClick={() => row.set(Math.min(row.max, row.value + 1))}
-                            disabled={row.value >= row.max}
-                            className="w-8 h-8 rounded-full border border-gray-300 text-gray-600 flex items-center justify-center hover:border-gray-500 disabled:opacity-30 transition text-sm">
-                            +
-                          </button>
+                      );
+                    })}
+                  </div>
+                  <p className="text-[10px] text-gray-400 mt-2">
+                    Occupant count is auto-calculated from your room selection above
+                  </p>
+                </>
+              ) : (
+                /* Regular stays: editable rooms & guests */
+                <>
+                  <div className="flex items-center justify-between mb-2">
+                    <p className="text-xs font-semibold text-gray-500 uppercase">Rooms & Guests</p>
+                    {!booking && (
+                      <button type="button" onClick={() => setEditingGuests(!editingGuests)}
+                        className="text-xs text-orange-600 hover:text-orange-700 font-semibold">
+                        {editingGuests ? 'Done' : 'Change'}
+                      </button>
+                    )}
+                  </div>
+                  {editingGuests ? (
+                    <div className="space-y-3">
+                      {(() => {
+                        const lTotalRooms = listing.totalRooms ?? 1;
+                        let perRoomMax: number;
+                        let maxGuestTotal: number;
+                        let maxRooms: number;
+
+                        if (selectedRoomType) {
+                          perRoomMax = selectedRoomType.maxGuests;
+                          maxGuestTotal = perRoomMax * rooms;
+                          maxRooms = selectedRoomType.count ?? listing.totalRooms ?? 10;
+                        } else {
+                          perRoomMax = lTotalRooms > 1 && listing.maxGuests
+                            ? Math.max(1, Math.floor(listing.maxGuests / lTotalRooms))
+                            : Math.min(listing.maxGuests ?? 2, 4);
+                          maxGuestTotal = perRoomMax * rooms;
+                          maxRooms = listing.totalRooms ?? 10;
+                        }
+
+                        const setAdultsAuto = (val: number) => {
+                          setAdults(val);
+                          const needed = Math.ceil((val + childrenCount) / perRoomMax);
+                          if (needed > rooms && needed <= maxRooms) setRooms(needed);
+                        };
+                        const setChildrenAuto = (val: number) => {
+                          setChildrenCount(val);
+                          const needed = Math.ceil((adults + val) / perRoomMax);
+                          if (needed > rooms && needed <= maxRooms) setRooms(needed);
+                        };
+                        const setRoomsAuto = (val: number) => {
+                          setRooms(val);
+                          const maxTotal = val * perRoomMax;
+                          if (adults < val) setAdults(val);
+                          const totalNow = adults + childrenCount;
+                          if (totalNow > maxTotal) {
+                            const excessChildren = Math.max(0, childrenCount - Math.max(0, maxTotal - adults));
+                            const newChildren = childrenCount - excessChildren;
+                            const newAdults = Math.min(adults, maxTotal - newChildren);
+                            setAdults(Math.max(1, newAdults));
+                            setChildrenCount(newChildren);
+                          }
+                        };
+
+                        const guestRows = [
+                          { key: 'rooms', label: 'Rooms', sub: `${perRoomMax} guests per room`, value: rooms,
+                            set: setRoomsAuto, min: 1, max: maxRooms },
+                          { key: 'adults', label: 'Adults', sub: 'Age 13+', value: adults,
+                            set: setAdultsAuto, min: 1, max: maxGuestTotal - childrenCount },
+                          { key: 'children', label: 'Children', sub: 'Age 2-12', value: childrenCount,
+                            set: setChildrenAuto, min: 0, max: maxGuestTotal - adults },
+                          { key: 'infants', label: 'Infants', sub: 'Under 2', value: infants,
+                            set: setInfants, min: 0, max: 5 },
+                        ];
+                        return guestRows.map(row => (
+                          <div key={row.key} className="flex items-center justify-between">
+                            <div>
+                              <p className="text-sm font-medium text-gray-800">{row.label}</p>
+                              <p className="text-xs text-gray-400">{row.sub}</p>
+                            </div>
+                            <div className="flex items-center gap-3">
+                              <button type="button"
+                                onClick={() => row.set(Math.max(row.min, row.value - 1))}
+                                disabled={row.value <= row.min}
+                                className="w-8 h-8 rounded-full border border-gray-300 text-gray-600 flex items-center justify-center hover:border-gray-500 disabled:opacity-30 transition text-sm">
+                                -
+                              </button>
+                              <span className="w-6 text-center text-sm font-semibold">{row.value}</span>
+                              <button type="button"
+                                onClick={() => row.set(Math.min(row.max, row.value + 1))}
+                                disabled={row.value >= row.max}
+                                className="w-8 h-8 rounded-full border border-gray-300 text-gray-600 flex items-center justify-center hover:border-gray-500 disabled:opacity-30 transition text-sm">
+                                +
+                              </button>
+                            </div>
+                          </div>
+                        ));
+                      })()}
+                      {listing.petFriendly && (
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="text-sm font-medium text-gray-800">Pets</p>
+                            <p className="text-xs text-gray-400">Service animals welcome</p>
+                          </div>
+                          <div className="flex items-center gap-3">
+                            <button type="button" onClick={() => setPets(Math.max(0, pets - 1))} disabled={pets <= 0}
+                              className="w-8 h-8 rounded-full border border-gray-300 text-gray-600 flex items-center justify-center hover:border-gray-500 disabled:opacity-30 transition text-sm">-</button>
+                            <span className="w-6 text-center text-sm font-semibold">{pets}</span>
+                            <button type="button" onClick={() => setPets(Math.min(listing.maxPets ?? 3, pets + 1))}
+                              disabled={pets >= (listing.maxPets ?? 3)}
+                              className="w-8 h-8 rounded-full border border-gray-300 text-gray-600 flex items-center justify-center hover:border-gray-500 disabled:opacity-30 transition text-sm">+</button>
+                          </div>
                         </div>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="space-y-1.5 text-sm">
+                      <div className="flex justify-between">
+                        <span className="text-gray-500">Rooms</span>
+                        <span className="font-medium">{rooms}</span>
                       </div>
-                    ));
-                  })()}
-                  {/* Pets */}
-                  {listing.petFriendly && (
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-sm font-medium text-gray-800">Pets</p>
-                        <p className="text-xs text-gray-400">Service animals welcome</p>
-                      </div>
-                      <div className="flex items-center gap-3">
-                        <button type="button" onClick={() => setPets(Math.max(0, pets - 1))} disabled={pets <= 0}
-                          className="w-8 h-8 rounded-full border border-gray-300 text-gray-600 flex items-center justify-center hover:border-gray-500 disabled:opacity-30 transition text-sm">-</button>
-                        <span className="w-6 text-center text-sm font-semibold">{pets}</span>
-                        <button type="button" onClick={() => setPets(Math.min(listing.maxPets ?? 3, pets + 1))}
-                          disabled={pets >= (listing.maxPets ?? 3)}
-                          className="w-8 h-8 rounded-full border border-gray-300 text-gray-600 flex items-center justify-center hover:border-gray-500 disabled:opacity-30 transition text-sm">+</button>
+                      <div className="flex justify-between">
+                        <span className="text-gray-500">Guests</span>
+                        <span className="font-medium">{guestLabel}</span>
                       </div>
                     </div>
                   )}
-                </div>
-              ) : (
-                <div className="space-y-1.5 text-sm">
-                  <div className="flex justify-between">
-                    <span className="text-gray-500">Rooms</span>
-                    <span className="font-medium">{rooms}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-500">Guests</span>
-                    <span className="font-medium">{guestLabel}</span>
-                  </div>
-                </div>
+                </>
               )}
             </div>
 
@@ -941,9 +912,17 @@ export default function BookPage() {
                         lineTotal = price * sel.c * nights;
                         lineDuration = `${nights} night${nights > 1 ? 's' : ''}`;
                       }
+                      const selRooms = sel.rooms ?? 1;
+                      const selGpr = sel.gpr ?? sel.c;
                       return (
-                        <div key={sel.id} className="flex justify-between text-gray-600">
-                          <span>{sel.c}x {rt?.name ?? 'Room'} — {formatPaise(price)} x {lineDuration}</span>
+                        <div key={sel.id} className="flex justify-between text-gray-600 text-xs">
+                          <span>
+                            {rt?.name ?? 'Room'}
+                            {isPG
+                              ? ` — ${selRooms} room${selRooms > 1 ? 's' : ''} x ${selGpr} guest${selGpr > 1 ? 's' : ''} x ${lineDuration}`
+                              : ` — ${sel.c} room${sel.c > 1 ? 's' : ''} x ${lineDuration}`
+                            }
+                          </span>
                           <span>{formatPaise(lineTotal)}</span>
                         </div>
                       );
@@ -954,7 +933,7 @@ export default function BookPage() {
                         {isMonthly ? (
                           <>
                             {formatPaise(baseRate)} x {fullMonths} month{fullMonths !== 1 ? 's' : ''}
-                            {rooms > 1 ? ` x ${rooms} rooms` : ''}
+                            {rooms > 1 ? ` x ${rooms} bed${rooms > 1 ? 's' : ''}` : ''}
                           </>
                         ) : isHourly ? (
                           <>
@@ -971,18 +950,35 @@ export default function BookPage() {
                       <span>{formatPaise(roomSubtotalPaise)}</span>
                     </div>
                   )}
-                  {hasMultiRoom && (
+                  {hasMultiRoom && selectedRoomSelections.length > 1 && (
                     <div className="flex justify-between text-gray-700 font-medium border-t border-dashed pt-1">
-                      <span>Room subtotal</span>
+                      <span>Rent subtotal ({totalBedsSelected} bed{totalBedsSelected > 1 ? 's' : ''})</span>
                       <span>{formatPaise(roomSubtotalPaise)}</span>
                     </div>
                   )}
-                  {securityDepositPaise > 0 && (
+                  {securityDepositPaise > 0 && hasMultiRoom && selectedRoomSelections.length > 1 ? (
+                    <>
+                      {selectedRoomSelections.map(sel => {
+                        const rt = roomTypes.find(r => r.id === sel.id);
+                        const rtDep = (rt?.securityDepositPaise ?? 0) > 0 ? rt!.securityDepositPaise! : listingDeposit;
+                        return (
+                          <div key={`dep-${sel.id}`} className="flex justify-between text-gray-500 text-xs">
+                            <span>Deposit: {sel.c}x {rt?.name ?? 'Room'} ({formatPaise(rtDep)}/bed)</span>
+                            <span>{formatPaise(rtDep * sel.c)}</span>
+                          </div>
+                        );
+                      })}
+                      <div className="flex justify-between text-gray-600">
+                        <span>Total security deposit</span>
+                        <span>{formatPaise(securityDepositPaise)}</span>
+                      </div>
+                    </>
+                  ) : securityDepositPaise > 0 ? (
                     <div className="flex justify-between text-gray-600">
-                      <span>Security deposit{isPG && adults > 1 ? ` (${formatPaise(perBedDeposit)} x ${adults} beds)` : ''}</span>
+                      <span>Security deposit{totalBedsSelected > 1 ? ` (${formatPaise(securityDepositPaise / totalBedsSelected)}/bed x ${totalBedsSelected})` : ''}</span>
                       <span>{formatPaise(securityDepositPaise)}</span>
                     </div>
-                  )}
+                  ) : null}
                   {cleaningFeePaise > 0 && (
                     <div className="flex justify-between text-gray-600">
                       <span>Cleaning fee</span>

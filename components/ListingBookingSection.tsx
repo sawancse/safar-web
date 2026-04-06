@@ -33,6 +33,7 @@ export default function ListingBookingSection({ listing, roomTypes, perNightLabe
             roomTypes={roomTypes}
             perNightLabel={perNightLabel}
             listingId={listing.id}
+            isPG={listing.type === 'PG' || listing.type === 'COLIVING'}
             onSelect={setRoomSelections}
           />
         )}

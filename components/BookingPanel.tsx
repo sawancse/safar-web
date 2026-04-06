@@ -101,20 +101,23 @@ export default function BookingPanel({ listing, selectedRoomType, roomSelections
 
   // Auto-adjust guests when room selection changes
   useEffect(() => {
-    const maxTotal = maxGuestsAllowed;
-    const totalNow = guestCounts.adults + guestCounts.children;
-
-    // Ensure at least 1 adult per room
-    if (guestCounts.adults < effectiveRooms) {
-      setGuestCounts(g => ({ ...g, adults: effectiveRooms }));
+    if (hasMultiRoomSelection) {
+      // PG/Hotel: occupants = total beds selected (read-only)
+      if (guestCounts.adults !== effectiveRooms) {
+        setGuestCounts(g => ({ ...g, adults: effectiveRooms, children: 0 }));
+      }
+    } else {
+      const maxTotal = maxGuestsAllowed;
+      const totalNow = guestCounts.adults + guestCounts.children;
+      if (guestCounts.adults < effectiveRooms) {
+        setGuestCounts(g => ({ ...g, adults: effectiveRooms }));
+      } else if (totalNow > maxTotal) {
+        const newChildren = Math.min(guestCounts.children, Math.max(0, maxTotal - 1));
+        const newAdults = Math.min(guestCounts.adults, maxTotal - newChildren);
+        setGuestCounts(g => ({ ...g, adults: Math.max(1, newAdults), children: newChildren }));
+      }
     }
-    // Cap guests if over new max
-    else if (totalNow > maxTotal) {
-      const newChildren = Math.min(guestCounts.children, Math.max(0, maxTotal - 1));
-      const newAdults = Math.min(guestCounts.adults, maxTotal - newChildren);
-      setGuestCounts(g => ({ ...g, adults: Math.max(1, newAdults), children: newChildren }));
-    }
-  }, [maxGuestsAllowed]);
+  }, [maxGuestsAllowed, effectiveRooms, hasMultiRoomSelection]);
   const multiRoomTotalPerUnit = hasMultiRoomSelection
     ? roomSelections.reduce((sum, s) => sum + s.pricePerUnitPaise * s.count, 0)
     : 0;
@@ -147,6 +150,9 @@ export default function BookingPanel({ listing, selectedRoomType, roomSelections
     basePaise = displayPrice * nights * roomMultiplier;
   }
 
+  // PG/Co-living: price is per-bed, room count already = beds selected.
+  // NO separate adults multiplier — rooms IS the number of beds/persons.
+
   const duration = isMonthly ? Math.max(1, pgFullMonths) : isHourly ? hours : nights;
 
   // Discount calculation
@@ -174,9 +180,20 @@ export default function BookingPanel({ listing, selectedRoomType, roomSelections
   const insurancePaise = listing.insuranceEnabled && (listing.insuranceAmountPaise ?? 0) > 0
     ? (listing.insuranceAmountPaise ?? 0) : 0;
 
-  // PG/Co-living: deposit is per bed (per adult), multiply by adults count
-  const perBedDeposit = listing.securityDepositPaise ?? 0;
-  const depositPaise = isPG && guestCounts.adults > 1 ? perBedDeposit * guestCounts.adults : perBedDeposit;
+  // Security deposit: per-bed for each room type × count
+  const listingDeposit = listing.securityDepositPaise ?? 0;
+  let depositPaise = 0;
+  if (hasMultiRoomSelection) {
+    for (const s of roomSelections) {
+      const dep = s.securityDepositPaise > 0 ? s.securityDepositPaise : listingDeposit;
+      depositPaise += dep * s.count;
+    }
+  } else {
+    const perBedDeposit = (selectedRoomType?.securityDepositPaise ?? 0) > 0
+      ? selectedRoomType!.securityDepositPaise!
+      : listingDeposit;
+    depositPaise = perBedDeposit * effectiveRooms;
+  }
   const totalPaise = discountedBase + gstPaise + insurancePaise + depositPaise + maintenancePaise;
 
   const canBook = isCommercial
@@ -209,7 +226,9 @@ export default function BookingPanel({ listing, selectedRoomType, roomSelections
     params.set('infants', String(guestCounts.infants));
     params.set('pets', String(guestCounts.pets));
     if (roomSelections.length > 0) {
-      params.set('roomSelections', JSON.stringify(roomSelections.map(s => ({ id: s.roomTypeId, c: s.count }))));
+      params.set('roomSelections', JSON.stringify(roomSelections.map(s => ({
+        id: s.roomTypeId, c: s.count, rooms: s.rooms, gpr: s.guestsPerRoom,
+      }))));
       params.set('rooms', String(roomSelections.reduce((s, r) => s + r.count, 0)));
     } else if (selectedRoomType?.id) {
       params.set('roomTypeId', selectedRoomType.id);
@@ -355,17 +374,25 @@ export default function BookingPanel({ listing, selectedRoomType, roomSelections
                 </div>
                 <div className="border-t p-3">
                   <label className="block text-xs font-semibold text-gray-500 mb-1">OCCUPANTS</label>
-                  <div className="flex items-center gap-3">
-                    <button type="button"
-                      onClick={() => setGuestCounts(g => ({ ...g, adults: Math.max(1, g.adults - 1) }))}
-                      disabled={guestCounts.adults <= 1}
-                      className="w-8 h-8 rounded-full border border-gray-300 text-gray-600 flex items-center justify-center hover:border-gray-500 disabled:opacity-30 transition">-</button>
-                    <span className="text-sm font-semibold w-16 text-center">{guestCounts.adults} person{guestCounts.adults > 1 ? 's' : ''}</span>
-                    <button type="button"
-                      onClick={() => setGuestCounts(g => ({ ...g, adults: Math.min(listing.maxGuests ?? 10, g.adults + 1) }))}
-                      disabled={guestCounts.adults >= (listing.maxGuests ?? 10)}
-                      className="w-8 h-8 rounded-full border border-gray-300 text-gray-600 flex items-center justify-center hover:border-gray-500 disabled:opacity-30 transition">+</button>
-                  </div>
+                  {hasMultiRoomSelection ? (
+                    /* PG/Hotel with room selections: auto-derived, read-only */
+                    <div>
+                      <p className="text-sm font-semibold text-gray-800">{effectiveRooms} person{effectiveRooms > 1 ? 's' : ''}</p>
+                      <p className="text-[10px] text-gray-400 mt-1">Auto-calculated from room selection</p>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-3">
+                      <button type="button"
+                        onClick={() => setGuestCounts(g => ({ ...g, adults: Math.max(1, g.adults - 1) }))}
+                        disabled={guestCounts.adults <= 1}
+                        className="w-8 h-8 rounded-full border border-gray-300 text-gray-600 flex items-center justify-center hover:border-gray-500 disabled:opacity-30 transition">-</button>
+                      <span className="text-sm font-semibold w-16 text-center">{guestCounts.adults} person{guestCounts.adults > 1 ? 's' : ''}</span>
+                      <button type="button"
+                        onClick={() => setGuestCounts(g => ({ ...g, adults: Math.min(listing.maxGuests ?? 10, g.adults + 1) }))}
+                        disabled={guestCounts.adults >= (listing.maxGuests ?? 10)}
+                        className="w-8 h-8 rounded-full border border-gray-300 text-gray-600 flex items-center justify-center hover:border-gray-500 disabled:opacity-30 transition">+</button>
+                    </div>
+                  )}
                 </div>
               </>
             ) : (
@@ -499,24 +526,41 @@ export default function BookingPanel({ listing, selectedRoomType, roomSelections
       {/* Price breakdown */}
       {duration > 0 && (
         <div className="mt-4 space-y-2 text-sm">
-          {/* Rent line */}
-          <div className="flex justify-between text-gray-600">
-            <span>
-              {isMonthly ? (
-                <>
-                  Rent: {formatPaise(displayPrice)}/month
-                  {pgFullMonths > 1 && <> x {pgFullMonths} months</>}
-                  {effectiveRooms > 1 ? ` x ${effectiveRooms} rooms` : ''}
-                </>
-              ) : (
-                <>
-                  {formatPaise(displayPrice)} x {duration} {duration > 1 ? unitLabelPlural : unitLabel}
-                  {effectiveRooms > 1 ? ` x ${effectiveRooms} rooms` : ''}
-                </>
+          {/* Rent lines */}
+          {hasMultiRoomSelection ? (
+            <>
+              {roomSelections.map(s => (
+                <div key={s.roomTypeId} className="flex justify-between text-gray-600">
+                  <span>{s.count}x {s.roomTypeName} — {formatPaise(s.pricePerUnitPaise)}/{unitLabel}</span>
+                  <span>{formatPaise(s.pricePerUnitPaise * s.count * (isMonthly ? Math.max(1, pgFullMonths) : duration))}</span>
+                </div>
+              ))}
+              {roomSelections.length > 1 && (
+                <div className="flex justify-between text-gray-700 font-medium border-t border-dashed pt-1">
+                  <span>Rent subtotal ({effectiveRooms} bed{effectiveRooms > 1 ? 's' : ''})</span>
+                  <span>{formatPaise(basePaise)}</span>
+                </div>
               )}
-            </span>
-            <span>{formatPaise(basePaise)}</span>
-          </div>
+            </>
+          ) : (
+            <div className="flex justify-between text-gray-600">
+              <span>
+                {isMonthly ? (
+                  <>
+                    {formatPaise(displayPrice)}/{unitLabel}
+                    {pgFullMonths > 1 && <> x {pgFullMonths} months</>}
+                    {effectiveRooms > 1 ? ` x ${effectiveRooms} beds` : ''}
+                  </>
+                ) : (
+                  <>
+                    {formatPaise(displayPrice)} x {duration} {duration > 1 ? unitLabelPlural : unitLabel}
+                    {effectiveRooms > 1 ? ` x ${effectiveRooms} rooms` : ''}
+                  </>
+                )}
+              </span>
+              <span>{formatPaise(basePaise)}</span>
+            </div>
+          )}
           {isMonthly && pgRemainingDays > 0 && pgFullMonths >= 1 && (
             <div className="flex justify-between text-xs text-gray-400">
               <span>+ {pgRemainingDays} days prorated</span>
@@ -563,12 +607,28 @@ export default function BookingPanel({ listing, selectedRoomType, roomSelections
           )}
 
           {/* Security deposit */}
-          {depositPaise > 0 && (
+          {depositPaise > 0 && hasMultiRoomSelection && roomSelections.length > 1 ? (
+            <>
+              {roomSelections.map(s => {
+                const dep = s.securityDepositPaise > 0 ? s.securityDepositPaise : listingDeposit;
+                return (
+                  <div key={`dep-${s.roomTypeId}`} className="flex justify-between text-gray-400 text-xs">
+                    <span>Deposit: {s.count}x {s.roomTypeName} ({formatPaise(dep)}/bed)</span>
+                    <span>{formatPaise(dep * s.count)}</span>
+                  </div>
+                );
+              })}
+              <div className="flex justify-between text-gray-500">
+                <span>Total deposit</span>
+                <span>{formatPaise(depositPaise)}</span>
+              </div>
+            </>
+          ) : depositPaise > 0 ? (
             <div className="flex justify-between text-gray-500">
-              <span>Security deposit{isPG && guestCounts.adults > 1 ? ` (${formatPaise(perBedDeposit)} x ${guestCounts.adults} beds)` : ''}</span>
+              <span>Security deposit{effectiveRooms > 1 ? ` (${formatPaise(Math.round(depositPaise / effectiveRooms))}/bed x ${effectiveRooms})` : ''}</span>
               <span>{formatPaise(depositPaise)}</span>
             </div>
-          )}
+          ) : null}
 
           {/* No GST note for residential */}
           {isMonthly && !isCommercial && !listing.gstApplicable && (
@@ -636,10 +696,10 @@ export default function BookingPanel({ listing, selectedRoomType, roomSelections
                   : `${nights} night${nights > 1 ? 's' : ''}`}
               </span>
               <span className="text-xs bg-gray-100 text-gray-600 px-2.5 py-1 rounded-full">
-                {effectiveRooms} room{effectiveRooms > 1 ? 's' : ''}
+                {effectiveRooms} {isPG ? 'bed' : 'room'}{effectiveRooms > 1 ? 's' : ''}
               </span>
               <span className="text-xs bg-gray-100 text-gray-600 px-2.5 py-1 rounded-full">
-                {totalGuests} guest{totalGuests > 1 ? 's' : ''}
+                {effectiveRooms} occupant{effectiveRooms > 1 ? 's' : ''}
               </span>
             </>
           )}

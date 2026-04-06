@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { formatPaise } from '@/lib/utils';
 import type { RoomType, RoomTypeInclusion } from '@/types';
 
@@ -9,15 +9,26 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
 export interface RoomSelection {
   roomTypeId: string;
   roomTypeName: string;
-  count: number;
+  count: number;        // total guests (PG: rooms × guestsPerRoom; Hotel: rooms)
+  rooms: number;        // number of rooms selected
+  guestsPerRoom: number; // guests per room (PG: 1 to maxGuests; Hotel: maxGuests)
   pricePerUnitPaise: number;
   maxGuests: number;
+  securityDepositPaise: number;
+}
+
+interface InitialSelection {
+  roomTypeId: string;
+  rooms: number;
+  guestsPerRoom: number;
 }
 
 interface Props {
   roomTypes: RoomType[];
   perNightLabel: string;
   listingId: string;
+  isPG?: boolean;
+  initialSelections?: InitialSelection[];
   onSelect?: (selections: RoomSelection[]) => void;
 }
 
@@ -26,25 +37,80 @@ function resolveUrl(url: string): string {
   return `${API_URL}${url}`;
 }
 
-export default function RoomTypeSelector({ roomTypes, perNightLabel, listingId, onSelect }: Props) {
-  const [quantities, setQuantities] = useState<Record<string, number>>({});
+export default function RoomTypeSelector({ roomTypes, perNightLabel, listingId, isPG = false, initialSelections, onSelect }: Props) {
+  // For PG: track rooms + guests-per-room separately. For Hotel: just rooms.
+  const [roomCounts, setRoomCounts] = useState<Record<string, number>>(() => {
+    if (!initialSelections) return {};
+    const rc: Record<string, number> = {};
+    for (const s of initialSelections) rc[s.roomTypeId] = s.rooms;
+    return rc;
+  });
+  const [guestsPerRoom, setGuestsPerRoom] = useState<Record<string, number>>(() => {
+    if (!initialSelections) return {};
+    const gpr: Record<string, number> = {};
+    for (const s of initialSelections) gpr[s.roomTypeId] = s.guestsPerRoom;
+    return gpr;
+  });
   const [expandedAddons, setExpandedAddons] = useState<string | null>(null);
   const [photoModal, setPhotoModal] = useState<{ urls: string[]; index: number } | null>(null);
 
-  function updateQuantity(rt: RoomType, delta: number) {
-    const current = quantities[rt.id] || 0;
-    const next = Math.max(0, Math.min(rt.count, current + delta));
-    const newQty = { ...quantities, [rt.id]: next };
-    setQuantities(newQty);
+  // Derived quantities: total guests per room type
+  const quantities: Record<string, number> = {};
+  for (const rt of roomTypes) {
+    const rooms = roomCounts[rt.id] || 0;
+    const gpr = guestsPerRoom[rt.id] || (isPG ? rt.maxGuests : rt.maxGuests);
+    quantities[rt.id] = isPG ? rooms * gpr : rooms;
+  }
 
-    // Emit selections to parent
-    const selections: RoomSelection[] = Object.entries(newQty)
-      .filter(([, count]) => count > 0)
-      .map(([id, count]) => {
-        const room = roomTypes.find(r => r.id === id)!;
-        return { roomTypeId: id, roomTypeName: room.name, count, pricePerUnitPaise: room.basePricePaise, maxGuests: room.maxGuests };
+  function emitSelections(newRoomCounts: Record<string, number>, newGpr: Record<string, number>) {
+    const selections: RoomSelection[] = roomTypes
+      .filter(rt => (newRoomCounts[rt.id] || 0) > 0)
+      .map(rt => {
+        const rooms = newRoomCounts[rt.id] || 0;
+        const gpr = newGpr[rt.id] || rt.maxGuests;
+        const totalGuests = isPG ? rooms * gpr : rooms;
+        return {
+          roomTypeId: rt.id, roomTypeName: rt.name,
+          count: totalGuests, rooms, guestsPerRoom: gpr,
+          pricePerUnitPaise: rt.basePricePaise,
+          maxGuests: rt.maxGuests, securityDepositPaise: rt.securityDepositPaise ?? 0,
+        };
       });
     onSelect?.(selections);
+  }
+
+  // Emit initial selections on mount so parent gets the data
+  useEffect(() => {
+    if (initialSelections && initialSelections.length > 0 && roomTypes.length > 0) {
+      emitSelections(roomCounts, guestsPerRoom);
+    }
+  }, [roomTypes.length]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  function updateRoomCount(rt: RoomType, delta: number) {
+    const current = roomCounts[rt.id] || 0;
+    const maxAvailable = rt.availableCount ?? rt.count;
+    const next = Math.max(0, Math.min(maxAvailable, current + delta));
+    const newCounts = { ...roomCounts, [rt.id]: next };
+    setRoomCounts(newCounts);
+    // If rooms set to 0, reset gpr
+    if (next === 0) {
+      const newGpr = { ...guestsPerRoom };
+      delete newGpr[rt.id];
+      setGuestsPerRoom(newGpr);
+      emitSelections(newCounts, newGpr);
+    } else {
+      // Auto-set gpr to max if not set
+      const newGpr = { ...guestsPerRoom };
+      if (!newGpr[rt.id]) newGpr[rt.id] = rt.maxGuests;
+      setGuestsPerRoom(newGpr);
+      emitSelections(newCounts, newGpr);
+    }
+  }
+
+  function updateGuestsPerRoom(rt: RoomType, gpr: number) {
+    const newGpr = { ...guestsPerRoom, [rt.id]: Math.max(1, Math.min(rt.maxGuests, gpr)) };
+    setGuestsPerRoom(newGpr);
+    emitSelections(roomCounts, newGpr);
   }
 
   function openPhotos(rt: RoomType, e: React.MouseEvent) {
@@ -57,7 +123,8 @@ export default function RoomTypeSelector({ roomTypes, perNightLabel, listingId, 
 
   if (roomTypes.length === 0) return null;
 
-  const totalRooms = Object.values(quantities).reduce((s, c) => s + c, 0);
+  const totalGuests = Object.values(quantities).reduce((s, c) => s + c, 0);
+  const totalRoomCount = Object.values(roomCounts).reduce((s, c) => s + c, 0);
   const totalPaise = Object.entries(quantities)
     .filter(([, c]) => c > 0)
     .reduce((sum, [id, count]) => {
@@ -68,10 +135,10 @@ export default function RoomTypeSelector({ roomTypes, perNightLabel, listingId, 
   return (
     <div>
       <div className="flex items-center justify-between mb-4">
-        <h2 className="text-xl font-semibold">Choose Your Rooms</h2>
-        {totalRooms > 0 && (
+        <h2 className="text-xl font-semibold">{isPG ? 'Select Rooms & Guests' : 'Choose Your Rooms'}</h2>
+        {totalGuests > 0 && (
           <span className="text-sm font-medium text-orange-600">
-            {totalRooms} room{totalRooms > 1 ? 's' : ''} · {formatPaise(totalPaise)}/{perNightLabel.replace('per ', '')}
+            {isPG ? `${totalRoomCount} room${totalRoomCount > 1 ? 's' : ''} · ${totalGuests} guest${totalGuests > 1 ? 's' : ''}` : `${totalGuests} room${totalGuests > 1 ? 's' : ''}`} · {formatPaise(totalPaise)}/{perNightLabel.replace('per ', '')}
           </span>
         )}
       </div>
@@ -167,26 +234,67 @@ export default function RoomTypeSelector({ roomTypes, perNightLabel, listingId, 
                     </div>
                   )}
 
-                  {/* Quantity stepper */}
-                  <div className="flex items-center justify-between mt-3 pt-2 border-t border-gray-100">
-                    <span className="text-xs text-gray-500">
-                      {qty > 0 ? `${qty} room${qty > 1 ? 's' : ''} selected` : 'Select rooms'}
-                    </span>
-                    <div className="flex items-center gap-2">
-                      <button type="button"
-                        onClick={() => updateQuantity(rt, -1)}
-                        disabled={qty <= 0}
-                        className="w-8 h-8 rounded-full border border-gray-300 text-gray-600 flex items-center justify-center hover:border-orange-400 hover:text-orange-600 disabled:opacity-30 disabled:cursor-not-allowed transition text-sm font-bold">
-                        −
-                      </button>
-                      <span className={`w-6 text-center text-sm font-bold ${qty > 0 ? 'text-orange-600' : 'text-gray-400'}`}>{qty}</span>
-                      <button type="button"
-                        onClick={() => updateQuantity(rt, 1)}
-                        disabled={qty >= rt.count}
-                        className="w-8 h-8 rounded-full border border-gray-300 text-gray-600 flex items-center justify-center hover:border-orange-400 hover:text-orange-600 disabled:opacity-30 disabled:cursor-not-allowed transition text-sm font-bold">
-                        +
-                      </button>
+                  {/* Selection controls */}
+                  <div className="mt-3 pt-2 border-t border-gray-100 space-y-2">
+                    {/* Rooms stepper — always shown */}
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs text-gray-500">
+                        {(roomCounts[rt.id] || 0) > 0
+                          ? `${roomCounts[rt.id]} room${(roomCounts[rt.id] || 0) > 1 ? 's' : ''}`
+                          : 'Select rooms'}
+                      </span>
+                      <div className="flex items-center gap-2">
+                        <button type="button"
+                          onClick={() => updateRoomCount(rt, -1)}
+                          disabled={(roomCounts[rt.id] || 0) <= 0}
+                          className="w-8 h-8 rounded-full border border-gray-300 text-gray-600 flex items-center justify-center hover:border-orange-400 hover:text-orange-600 disabled:opacity-30 disabled:cursor-not-allowed transition text-sm font-bold">
+                          −
+                        </button>
+                        <span className={`w-6 text-center text-sm font-bold ${(roomCounts[rt.id] || 0) > 0 ? 'text-orange-600' : 'text-gray-400'}`}>
+                          {roomCounts[rt.id] || 0}
+                        </span>
+                        <button type="button"
+                          onClick={() => updateRoomCount(rt, 1)}
+                          disabled={(roomCounts[rt.id] || 0) >= (rt.availableCount ?? rt.count)}
+                          className="w-8 h-8 rounded-full border border-gray-300 text-gray-600 flex items-center justify-center hover:border-orange-400 hover:text-orange-600 disabled:opacity-30 disabled:cursor-not-allowed transition text-sm font-bold">
+                          +
+                        </button>
+                      </div>
                     </div>
+
+                    {/* PG: Guests per room selector — shown when rooms > 0 and maxGuests > 1 */}
+                    {isPG && (roomCounts[rt.id] || 0) > 0 && rt.maxGuests > 1 && (
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs text-gray-500">Guests / room</span>
+                        <div className="flex items-center gap-2">
+                          <button type="button"
+                            onClick={() => updateGuestsPerRoom(rt, (guestsPerRoom[rt.id] || rt.maxGuests) - 1)}
+                            disabled={(guestsPerRoom[rt.id] || rt.maxGuests) <= 1}
+                            className="w-7 h-7 rounded-full border border-gray-300 text-gray-600 flex items-center justify-center hover:border-orange-400 hover:text-orange-600 disabled:opacity-30 disabled:cursor-not-allowed transition text-xs font-bold">
+                            −
+                          </button>
+                          <span className="w-6 text-center text-xs font-bold text-orange-600">
+                            {guestsPerRoom[rt.id] || rt.maxGuests}
+                          </span>
+                          <button type="button"
+                            onClick={() => updateGuestsPerRoom(rt, (guestsPerRoom[rt.id] || rt.maxGuests) + 1)}
+                            disabled={(guestsPerRoom[rt.id] || rt.maxGuests) >= rt.maxGuests}
+                            className="w-7 h-7 rounded-full border border-gray-300 text-gray-600 flex items-center justify-center hover:border-orange-400 hover:text-orange-600 disabled:opacity-30 disabled:cursor-not-allowed transition text-xs font-bold">
+                            +
+                          </button>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Summary when selected */}
+                    {qty > 0 && (
+                      <p className="text-xs text-orange-600 font-medium text-right">
+                        {isPG
+                          ? `${qty} guest${qty > 1 ? 's' : ''} · ${formatPaise(rt.basePricePaise * qty)}/${perNightLabel.replace('per ', '')}`
+                          : `${qty} room${qty > 1 ? 's' : ''} · ${formatPaise(rt.basePricePaise * qty)}/${perNightLabel.replace('per ', '')}`
+                        }
+                      </p>
+                    )}
                   </div>
                 </div>
               </div>
