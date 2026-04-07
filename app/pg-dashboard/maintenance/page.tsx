@@ -228,7 +228,7 @@ export default function MaintenancePage() {
     if (!token || !tenancyId || !reopenReason.trim()) return;
     setSubmitting(true);
     try {
-      await api.reopenTicket(tenancyId, requestId, reopenReason);
+      await api.reopenTicket(tenancyId, requestId, reopenReason, token!);
       setShowReopenModal(null);
       setReopenReason('');
       setLoading(true);
@@ -245,7 +245,7 @@ export default function MaintenancePage() {
     if (!token || !tenancyId) return;
     if (!confirm('Confirm this issue has been resolved?')) return;
     try {
-      await api.closeTicket(tenancyId, requestId);
+      await api.closeTicket(tenancyId, requestId, token!);
       setLoading(true);
       await loadData();
     } catch {
@@ -258,7 +258,7 @@ export default function MaintenancePage() {
     if (!token || !tenancyId) return;
     setCommentsLoading(requestId);
     try {
-      const data = await api.getTicketComments(tenancyId, requestId);
+      const data = await api.getTicketComments(tenancyId, requestId, token!);
       setComments((prev) => ({ ...prev, [requestId]: Array.isArray(data) ? data : data?.content ?? [] }));
     } catch {
       setComments((prev) => ({ ...prev, [requestId]: [] }));
@@ -283,7 +283,7 @@ export default function MaintenancePage() {
     if (!token || !tenancyId || !newComment.trim()) return;
     setCommentSubmitting(true);
     try {
-      await api.addTicketComment(tenancyId, requestId, { commentText: newComment.trim() });
+      await api.addTicketComment(tenancyId, requestId, { commentText: newComment.trim() }, token!);
       setNewComment('');
       await loadComments(requestId);
     } catch {

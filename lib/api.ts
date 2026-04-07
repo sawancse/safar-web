@@ -1641,7 +1641,7 @@ export const api = {
     }),
 
   // Host ticket management
-  getListingTickets: (listingId: string, params: { status?: string; page?: number }, token: string) =>
+  getListingTickets: (listingId: string, params: { status?: string; priority?: string; category?: string; page?: number }, token: string) =>
     apiFetch<any>(`/api/v1/listings/${listingId}/tickets?${new URLSearchParams(
       Object.entries(params).filter(([, v]) => v != null).map(([k, v]) => [k, String(v)])
     ).toString()}`, {
@@ -2054,11 +2054,6 @@ export const api = {
       headers: { Authorization: `Bearer ${token}` },
     }),
 
-  getMyChefProfile: (token: string) =>
-    apiFetch<any>('/api/v1/chefs/me', {
-      headers: { Authorization: `Bearer ${token}` },
-    }),
-
   updateChefProfile: (data: any, token: string) =>
     apiFetch<any>('/api/v1/chefs/me', {
       method: 'PUT',
@@ -2275,7 +2270,7 @@ export const api = {
     apiFetch<any>(`/api/v1/agreements/stamp-duty/calculate?state=${state}&agreementType=${agreementType}&propertyValuePaise=${propertyValuePaise}`),
   createAgreement: (data: any, token?: string) =>
     apiFetch<any>('/api/v1/agreements', { method: 'POST', ...(token ? { headers: { Authorization: `Bearer ${token}` } } : {}), body: JSON.stringify(data) }),
-  getAgreement: (id: string, token: string) =>
+  getSaleAgreement: (id: string, token: string) =>
     apiFetch<any>(`/api/v1/agreements/${id}`, { headers: { Authorization: `Bearer ${token}` } }),
   getMyAgreements: (token: string) =>
     apiFetch<any>('/api/v1/agreements/my', { headers: { Authorization: `Bearer ${token}` } }),
@@ -2343,22 +2338,4 @@ export const api = {
   getInteriorQuote: (projectId: string, token: string) =>
     apiFetch<any>(`/api/v1/interiors/projects/${projectId}/quote`, { headers: { Authorization: `Bearer ${token}` } }),
 
-  // ══════ PG Tickets ══════
-  getTicketStats: (listingId: string, token: string) =>
-    apiFetch<any>(`/api/v1/pg/listings/${listingId}/tickets/stats`, { headers: { Authorization: `Bearer ${token}` } }),
-  getListingTickets: (listingId: string, params: { status?: string; priority?: string; category?: string; page?: number }, token: string) => {
-    const q = new URLSearchParams();
-    if (params.status) q.set('status', params.status);
-    if (params.priority) q.set('priority', params.priority);
-    if (params.category) q.set('category', params.category);
-    if (params.page !== undefined) q.set('page', String(params.page));
-    q.set('size', '20');
-    return apiFetch<any>(`/api/v1/pg/listings/${listingId}/tickets?${q}`, { headers: { Authorization: `Bearer ${token}` } });
-  },
-  getTicketComments: (tenancyId: string, requestId: string, token: string) =>
-    apiFetch<any[]>(`/api/v1/pg/tenancies/${tenancyId}/requests/${requestId}/comments`, { headers: { Authorization: `Bearer ${token}` } }),
-  addTicketComment: (tenancyId: string, requestId: string, data: { commentText: string }, token: string) =>
-    apiFetch<any>(`/api/v1/pg/tenancies/${tenancyId}/requests/${requestId}/comments`, { method: 'POST', headers: { Authorization: `Bearer ${token}` }, body: JSON.stringify(data) }),
-  updateListingTicket: (listingId: string, requestId: string, data: { status?: string; assignedTo?: string; resolutionNotes?: string }, token: string) =>
-    apiFetch<any>(`/api/v1/pg/listings/${listingId}/tickets/${requestId}`, { method: 'PUT', headers: { Authorization: `Bearer ${token}` }, body: JSON.stringify(data) }),
 };

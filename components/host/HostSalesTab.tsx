@@ -207,8 +207,8 @@ export default function HostSalesTab({ token }: { token: string }) {
   const totalListed = properties.length;
   const activeCount = properties.filter(p => p.status === 'ACTIVE').length;
   const soldCount = properties.filter(p => p.status === 'SOLD').length;
-  const totalViews = properties.reduce((sum, p) => sum + (p.viewsCount || p.views || 0), 0);
-  const totalInquiries = properties.reduce((sum, p) => sum + (p.inquiriesCount || p.inquiryCount || 0), 0);
+  const totalViews = properties.reduce((sum, p) => sum + ((p as any).viewsCount || (p as any).views || 0), 0);
+  const totalInquiries = properties.reduce((sum, p) => sum + ((p as any).inquiriesCount || p.inquiryCount || 0), 0);
 
   /* ── Sub-tab renderers ───────────────────────────────────── */
 
@@ -282,7 +282,7 @@ export default function HostSalesTab({ token }: { token: string }) {
                   <div className="flex-1 min-w-0">
                     <div className="flex items-start justify-between gap-2 mb-1">
                       <h3 className="font-semibold text-gray-800 truncate">
-                        {prop.title || `${prop.bhk || prop.bedrooms} BHK ${(prop.propertyType || prop.salePropertyType)?.replace(/_/g, ' ')}`}
+                        {prop.title || `${prop.bhk || (prop as any).bedrooms} BHK ${(prop.propertyType || (prop as any).salePropertyType)?.replace(/_/g, ' ')}`}
                       </h3>
                       <span className={`px-2 py-0.5 rounded-full text-xs font-medium whitespace-nowrap ${PROPERTY_STATUS_COLORS[prop.status] || 'bg-gray-100 text-gray-600'}`}>
                         {prop.status}
@@ -305,8 +305,8 @@ export default function HostSalesTab({ token }: { token: string }) {
                       )}
                     </p>
                     <div className="flex items-center gap-4 text-sm text-gray-500">
-                      <span>{prop.viewsCount || prop.views || 0} views</span>
-                      <span>{prop.inquiriesCount || prop.inquiryCount || 0} inquiries</span>
+                      <span>{(prop as any).viewsCount || (prop as any).views || 0} views</span>
+                      <span>{(prop as any).inquiriesCount || prop.inquiryCount || 0} inquiries</span>
                       <span>Listed {formatDate(prop.createdAt)}</span>
                     </div>
                   </div>

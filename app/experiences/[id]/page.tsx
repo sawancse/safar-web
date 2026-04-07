@@ -150,10 +150,10 @@ export default function ExperienceDetailPage() {
               <span>{formatDuration(exp.durationMinutes)}</span>
               <span>Up to {exp.maxGuests} guests</span>
             </div>
-            {stats && stats.count > 0 && (
+            {stats && (stats as any).totalReviews > 0 && (
               <div className="flex items-center gap-2 mt-2">
-                <span className="text-lg font-bold">★ {stats.avgRating?.toFixed(1)}</span>
-                <span className="text-gray-400">({stats.count} reviews)</span>
+                <span className="text-lg font-bold">★ {(stats as any).avgRating?.toFixed(1) ?? (stats as any).averageRating?.toFixed(1)}</span>
+                <span className="text-gray-400">({(stats as any).totalReviews} reviews)</span>
               </div>
             )}
           </div>
@@ -253,7 +253,7 @@ export default function ExperienceDetailPage() {
           {reviews.length > 0 && (
             <div>
               <h2 className="text-xl font-semibold mb-4">
-                Reviews ({stats?.count ?? reviews.length})
+                Reviews ({(stats as any)?.totalReviews ?? reviews.length})
               </h2>
               <div className="space-y-4">
                 {reviews.map((review) => (
