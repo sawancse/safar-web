@@ -42,6 +42,11 @@ export default function ChefDashboardPage() {
   const [bookingsError, setBookingsError] = useState('');
   const [quoteModal, setQuoteModal] = useState<string | null>(null);
   const [quoteAmount, setQuoteAmount] = useState('');
+  const [editMode, setEditMode] = useState(false);
+  const [editForm, setEditForm] = useState({
+    name: '', cuisines: '', dailyRate: '', monthlyRate: '', eventRate: '',
+    experience: '', specialties: '', bio: '',
+  });
 
   useEffect(() => {
     const token = localStorage.getItem('access_token');
@@ -515,49 +520,171 @@ export default function ChefDashboardPage() {
 
         {/* ── Profile Tab ───────────────────────────────────────── */}
         {activeTab === 'profile' && (
-          <div className="bg-white border rounded-2xl p-6 space-y-6">
-            <div className="flex items-center gap-5">
-              {chef.profilePhotoUrl ? (
-                <img src={chef.profilePhotoUrl} alt="" className="w-24 h-24 rounded-2xl object-cover ring-2 ring-orange-100" />
-              ) : (
-                <div className="w-24 h-24 rounded-2xl bg-orange-50 flex items-center justify-center text-4xl">👨‍🍳</div>
+          <div className="space-y-6">
+            {/* Profile Card */}
+            <div className="bg-white border rounded-2xl p-6 space-y-6">
+              <div className="flex items-center gap-5">
+                {/* Photo with upload */}
+                <div className="relative group">
+                  {chef.profilePhotoUrl ? (
+                    <img src={chef.profilePhotoUrl} alt="" className="w-24 h-24 rounded-2xl object-cover ring-2 ring-orange-100" />
+                  ) : (
+                    <div className="w-24 h-24 rounded-2xl bg-orange-50 flex items-center justify-center text-4xl">👨‍🍳</div>
+                  )}
+                  <label className="absolute inset-0 bg-black/40 rounded-2xl flex items-center justify-center opacity-0 group-hover:opacity-100 transition cursor-pointer">
+                    <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+                    </svg>
+                    <input type="file" accept="image/*" className="hidden" onChange={async (e) => {
+                      const file = e.target.files?.[0];
+                      if (!file || !token) return;
+                      try {
+                        const url = await api.uploadGenericFile(file, 'chef-photos', token());
+                        await api.updateChefProfile({ profilePhotoUrl: url }, token());
+                        setChef((prev: any) => ({ ...prev, profilePhotoUrl: url }));
+                      } catch { alert('Failed to upload photo'); }
+                    }} />
+                  </label>
+                </div>
+                <div>
+                  <h2 className="text-xl font-bold text-gray-900">{chef.name}</h2>
+                  <p className="text-sm text-gray-500">{chef.chefType?.replace(/_/g, ' ')} | {chef.experienceYears || 0} years exp</p>
+                  <p className="text-sm text-gray-500">{chef.city}, {chef.state}</p>
+                  <p className="text-sm text-gray-500">{chef.cuisines}</p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                <ProfileField label="Daily Rate" value={chef.dailyRatePaise ? formatPaise(chef.dailyRatePaise) : 'Not set'} />
+                <ProfileField label="Monthly Rate" value={chef.monthlyRatePaise ? formatPaise(chef.monthlyRatePaise) : 'Not set'} />
+                <ProfileField label="Event Min/Plate" value={chef.eventMinPlatePaise ? formatPaise(chef.eventMinPlatePaise) : 'Not set'} />
+                <ProfileField label="Guests Range" value={`${chef.minGuests || 1} – ${chef.maxGuests || 100}`} />
+                <ProfileField label="Verification" value={chef.verificationStatus} />
+                <ProfileField label="Food Safety" value={chef.foodSafetyCertificate ? 'Certified' : 'Not certified'} />
+              </div>
+
+              {chef.bio && (
+                <div>
+                  <p className="text-xs font-medium text-gray-500 mb-1">Bio</p>
+                  <p className="text-sm text-gray-700">{chef.bio}</p>
+                </div>
               )}
-              <div>
-                <h2 className="text-xl font-bold text-gray-900">{chef.name}</h2>
-                <p className="text-sm text-gray-500">{chef.chefType?.replace(/_/g, ' ')} | {chef.experienceYears || 0} years exp</p>
-                <p className="text-sm text-gray-500">{chef.city}, {chef.state}</p>
-                <p className="text-sm text-gray-500">{chef.cuisines}</p>
+
+              {chef.specialties && (
+                <div>
+                  <p className="text-xs font-medium text-gray-500 mb-1">Specialties</p>
+                  <p className="text-sm text-gray-700">{chef.specialties}</p>
+                </div>
+              )}
+
+              <div className="pt-4 border-t flex items-center justify-between">
+                <Link href={`/cooks/${chef.id}`} className="text-sm text-orange-500 hover:underline font-medium">
+                  View my public profile →
+                </Link>
+                <button onClick={() => {
+                  if (!editMode && chef) {
+                    setEditForm({
+                      name: chef.name || '',
+                      cuisines: chef.cuisines || '',
+                      dailyRate: chef.dailyRatePaise ? String(chef.dailyRatePaise / 100) : '',
+                      monthlyRate: chef.monthlyRatePaise ? String(chef.monthlyRatePaise / 100) : '',
+                      eventRate: chef.eventMinPlatePaise ? String(chef.eventMinPlatePaise / 100) : '',
+                      experience: chef.experienceYears ? String(chef.experienceYears) : '',
+                      specialties: chef.specialties || '',
+                      bio: chef.bio || '',
+                    });
+                  }
+                  setEditMode(!editMode);
+                }}
+                  className="px-4 py-2 bg-[#003B95] text-white rounded-lg text-sm font-medium hover:bg-[#00296b] transition">
+                  {editMode ? 'Cancel Edit' : 'Edit Profile'}
+                </button>
               </div>
             </div>
 
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-              <ProfileField label="Daily Rate" value={chef.dailyRatePaise ? formatPaise(chef.dailyRatePaise) : 'Not set'} />
-              <ProfileField label="Monthly Rate" value={chef.monthlyRatePaise ? formatPaise(chef.monthlyRatePaise) : 'Not set'} />
-              <ProfileField label="Event Min/Plate" value={chef.eventMinPlatePaise ? formatPaise(chef.eventMinPlatePaise) : 'Not set'} />
-              <ProfileField label="Guests Range" value={`${chef.minGuests || 1} – ${chef.maxGuests || 100}`} />
-              <ProfileField label="Verification" value={chef.verificationStatus} />
-              <ProfileField label="Food Safety" value={chef.foodSafetyCertificate ? 'Certified' : 'Not certified'} />
-            </div>
-
-            {chef.bio && (
-              <div>
-                <p className="text-xs font-medium text-gray-500 mb-1">Bio</p>
-                <p className="text-sm text-gray-700">{chef.bio}</p>
+            {/* Edit Form */}
+            {editMode && (
+              <div className="bg-white border rounded-2xl p-6">
+                <h3 className="font-bold text-gray-900 mb-4">Edit Profile</h3>
+                <div className="space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Name</label>
+                      <input type="text" value={editForm.name} onChange={e => setEditForm(f => ({ ...f, name: e.target.value }))}
+                        className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-[#003B95]/30" />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Cuisines</label>
+                      <input type="text" value={editForm.cuisines} onChange={e => setEditForm(f => ({ ...f, cuisines: e.target.value }))}
+                        className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-[#003B95]/30"
+                        placeholder="North Indian, South Indian, Chinese" />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-3 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Daily Rate (INR)</label>
+                      <input type="number" value={editForm.dailyRate} onChange={e => setEditForm(f => ({ ...f, dailyRate: e.target.value }))}
+                        className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-[#003B95]/30" />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Monthly Rate (INR)</label>
+                      <input type="number" value={editForm.monthlyRate} onChange={e => setEditForm(f => ({ ...f, monthlyRate: e.target.value }))}
+                        className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-[#003B95]/30" />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Event Min/Plate (INR)</label>
+                      <input type="number" value={editForm.eventRate} onChange={e => setEditForm(f => ({ ...f, eventRate: e.target.value }))}
+                        className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-[#003B95]/30" />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Experience (years)</label>
+                      <input type="number" value={editForm.experience} onChange={e => setEditForm(f => ({ ...f, experience: e.target.value }))}
+                        className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-[#003B95]/30" />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Specialties</label>
+                      <input type="text" value={editForm.specialties} onChange={e => setEditForm(f => ({ ...f, specialties: e.target.value }))}
+                        className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-[#003B95]/30"
+                        placeholder="Biryani, Tandoori, Desserts" />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Bio</label>
+                    <textarea value={editForm.bio} onChange={e => setEditForm(f => ({ ...f, bio: e.target.value }))} rows={3}
+                      className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-[#003B95]/30 resize-none"
+                      placeholder="Tell customers about yourself..." />
+                  </div>
+                  <div className="flex gap-3 pt-2">
+                    <button onClick={() => setEditMode(false)}
+                      className="flex-1 border border-gray-200 rounded-lg py-2.5 text-sm font-medium hover:bg-gray-50 transition">Cancel</button>
+                    <button onClick={async () => {
+                      if (!token()) return;
+                      try {
+                        await api.updateChefProfile({
+                          name: editForm.name || undefined,
+                          cuisines: editForm.cuisines || undefined,
+                          dailyRatePaise: editForm.dailyRate ? Math.round(Number(editForm.dailyRate) * 100) : undefined,
+                          monthlyRatePaise: editForm.monthlyRate ? Math.round(Number(editForm.monthlyRate) * 100) : undefined,
+                          eventMinPlatePaise: editForm.eventRate ? Math.round(Number(editForm.eventRate) * 100) : undefined,
+                          experienceYears: editForm.experience ? Number(editForm.experience) : undefined,
+                          specialties: editForm.specialties || undefined,
+                          bio: editForm.bio || undefined,
+                        }, token());
+                        const updated = await api.getMyChefProfile(token());
+                        setChef(updated);
+                        setEditMode(false);
+                      } catch { alert('Failed to update profile'); }
+                    }}
+                      className="flex-1 bg-[#003B95] text-white rounded-lg py-2.5 text-sm font-semibold hover:bg-[#00296b] transition">
+                      Save Changes
+                    </button>
+                  </div>
+                </div>
               </div>
             )}
-
-            {chef.specialties && (
-              <div>
-                <p className="text-xs font-medium text-gray-500 mb-1">Specialties</p>
-                <p className="text-sm text-gray-700">{chef.specialties}</p>
-              </div>
-            )}
-
-            <div className="pt-4 border-t">
-              <Link href={`/cooks/${chef.id}`} className="text-sm text-orange-500 hover:underline font-medium">
-                View my public profile →
-              </Link>
-            </div>
           </div>
         )}
       </div>

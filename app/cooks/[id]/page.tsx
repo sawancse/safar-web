@@ -107,9 +107,9 @@ export default function ChefProfilePage() {
         {/* ── Profile Header Card ── */}
         <div className="bg-white rounded-2xl border shadow-sm overflow-hidden">
           {/* Cover gradient */}
-          <div className="h-24 bg-gradient-to-r from-[#003B95] to-[#0057D9]" />
-          <div className="px-6 pb-6 -mt-12">
-            <div className="flex flex-col sm:flex-row gap-5 items-start">
+          <div className="h-28 bg-gradient-to-r from-[#003B95] to-[#0057D9]" />
+          <div className="px-6 pb-6">
+            <div className="flex flex-col sm:flex-row gap-5 items-start -mt-14">
               {/* Avatar */}
               <div className="w-24 h-24 rounded-2xl bg-white shadow-lg border-4 border-white overflow-hidden shrink-0">
                 {chef.profilePhotoUrl ? (
@@ -121,7 +121,7 @@ export default function ChefProfilePage() {
                 )}
               </div>
               {/* Name & badges */}
-              <div className="flex-1 pt-2 sm:pt-6">
+              <div className="flex-1 pt-12 sm:pt-8">
                 <div className="flex flex-wrap items-center gap-2">
                   <h1 className="text-2xl font-bold text-gray-900">{chef.name}</h1>
                   {chef.verified && (
