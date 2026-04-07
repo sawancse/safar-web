@@ -116,7 +116,7 @@ export default function MyChefBookingsPage() {
     });
 
     try {
-      let updated;
+      let updated: any;
       if (type === 'booking') {
         updated = await api.modifyChefBooking(item.id, payload, token);
         setBookings(prev => prev.map(b => b.id === item.id ? updated : b));
