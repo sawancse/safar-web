@@ -52,21 +52,21 @@ export default function AashrayPage() {
   return (
     <div>
       {/* Hero */}
-      <section className="bg-gradient-to-br from-teal-600 via-blue-600 to-purple-700 text-white py-20 px-4">
+      <section className="bg-[#003B95] text-white py-20 px-4">
         <div className="max-w-4xl mx-auto text-center">
-          <div className="inline-block bg-white/20 backdrop-blur rounded-full px-4 py-1.5 text-sm font-medium mb-6">
+          <div className="inline-block bg-white/15 backdrop-blur rounded-full px-4 py-1.5 text-sm font-medium mb-6">
             Safar Aashray — Shelter for Every Journey
           </div>
           <h1 className="text-4xl md:text-5xl font-bold mb-4">
             Everyone deserves a safe place to stay
           </h1>
-          <p className="text-lg text-blue-100 mb-8 max-w-2xl mx-auto">
+          <p className="text-lg text-white/70 mb-8 max-w-2xl mx-auto">
             Connecting displaced persons with dignified housing through NGO-funded stays.
             India hosts 300,000+ refugees — let's house them with care.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Link href="/aashray/host"
-              className="bg-white text-blue-700 font-semibold px-8 py-3 rounded-xl hover:bg-blue-50 transition text-sm">
+              className="bg-[#FFB700] text-[#003B95] font-bold px-8 py-3 rounded-xl hover:bg-[#e5a600] transition text-sm">
               Become an Aashray Host
             </Link>
             <Link href="/aashray/ngo"
@@ -126,13 +126,13 @@ export default function AashrayPage() {
       </section>
 
       {/* How it works — Host */}
-      <section className="bg-teal-50 py-16 px-4">
+      <section className="bg-blue-50 py-16 px-4">
         <div className="max-w-4xl mx-auto">
           <h2 className="text-2xl font-bold text-center mb-10">For Hosts — How It Works</h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             {HOW_IT_WORKS_HOST.map(item => (
               <div key={item.step} className="text-center">
-                <div className="w-12 h-12 rounded-full bg-teal-600 text-white flex items-center justify-center text-lg font-bold mx-auto mb-4">
+                <div className="w-12 h-12 rounded-full bg-[#003B95] text-white flex items-center justify-center text-lg font-bold mx-auto mb-4">
                   {item.step}
                 </div>
                 <h3 className="font-semibold mb-2">{item.title}</h3>
@@ -142,7 +142,7 @@ export default function AashrayPage() {
           </div>
           <div className="text-center mt-8">
             <Link href="/aashray/host"
-              className="bg-teal-600 hover:bg-teal-700 text-white font-semibold px-8 py-3 rounded-xl transition text-sm inline-block">
+              className="bg-[#003B95] hover:bg-[#00296b] text-white font-semibold px-8 py-3 rounded-xl transition text-sm inline-block">
               Open your home →
             </Link>
           </div>
@@ -214,12 +214,12 @@ export default function AashrayPage() {
       </section>
 
       {/* Why India */}
-      <section className="bg-gradient-to-r from-orange-500 to-amber-500 text-white py-16 px-4">
+      <section className="bg-[#003B95] text-white py-16 px-4">
         <div className="max-w-4xl mx-auto text-center">
           <h2 className="text-2xl font-bold mb-3">
             "अतिथि देवो भव" — The Guest is God
           </h2>
-          <p className="text-orange-100 mb-8 max-w-2xl mx-auto">
+          <p className="text-white/70 mb-8 max-w-2xl mx-auto">
             India's ancient tradition of hospitality meets modern technology.
             Every spare room can become a safe haven. Every host can change a life.
           </p>
@@ -231,7 +231,7 @@ export default function AashrayPage() {
             ].map(item => (
               <div key={item.label}>
                 <p className="text-3xl font-bold">{item.num}</p>
-                <p className="text-sm text-orange-100 mt-1">{item.label}</p>
+                <p className="text-sm text-white/60 mt-1">{item.label}</p>
               </div>
             ))}
           </div>
@@ -254,7 +254,7 @@ export default function AashrayPage() {
               <p className="text-4xl mb-3">🏠</p>
               <p className="text-gray-500">No Aashray-ready listings yet. Be the first host!</p>
               <Link href="/aashray/host"
-                className="mt-4 inline-block bg-teal-600 hover:bg-teal-700 text-white font-semibold px-6 py-2 rounded-xl transition text-sm">
+                className="mt-4 inline-block bg-[#003B95] hover:bg-[#00296b] text-white font-semibold px-6 py-2 rounded-xl transition text-sm">
                 Become an Aashray Host
               </Link>
             </div>
@@ -273,7 +273,7 @@ export default function AashrayPage() {
                     ) : (
                       <div className="w-full h-full flex items-center justify-center text-4xl text-gray-300">🏠</div>
                     )}
-                    <span className="absolute top-2 left-2 bg-teal-600 text-white text-xs font-semibold px-2 py-0.5 rounded-full">
+                    <span className="absolute top-2 left-2 bg-[#003B95] text-white text-xs font-semibold px-2 py-0.5 rounded-full">
                       Aashray Ready
                     </span>
                   </div>
@@ -292,7 +292,7 @@ export default function AashrayPage() {
           {aashrayListings.length > 0 && aashrayCount > 12 && (
             <div className="text-center mt-6">
               <Link href="/search?aashrayReady=true"
-                className="text-teal-600 hover:text-teal-700 font-semibold text-sm">
+                className="text-[#003B95] hover:text-[#00296b] font-semibold text-sm">
                 View all {aashrayCount} Aashray listings →
               </Link>
             </div>
@@ -306,7 +306,7 @@ export default function AashrayPage() {
         <p className="text-gray-500 mb-8">Whether you have a spare room or represent an organization, you can help.</p>
         <div className="flex flex-col sm:flex-row gap-4 justify-center">
           <Link href="/aashray/host"
-            className="bg-teal-600 hover:bg-teal-700 text-white font-semibold px-8 py-3 rounded-xl transition">
+            className="bg-[#003B95] hover:bg-[#00296b] text-white font-semibold px-8 py-3 rounded-xl transition">
             Become an Aashray Host
           </Link>
           <Link href="/aashray/ngo"

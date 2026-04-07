@@ -208,9 +208,16 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="max-w-3xl mx-auto px-4 py-10">
-      <h1 className="text-2xl font-bold mb-2">My Trips</h1>
-      <p className="text-sm text-gray-500 mb-6">Manage your bookings and travel plans</p>
+    <div>
+      {/* Blue header — Booking.com style */}
+      <div className="bg-[#003B95] text-white">
+        <div className="max-w-3xl mx-auto px-4 py-8">
+          <h1 className="text-2xl font-bold">My Trips</h1>
+          <p className="text-sm text-white/70 mt-1">Manage your bookings and travel plans</p>
+        </div>
+      </div>
+
+      <div className="max-w-3xl mx-auto px-4 py-8">
 
       {/* Quick links */}
       <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 mb-8">
@@ -705,6 +712,7 @@ export default function DashboardPage() {
           </div>
         </div>
       )}
+      </div>
     </div>
   );
 }

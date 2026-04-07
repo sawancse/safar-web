@@ -77,7 +77,7 @@ export default function ChefProfilePage() {
     <div className="max-w-4xl mx-auto px-4 py-20 text-center">
       <p className="text-5xl mb-4">😕</p>
       <p className="text-lg font-semibold text-gray-700">Chef not found</p>
-      <Link href="/cooks" className="text-sm text-orange-600 mt-2 inline-block hover:underline">Browse all cooks</Link>
+      <Link href="/cooks" className="text-sm text-[#003B95] mt-2 inline-block hover:underline">Browse all cooks</Link>
     </div>
   );
 
@@ -97,7 +97,7 @@ export default function ChefProfilePage() {
       {/* Breadcrumb */}
       <div className="max-w-4xl mx-auto px-4 pt-6 pb-2">
         <nav className="text-sm text-gray-500 flex items-center gap-2">
-          <Link href="/cooks" className="hover:text-orange-500">Safar Cooks</Link>
+          <Link href="/cooks" className="hover:text-[#003B95]">Safar Cooks</Link>
           <span>/</span>
           <span className="text-gray-900 font-medium">{chef.name}</span>
         </nav>
@@ -107,7 +107,7 @@ export default function ChefProfilePage() {
         {/* ── Profile Header Card ── */}
         <div className="bg-white rounded-2xl border shadow-sm overflow-hidden">
           {/* Cover gradient */}
-          <div className="h-24 bg-gradient-to-r from-orange-500 to-amber-400" />
+          <div className="h-24 bg-gradient-to-r from-[#003B95] to-[#0057D9]" />
           <div className="px-6 pb-6 -mt-12">
             <div className="flex flex-col sm:flex-row gap-5 items-start">
               {/* Avatar */}
@@ -115,7 +115,7 @@ export default function ChefProfilePage() {
                 {chef.profilePhotoUrl ? (
                   <img src={chef.profilePhotoUrl} alt={chef.name} className="w-full h-full object-cover" />
                 ) : (
-                  <div className="w-full h-full bg-gradient-to-br from-orange-100 to-amber-50 flex items-center justify-center">
+                  <div className="w-full h-full bg-gradient-to-br from-blue-50 to-slate-50 flex items-center justify-center">
                     <span className="text-4xl">👨‍🍳</span>
                   </div>
                 )}
@@ -125,15 +125,15 @@ export default function ChefProfilePage() {
                 <div className="flex flex-wrap items-center gap-2">
                   <h1 className="text-2xl font-bold text-gray-900">{chef.name}</h1>
                   {chef.verified && (
-                    <span className="text-[10px] bg-green-500 text-white px-2.5 py-0.5 rounded-full font-bold uppercase tracking-wide">
+                    <span className="text-[10px] bg-[#003B95] text-white px-2.5 py-0.5 rounded-full font-bold uppercase tracking-wide">
                       Pro
                     </span>
                   )}
                   {chef.badge && (
                     <span className={`text-[10px] px-2.5 py-0.5 rounded-full font-bold uppercase tracking-wide ${
-                      chef.badge === 'TOP_CHEF' ? 'bg-yellow-400 text-yellow-900' :
+                      chef.badge === 'TOP_CHEF' ? 'bg-[#FFB700] text-[#003B95]' :
                       chef.badge === 'TOP_10' ? 'bg-purple-500 text-white' :
-                      chef.badge === 'RISING_STAR' ? 'bg-blue-500 text-white' :
+                      chef.badge === 'RISING_STAR' ? 'bg-[#003B95] text-white' :
                       'bg-gray-500 text-white'
                     }`}>
                       {chef.badge.replace(/_/g, ' ')}
@@ -155,7 +155,7 @@ export default function ChefProfilePage() {
                 {serviceTags.length > 0 && (
                   <div className="flex flex-wrap gap-1.5 mt-2">
                     {serviceTags.map(tag => (
-                      <span key={tag} className="text-[10px] bg-amber-50 text-amber-700 px-2.5 py-1 rounded-full font-medium border border-amber-200">
+                      <span key={tag} className="text-[10px] bg-blue-50 text-[#003B95] px-2.5 py-1 rounded-full font-medium border border-blue-200">
                         {tag}
                       </span>
                     ))}
@@ -166,8 +166,8 @@ export default function ChefProfilePage() {
 
             {/* Stats Row */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-6 pt-5 border-t">
-              <div className="text-center p-3 bg-orange-50 rounded-xl">
-                <p className="text-2xl font-bold text-orange-600">{chef.rating > 0 ? chef.rating.toFixed(1) : '—'}</p>
+              <div className="text-center p-3 bg-blue-50 rounded-xl">
+                <p className="text-2xl font-bold text-[#003B95]">{chef.rating > 0 ? chef.rating.toFixed(1) : '—'}</p>
                 <p className="text-[10px] text-gray-500 mt-0.5 font-medium">RATING ({chef.reviewCount || 0})</p>
               </div>
               <div className="text-center p-3 bg-gray-50 rounded-xl">
@@ -190,12 +190,12 @@ export default function ChefProfilePage() {
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-6">
           {chef.dailyRatePaise > 0 && (
             <div className="bg-white border rounded-xl p-5 text-center hover:shadow-md transition">
-              <div className="w-10 h-10 bg-orange-100 rounded-xl flex items-center justify-center text-xl mx-auto mb-3">🍳</div>
+              <div className="w-10 h-10 bg-blue-50 rounded-xl flex items-center justify-center text-xl mx-auto mb-3">🍳</div>
               <p className="text-xs text-gray-500 font-medium uppercase tracking-wide">Daily Rate</p>
               <p className="text-2xl font-bold text-gray-900 mt-1">{formatPaise(chef.dailyRatePaise)}</p>
               <p className="text-xs text-gray-400 mb-3">per day</p>
               <Link href={`/cooks/book?chefId=${chef.id}&type=DAILY`}
-                className="block bg-orange-500 text-white text-sm font-semibold py-2.5 rounded-lg hover:bg-orange-600 transition">
+                className="block bg-[#003B95] text-white text-sm font-semibold py-2.5 rounded-lg hover:bg-[#00296b] transition">
                 Book for a Day
               </Link>
               <button onClick={() => {
@@ -205,7 +205,7 @@ export default function ChefProfilePage() {
                   serviceDate: date, serviceTime: '12:00', guestsCount: 4, numberOfMeals: 1,
                   estimatedPricePaise: chef.dailyRatePaise * 4 });
                 alert('Added to cart!');
-              }} className="block w-full mt-2 border border-orange-300 text-orange-600 text-xs font-medium py-2 rounded-lg hover:bg-orange-50 transition">
+              }} className="block w-full mt-2 border border-[#003B95]/30 text-[#003B95] text-xs font-medium py-2 rounded-lg hover:bg-blue-50 transition">
                 + Add to Cart
               </button>
             </div>
@@ -213,7 +213,7 @@ export default function ChefProfilePage() {
           {chef.monthlyRatePaise > 0 && (
             <div className="bg-white border rounded-xl p-5 text-center hover:shadow-md transition relative">
               <span className="absolute -top-2 left-1/2 -translate-x-1/2 text-[10px] bg-green-500 text-white px-3 py-0.5 rounded-full font-bold">BEST VALUE</span>
-              <div className="w-10 h-10 bg-green-100 rounded-xl flex items-center justify-center text-xl mx-auto mb-3">📅</div>
+              <div className="w-10 h-10 bg-green-50 rounded-xl flex items-center justify-center text-xl mx-auto mb-3">📅</div>
               <p className="text-xs text-gray-500 font-medium uppercase tracking-wide">Monthly Plan</p>
               <p className="text-2xl font-bold text-gray-900 mt-1">{formatPaise(chef.monthlyRatePaise)}</p>
               <p className="text-xs text-gray-400 mb-3">per month</p>
@@ -236,7 +236,7 @@ export default function ChefProfilePage() {
           )}
           {chef.eventMinPlatePaise > 0 && (
             <div className="bg-white border rounded-xl p-5 text-center hover:shadow-md transition">
-              <div className="w-10 h-10 bg-purple-100 rounded-xl flex items-center justify-center text-xl mx-auto mb-3">🎪</div>
+              <div className="w-10 h-10 bg-purple-50 rounded-xl flex items-center justify-center text-xl mx-auto mb-3">🎪</div>
               <p className="text-xs text-gray-500 font-medium uppercase tracking-wide">Event Catering</p>
               <p className="text-2xl font-bold text-gray-900 mt-1">{formatPaise(chef.eventMinPlatePaise)}</p>
               <p className="text-xs text-gray-400 mb-3">per plate (min)</p>
@@ -266,7 +266,7 @@ export default function ChefProfilePage() {
             {(['about', 'menus', 'reviews', 'gallery', 'calendar'] as const).map(tab => (
               <button key={tab} onClick={() => setActiveTab(tab)}
                 className={`px-5 py-3 text-sm font-medium border-b-2 transition capitalize
-                  ${activeTab === tab ? 'border-orange-500 text-orange-600' : 'border-transparent text-gray-500 hover:text-gray-700'}`}>
+                  ${activeTab === tab ? 'border-[#003B95] text-[#003B95]' : 'border-transparent text-gray-500 hover:text-gray-700'}`}>
                 {tab}
                 {tab === 'menus' && menus.length > 0 && ` (${menus.filter(m => m.active).length})`}
               </button>
@@ -289,7 +289,7 @@ export default function ChefProfilePage() {
                   <h3 className="font-semibold text-gray-900 mb-3">Cuisine Expertise</h3>
                   <div className="flex flex-wrap gap-2">
                     {chef.cuisines?.split(',').map((c: string) => (
-                      <span key={c} className="text-xs bg-orange-50 text-orange-700 px-3 py-1.5 rounded-full font-medium">
+                      <span key={c} className="text-xs bg-blue-50 text-[#003B95] px-3 py-1.5 rounded-full font-medium">
                         {c.trim().replace(/_/g, ' ')}
                       </span>
                     ))}
@@ -348,7 +348,7 @@ export default function ChefProfilePage() {
                 </div>
               </div>
 
-              {/* Sub-rating Breakdown (simulated from overall) */}
+              {/* Sub-rating Breakdown */}
               {chef.rating > 0 && (
                 <div className="bg-white rounded-xl border p-5">
                   <h3 className="font-semibold text-gray-900 mb-4">Rating Breakdown</h3>
@@ -362,7 +362,7 @@ export default function ChefProfilePage() {
                             <p className="text-xs text-gray-500">{dim.label}</p>
                             <div className="flex items-center gap-2 mt-0.5">
                               <div className="flex-1 h-1.5 bg-gray-100 rounded-full overflow-hidden">
-                                <div className="h-full bg-orange-500 rounded-full" style={{ width: `${(dimRating / 5) * 100}%` }} />
+                                <div className="h-full bg-[#003B95] rounded-full" style={{ width: `${(dimRating / 5) * 100}%` }} />
                               </div>
                               <span className="text-xs font-semibold text-gray-700">{dimRating.toFixed(1)}</span>
                             </div>
@@ -395,12 +395,12 @@ export default function ChefProfilePage() {
                           {menu.description && <p className="text-xs text-gray-500 mt-0.5">{menu.description}</p>}
                           <div className="flex gap-2 mt-2">
                             {menu.cuisineType && (
-                              <span className="text-[10px] bg-orange-50 text-orange-600 px-2 py-0.5 rounded-full font-medium">
+                              <span className="text-[10px] bg-blue-50 text-[#003B95] px-2 py-0.5 rounded-full font-medium">
                                 {menu.cuisineType.replace(/_/g, ' ')}
                               </span>
                             )}
                             {menu.mealType && (
-                              <span className="text-[10px] bg-blue-50 text-blue-600 px-2 py-0.5 rounded-full font-medium">{menu.mealType}</span>
+                              <span className="text-[10px] bg-slate-50 text-slate-600 px-2 py-0.5 rounded-full font-medium">{menu.mealType}</span>
                             )}
                             {menu.isVeg && <span className="text-[10px] bg-green-50 text-green-600 px-2 py-0.5 rounded-full font-medium">Pure Veg</span>}
                             {menu.isJain && <span className="text-[10px] bg-yellow-50 text-yellow-700 px-2 py-0.5 rounded-full font-medium">Jain</span>}
@@ -419,7 +419,6 @@ export default function ChefProfilePage() {
                             <p className="text-sm text-gray-400">Menu items not listed yet</p>
                           ) : (
                             <>
-                              {/* Group by category */}
                               {Object.entries(
                                 menuItems[menu.id].reduce((acc: Record<string, any[]>, item: any) => {
                                   const cat = item.category || 'Items';
@@ -496,7 +495,7 @@ export default function ChefProfilePage() {
                     {cuisinePricing.map((cp: any) => (
                       <div key={cp.id} className="border rounded-lg px-3 py-2 text-center">
                         <p className="text-xs text-gray-500">{cp.cuisineType.replace(/_/g, ' ')}</p>
-                        <p className="text-sm font-bold text-orange-600">{formatPaise(cp.pricePerPlatePaise)}/plate</p>
+                        <p className="text-sm font-bold text-[#003B95]">{formatPaise(cp.pricePerPlatePaise)}/plate</p>
                       </div>
                     ))}
                   </div>

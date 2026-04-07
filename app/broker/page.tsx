@@ -142,38 +142,32 @@ export default function BrokerPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-950 text-white">
+    <div className="min-h-screen bg-white text-gray-900">
       {/* Hero */}
-      <section className="relative overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-br from-gray-900 via-gray-950 to-black" />
-        <div className="absolute inset-0 opacity-[0.03]" style={{
-          backgroundImage: 'radial-gradient(circle at 1px 1px, white 1px, transparent 0)',
-          backgroundSize: '40px 40px',
-        }} />
-
-        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-20 pb-16">
+      <section className="relative overflow-hidden bg-[#003B95]">
+        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-16 pb-14">
           <div className="text-center max-w-3xl mx-auto">
-            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-400 text-sm font-medium mb-6">
+            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/10 border border-white/20 text-white text-sm font-medium mb-6">
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
               </svg>
               India&apos;s Fastest Growing Broker Network
             </div>
 
-            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tight">
+            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tight text-white">
               Become a{' '}
-              <span className="bg-gradient-to-r from-amber-400 to-orange-500 bg-clip-text text-transparent">
+              <span className="text-[#FFB700]">
                 Safar Broker
               </span>
             </h1>
 
-            <p className="mt-6 text-lg sm:text-xl text-gray-400 max-w-2xl mx-auto">
+            <p className="mt-6 text-lg sm:text-xl text-white/70 max-w-2xl mx-auto">
               List properties, manage clients, and earn commissions with India&apos;s
               most trusted real estate marketplace. Zero platform fees to start.
             </p>
 
             {/* Trust badges */}
-            <div className="flex flex-wrap justify-center gap-6 mt-10">
+            <div className="flex flex-wrap justify-center gap-4 mt-10">
               {[
                 { icon: '🛡', label: 'RERA Verified Agents' },
                 { icon: '💰', label: 'Zero Platform Fee' },
@@ -181,10 +175,10 @@ export default function BrokerPage() {
               ].map((badge) => (
                 <div
                   key={badge.label}
-                  className="flex items-center gap-2 px-4 py-2 rounded-lg bg-white/5 border border-white/10"
+                  className="flex items-center gap-2 px-4 py-2 rounded-lg bg-white/10 border border-white/20"
                 >
                   <span className="text-lg">{badge.icon}</span>
-                  <span className="text-sm text-gray-300 font-medium">{badge.label}</span>
+                  <span className="text-sm text-white/90 font-medium">{badge.label}</span>
                 </div>
               ))}
             </div>
@@ -193,12 +187,12 @@ export default function BrokerPage() {
       </section>
 
       {/* Stats bar */}
-      <section className="border-y border-white/10 bg-white/[0.02]">
+      <section className="border-y border-gray-100 bg-gray-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
             {STATS.map((stat) => (
               <div key={stat.label} className="text-center">
-                <div className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-amber-400 to-orange-400 bg-clip-text text-transparent">
+                <div className="text-2xl sm:text-3xl font-bold text-[#003B95]">
                   {stat.value}
                 </div>
                 <div className="mt-1 text-sm text-gray-500">{stat.label}</div>
@@ -211,20 +205,20 @@ export default function BrokerPage() {
       {/* Benefits */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
         <h2 className="text-3xl font-bold text-center mb-4">Why Brokers Love Safar</h2>
-        <p className="text-gray-400 text-center max-w-2xl mx-auto mb-12">
+        <p className="text-gray-500 text-center max-w-2xl mx-auto mb-12">
           Everything you need to grow your real estate business, all in one platform.
         </p>
         <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
           {BENEFITS.map((b) => (
             <div
               key={b.title}
-              className="group p-6 rounded-2xl bg-white/[0.03] border border-white/10 hover:border-amber-500/30 transition-all"
+              className="group p-6 rounded-2xl bg-white border border-gray-200 shadow-sm hover:border-[#003B95]/30 transition-all"
             >
               <div className="w-12 h-12 rounded-xl bg-amber-500/10 text-amber-400 flex items-center justify-center mb-4 group-hover:bg-amber-500/20 transition-colors">
                 {b.icon}
               </div>
               <h3 className="text-lg font-semibold mb-2">{b.title}</h3>
-              <p className="text-sm text-gray-400 leading-relaxed">{b.desc}</p>
+              <p className="text-sm text-gray-500 leading-relaxed">{b.desc}</p>
             </div>
           ))}
         </div>
@@ -234,13 +228,13 @@ export default function BrokerPage() {
       <section id="register" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-20">
         <div className="max-w-2xl mx-auto">
           <h2 className="text-3xl font-bold text-center mb-2">Register as a Broker</h2>
-          <p className="text-gray-400 text-center mb-8">
+          <p className="text-gray-500 text-center mb-8">
             Fill in your details to join the Safar broker network.
           </p>
 
           {!isLoggedIn ? (
-            <div className="text-center p-8 rounded-2xl bg-white/[0.03] border border-white/10">
-              <p className="text-gray-400 mb-4">You need to be logged in to register as a broker.</p>
+            <div className="text-center p-8 rounded-2xl bg-white border border-gray-200 shadow-sm">
+              <p className="text-gray-500 mb-4">You need to be logged in to register as a broker.</p>
               <Link
                 href="/auth?redirect=/broker"
                 className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-amber-500 hover:bg-amber-600 text-black font-semibold transition-colors"
@@ -254,7 +248,7 @@ export default function BrokerPage() {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
               <h3 className="text-xl font-bold text-green-400 mb-2">Already Registered</h3>
-              <p className="text-gray-400 mb-4">You already have a broker profile.</p>
+              <p className="text-gray-500 mb-4">You already have a broker profile.</p>
               <Link
                 href="/host?tab=sales"
                 className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-amber-500 hover:bg-amber-600 text-black font-semibold transition-colors"
@@ -268,7 +262,7 @@ export default function BrokerPage() {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
               <h3 className="text-xl font-bold text-green-400 mb-2">Registration Successful!</h3>
-              <p className="text-gray-400 mb-4">
+              <p className="text-gray-500 mb-4">
                 Welcome to the Safar broker network. You can now start listing properties.
               </p>
               <Link
@@ -279,7 +273,7 @@ export default function BrokerPage() {
               </Link>
             </div>
           ) : (
-            <form onSubmit={handleSubmit} className="space-y-6 p-8 rounded-2xl bg-white/[0.03] border border-white/10">
+            <form onSubmit={handleSubmit} className="space-y-6 p-8 rounded-2xl bg-white border border-gray-200 shadow-sm">
               {error && (
                 <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-sm">
                   {error}
@@ -288,20 +282,20 @@ export default function BrokerPage() {
 
               {/* Company Name */}
               <div>
-                <label className="block text-sm font-medium text-gray-300 mb-1.5">Company Name *</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">Company Name *</label>
                 <input
                   type="text"
                   required
                   value={companyName}
                   onChange={(e) => setCompanyName(e.target.value)}
                   placeholder="Your real estate company name"
-                  className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white placeholder-gray-500 focus:outline-none focus:border-amber-500/50 focus:ring-1 focus:ring-amber-500/30"
+                  className="w-full px-4 py-3 rounded-xl bg-gray-50 border border-gray-200 text-gray-900 placeholder-gray-400 focus:outline-none focus:border-[#003B95] focus:ring-1 focus:ring-[#003B95]/30"
                 />
               </div>
 
               {/* RERA Agent ID */}
               <div>
-                <label className="block text-sm font-medium text-gray-300 mb-1.5">
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">
                   RERA Agent ID <span className="text-gray-500">(optional)</span>
                 </label>
                 <input
@@ -309,13 +303,13 @@ export default function BrokerPage() {
                   value={reraAgentId}
                   onChange={(e) => setReraAgentId(e.target.value)}
                   placeholder="e.g. A52000012345"
-                  className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white placeholder-gray-500 focus:outline-none focus:border-amber-500/50 focus:ring-1 focus:ring-amber-500/30"
+                  className="w-full px-4 py-3 rounded-xl bg-gray-50 border border-gray-200 text-gray-900 placeholder-gray-400 focus:outline-none focus:border-[#003B95] focus:ring-1 focus:ring-[#003B95]/30"
                 />
               </div>
 
               {/* Operating Cities */}
               <div className="relative">
-                <label className="block text-sm font-medium text-gray-300 mb-1.5">Operating Cities *</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">Operating Cities *</label>
                 <div className="flex flex-wrap gap-2 mb-2">
                   {operatingCities.map((c) => (
                     <span
@@ -340,16 +334,16 @@ export default function BrokerPage() {
                   }}
                   onFocus={() => setShowCityDropdown(true)}
                   placeholder="Search and add cities..."
-                  className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white placeholder-gray-500 focus:outline-none focus:border-amber-500/50 focus:ring-1 focus:ring-amber-500/30"
+                  className="w-full px-4 py-3 rounded-xl bg-gray-50 border border-gray-200 text-gray-900 placeholder-gray-400 focus:outline-none focus:border-[#003B95] focus:ring-1 focus:ring-[#003B95]/30"
                 />
                 {showCityDropdown && filteredCities.length > 0 && (
-                  <div className="absolute z-20 w-full mt-1 max-h-48 overflow-y-auto rounded-xl bg-gray-900 border border-white/10 shadow-xl">
+                  <div className="absolute z-20 w-full mt-1 max-h-48 overflow-y-auto rounded-xl bg-white border border-gray-200 shadow-xl">
                     {filteredCities.slice(0, 10).map((c) => (
                       <button
                         key={c}
                         type="button"
                         onClick={() => addCity(c)}
-                        className="w-full text-left px-4 py-2.5 text-sm text-gray-300 hover:bg-white/5 hover:text-white transition-colors"
+                        className="w-full text-left px-4 py-2.5 text-sm text-gray-700 hover:bg-blue-50 hover:text-[#003B95] transition-colors"
                       >
                         {c}
                       </button>
@@ -361,21 +355,21 @@ export default function BrokerPage() {
               {/* Specialization + Experience */}
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-1.5">Specialization</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Specialization</label>
                   <select
                     value={specialization}
                     onChange={(e) => setSpecialization(e.target.value)}
                     className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white focus:outline-none focus:border-amber-500/50 focus:ring-1 focus:ring-amber-500/30"
                   >
                     {SPECIALIZATIONS.map((s) => (
-                      <option key={s.value} value={s.value} className="bg-gray-900">
+                      <option key={s.value} value={s.value} className="bg-white">
                         {s.label}
                       </option>
                     ))}
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-1.5">Experience (years)</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Experience (years)</label>
                   <input
                     type="number"
                     min="0"
@@ -383,26 +377,26 @@ export default function BrokerPage() {
                     value={experienceYears}
                     onChange={(e) => setExperienceYears(e.target.value)}
                     placeholder="0"
-                    className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white placeholder-gray-500 focus:outline-none focus:border-amber-500/50 focus:ring-1 focus:ring-amber-500/30"
+                    className="w-full px-4 py-3 rounded-xl bg-gray-50 border border-gray-200 text-gray-900 placeholder-gray-400 focus:outline-none focus:border-[#003B95] focus:ring-1 focus:ring-[#003B95]/30"
                   />
                 </div>
               </div>
 
               {/* Bio */}
               <div>
-                <label className="block text-sm font-medium text-gray-300 mb-1.5">Bio</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">Bio</label>
                 <textarea
                   rows={3}
                   value={bio}
                   onChange={(e) => setBio(e.target.value)}
                   placeholder="Tell buyers about your experience and expertise..."
-                  className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white placeholder-gray-500 focus:outline-none focus:border-amber-500/50 focus:ring-1 focus:ring-amber-500/30 resize-none"
+                  className="w-full px-4 py-3 rounded-xl bg-gray-50 border border-gray-200 text-gray-900 placeholder-gray-400 focus:outline-none focus:border-[#003B95] focus:ring-1 focus:ring-[#003B95]/30 resize-none"
                 />
               </div>
 
               {/* Website */}
               <div>
-                <label className="block text-sm font-medium text-gray-300 mb-1.5">
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">
                   Website <span className="text-gray-500">(optional)</span>
                 </label>
                 <input
@@ -410,52 +404,52 @@ export default function BrokerPage() {
                   value={website}
                   onChange={(e) => setWebsite(e.target.value)}
                   placeholder="https://yourcompany.com"
-                  className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white placeholder-gray-500 focus:outline-none focus:border-amber-500/50 focus:ring-1 focus:ring-amber-500/30"
+                  className="w-full px-4 py-3 rounded-xl bg-gray-50 border border-gray-200 text-gray-900 placeholder-gray-400 focus:outline-none focus:border-[#003B95] focus:ring-1 focus:ring-[#003B95]/30"
                 />
               </div>
 
               {/* Office Address */}
               <div>
-                <label className="block text-sm font-medium text-gray-300 mb-1.5">Office Address</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">Office Address</label>
                 <input
                   type="text"
                   value={officeAddress}
                   onChange={(e) => setOfficeAddress(e.target.value)}
                   placeholder="Street address"
-                  className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white placeholder-gray-500 focus:outline-none focus:border-amber-500/50 focus:ring-1 focus:ring-amber-500/30"
+                  className="w-full px-4 py-3 rounded-xl bg-gray-50 border border-gray-200 text-gray-900 placeholder-gray-400 focus:outline-none focus:border-[#003B95] focus:ring-1 focus:ring-[#003B95]/30"
                 />
               </div>
 
               {/* City, State, Pincode */}
               <div className="grid grid-cols-3 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-1.5">City</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">City</label>
                   <input
                     type="text"
                     value={officeCity}
                     onChange={(e) => setOfficeCity(e.target.value)}
                     placeholder="City"
-                    className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white placeholder-gray-500 focus:outline-none focus:border-amber-500/50 focus:ring-1 focus:ring-amber-500/30"
+                    className="w-full px-4 py-3 rounded-xl bg-gray-50 border border-gray-200 text-gray-900 placeholder-gray-400 focus:outline-none focus:border-[#003B95] focus:ring-1 focus:ring-[#003B95]/30"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-1.5">State</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">State</label>
                   <input
                     type="text"
                     value={officeState}
                     onChange={(e) => setOfficeState(e.target.value)}
                     placeholder="State"
-                    className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white placeholder-gray-500 focus:outline-none focus:border-amber-500/50 focus:ring-1 focus:ring-amber-500/30"
+                    className="w-full px-4 py-3 rounded-xl bg-gray-50 border border-gray-200 text-gray-900 placeholder-gray-400 focus:outline-none focus:border-[#003B95] focus:ring-1 focus:ring-[#003B95]/30"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-1.5">Pincode</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Pincode</label>
                   <input
                     type="text"
                     value={officePincode}
                     onChange={(e) => setOfficePincode(e.target.value)}
                     placeholder="560001"
-                    className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white placeholder-gray-500 focus:outline-none focus:border-amber-500/50 focus:ring-1 focus:ring-amber-500/30"
+                    className="w-full px-4 py-3 rounded-xl bg-gray-50 border border-gray-200 text-gray-900 placeholder-gray-400 focus:outline-none focus:border-[#003B95] focus:ring-1 focus:ring-[#003B95]/30"
                   />
                 </div>
               </div>
@@ -463,7 +457,7 @@ export default function BrokerPage() {
               <button
                 type="submit"
                 disabled={loading || operatingCities.length === 0 || !companyName}
-                className="w-full py-3.5 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-black font-semibold text-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full py-3.5 rounded-xl bg-[#003B95] hover:bg-[#00296b] text-white font-semibold text-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {loading ? 'Registering...' : 'Register as Broker'}
               </button>
@@ -473,13 +467,13 @@ export default function BrokerPage() {
       </section>
 
       {/* CTA */}
-      <section className="border-t border-white/10 bg-gradient-to-r from-amber-500/5 to-orange-500/5">
+      <section className="border-t border-gray-100 bg-blue-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 text-center">
           <h2 className="text-2xl font-bold mb-3">Already a Safar Broker?</h2>
-          <p className="text-gray-400 mb-6">Access your dashboard to manage listings and track your deals.</p>
+          <p className="text-gray-500 mb-6">Access your dashboard to manage listings and track your deals.</p>
           <Link
             href="/host?tab=sales"
-            className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-white/10 hover:bg-white/15 border border-white/10 text-white font-medium transition-colors"
+            className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-[#003B95] hover:bg-[#00296b] text-white font-medium transition-colors"
           >
             Go to Broker Dashboard
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">

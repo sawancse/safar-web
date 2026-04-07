@@ -132,10 +132,10 @@ const ACCESSIBILITY_LABELS: Record<string, string> = {
 };
 
 const RATING_OPTIONS = [
-  { key: '9+', label: 'Wonderful: 9+', value: 9 },
-  { key: '8+', label: 'Very Good: 8+', value: 8 },
-  { key: '7+', label: 'Good: 7+', value: 7 },
-  { key: '6+', label: 'Pleasant: 6+', value: 6 },
+  { key: '4.5+', label: 'Exceptional: 4.5+', value: 4.5 },
+  { key: '4+', label: 'Wonderful: 4+', value: 4 },
+  { key: '3.5+', label: 'Very Good: 3.5+', value: 3.5 },
+  { key: '3+', label: 'Good: 3+', value: 3 },
 ];
 
 const PRICE_RANGES = [
