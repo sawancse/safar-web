@@ -4,6 +4,7 @@ import { useSearchParams, useRouter } from 'next/navigation';
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { api } from '@/lib/api';
 import ListingCard from '@/components/ListingCard';
+import SearchBar from '@/components/SearchBar';
 import Link from 'next/link';
 import type { Listing, FilterAggregations } from '@/types';
 
@@ -679,10 +680,22 @@ export default function SearchPage() {
     <div>
       {/* Blue header strip with search bar — Booking.com style */}
       <div className="bg-[#003B95] relative z-30 overflow-visible">
-        <div className="max-w-[1400px] mx-auto px-4 pt-4 pb-6">
-          <h2 className="text-white text-lg font-bold mb-3">Search</h2>
-          <form onSubmit={handleSearchSubmit}
-            className="flex flex-col sm:flex-row gap-2 bg-[#FFB700] rounded-xl p-1.5 shadow-lg">
+        <div className="max-w-[1400px] mx-auto px-4 pt-3 pb-4 sm:pt-4 sm:pb-6">
+          <div className="mb-3">
+            <SearchBar
+              initialCity={city || query || ''}
+              initialCheckIn={checkIn}
+              initialCheckOut={checkOut}
+              initialGuests={{
+                adults: Math.max(1, Number(searchParams.get('guests') || 1) - Number(searchParams.get('children') || 0)),
+                children: Number(searchParams.get('children') || 0),
+                infants: Number(searchParams.get('infants') || 0),
+                pets: Number(searchParams.get('pets') || 0),
+              }}
+            />
+          </div>
+          {/* Hidden — old form replaced by SearchBar above */}
+          <form onSubmit={handleSearchSubmit} className="hidden">
         {/* City with autocomplete */}
         <div ref={cityWrapRef} className="relative flex-1">
           <div className="flex items-center bg-white rounded-lg">
@@ -969,8 +982,8 @@ export default function SearchPage() {
         </button>
       </form>
 
-          {/* Property type tabs — wrapping pills inside blue header */}
-          <div className="flex flex-wrap gap-2 mt-4 pb-1">
+          {/* Property type tabs — scroll on mobile, wrap on desktop */}
+          <div className="flex gap-2 mt-3 pb-1 overflow-x-auto sm:flex-wrap scrollbar-hide" style={{ WebkitOverflowScrolling: 'touch' }}>
             {SEARCH_PROPERTY_TYPES.map(({ key, label, icon }) => {
               const isActive = key === 'ALL'
                 ? selectedTypes.length === 0
@@ -983,7 +996,7 @@ export default function SearchPage() {
                   params.set('page', '0');
                   router.push(`/search?${params.toString()}`);
                 }}
-                  className={`inline-flex items-center gap-1.5 px-4 py-2 rounded-full whitespace-nowrap transition-all duration-150 text-sm shadow-sm ${
+                  className={`inline-flex items-center gap-1 sm:gap-1.5 px-3 py-1.5 sm:px-4 sm:py-2 rounded-full whitespace-nowrap shrink-0 transition-all duration-150 text-xs sm:text-sm shadow-sm ${
                     isActive
                       ? 'bg-white text-[#003B95] font-semibold shadow-md ring-2 ring-white/50'
                       : 'bg-white/90 text-[#003B95]/80 hover:bg-white hover:shadow-md hover:scale-105 font-medium'

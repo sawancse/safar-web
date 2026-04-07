@@ -601,17 +601,25 @@ function highlightMatch(text: string, query: string) {
 }
 
 /* ── Main SearchBar ────────────────────────────────────────── */
-export default function SearchBar() {
+interface SearchBarProps {
+  initialCity?: string;
+  initialCheckIn?: string;
+  initialCheckOut?: string;
+  initialGuests?: { adults: number; children: number; infants: number; pets: number };
+  compact?: boolean;
+}
+
+export default function SearchBar({ initialCity, initialCheckIn, initialCheckOut, initialGuests, compact }: SearchBarProps = {}) {
   const router = useRouter();
-  const [city, setCity] = useState('');
-  const [checkIn, setCheckIn] = useState('');
-  const [checkOut, setCheckOut] = useState('');
+  const [city, setCity] = useState(initialCity || '');
+  const [checkIn, setCheckIn] = useState(initialCheckIn || '');
+  const [checkOut, setCheckOut] = useState(initialCheckOut || '');
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [calMonth, setCalMonth] = useState(() => new Date());
   const datePickerRef = useRef<HTMLDivElement>(null);
-  const [guestCounts, setGuestCounts] = useState<GuestCounts>({
-    adults: 1, children: 0, infants: 0, pets: 0,
-  });
+  const [guestCounts, setGuestCounts] = useState<GuestCounts>(
+    initialGuests || { adults: 1, children: 0, infants: 0, pets: 0 }
+  );
   const [cityFocused, setCityFocused] = useState(false);
   const [selectedLocation, setSelectedLocation] = useState<{
     lat?: number;

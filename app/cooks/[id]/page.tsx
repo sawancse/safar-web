@@ -28,6 +28,11 @@ export default function ChefProfilePage() {
   const [photos, setPhotos] = useState<any[]>([]);
   const [calendar, setCalendar] = useState<any>(null);
   const [cuisinePricing, setCuisinePricing] = useState<any[]>([]);
+  const [itemIngredients, setItemIngredients] = useState<Record<string, any[]>>({});
+  const [shoppingList, setShoppingList] = useState<any>(null);
+  const [shoppingGuests, setShoppingGuests] = useState(4);
+  const [showShoppingModal, setShowShoppingModal] = useState(false);
+  const [shoppingMenuId, setShoppingMenuId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!id) return;
@@ -62,7 +67,41 @@ export default function ChefProfilePage() {
     const items = await api.getMenuItems(menuId);
     setMenuItems(prev => ({ ...prev, [menuId]: items || [] }));
     setExpandedMenu(menuId);
+
+    // Load ingredients for each item
+    if (items?.length) {
+      for (const item of items) {
+        if (!itemIngredients[item.id]) {
+          api.getMenuItemIngredients(item.id).then(ings => {
+            if (ings?.length) setItemIngredients(prev => ({ ...prev, [item.id]: ings }));
+          }).catch(() => {});
+        }
+      }
+    }
   }
+
+  async function openShoppingList(menuId: string) {
+    setShoppingMenuId(menuId);
+    setShowShoppingModal(true);
+    try {
+      const list = await api.getShoppingList(menuId, shoppingGuests);
+      setShoppingList(list);
+    } catch { setShoppingList(null); }
+  }
+
+  async function refreshShoppingList(guests: number) {
+    setShoppingGuests(guests);
+    if (!shoppingMenuId) return;
+    try {
+      const list = await api.getShoppingList(shoppingMenuId, guests);
+      setShoppingList(list);
+    } catch {}
+  }
+
+  const INGREDIENT_CATEGORY_ICONS: Record<string, string> = {
+    GROCERY: '🛒', FRESH_PRODUCE: '🥬', SPICES: '🌶️', DAIRY: '🥛',
+    CONDIMENTS: '🫙', MEAT_FISH: '🥩', MISC: '📦',
+  };
 
   if (loading) return (
     <div className="max-w-4xl mx-auto px-4 py-20 text-center">
@@ -427,25 +466,47 @@ export default function ChefProfilePage() {
                                   return acc;
                                 }, {})
                               ).map(([category, items]) => (
-                                <div key={category} className="mb-3 last:mb-0">
+                                <div key={category} className="mb-4 last:mb-0">
                                   <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">{category}</h4>
-                                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
+                                  <div className="space-y-1.5">
                                     {(items as any[]).map((item: any) => (
-                                      <div key={item.id} className="flex items-center gap-2 text-sm py-1">
-                                        <span className={`w-3 h-3 rounded-sm border-2 ${item.isVeg ? 'border-green-500' : 'border-red-500'}`}>
-                                          <span className={`block w-1.5 h-1.5 rounded-full m-[1px] ${item.isVeg ? 'bg-green-500' : 'bg-red-500'}`} />
-                                        </span>
-                                        <span className="text-gray-700">{item.name}</span>
+                                      <div key={item.id}>
+                                        <div className="flex items-center gap-2 text-sm py-1">
+                                          <span className={`w-3 h-3 rounded-sm border-2 shrink-0 ${item.isVeg ? 'border-green-500' : 'border-red-500'}`}>
+                                            <span className={`block w-1.5 h-1.5 rounded-full m-[1px] ${item.isVeg ? 'bg-green-500' : 'bg-red-500'}`} />
+                                          </span>
+                                          <span className="text-gray-700 font-medium">{item.name}</span>
+                                        </div>
+                                        {/* Ingredients for this dish */}
+                                        {itemIngredients[item.id]?.length > 0 && (
+                                          <div className="ml-5 mt-1 mb-2 flex flex-wrap gap-1">
+                                            {itemIngredients[item.id].map((ing: any) => (
+                                              <span key={ing.id}
+                                                className={`text-[10px] px-2 py-0.5 rounded-full ${
+                                                  ing.isOptional ? 'bg-gray-100 text-gray-500 border border-dashed border-gray-300' : 'bg-blue-50 text-[#003B95]'
+                                                }`}>
+                                                {ing.name}{ing.quantity ? ` (${ing.quantity}${ing.unit || ''})` : ''}
+                                              </span>
+                                            ))}
+                                          </div>
+                                        )}
                                       </div>
                                     ))}
                                   </div>
                                 </div>
                               ))}
-                              {menu.minGuests && (
-                                <p className="text-xs text-gray-400 mt-3 pt-3 border-t">
-                                  Min {menu.minGuests} guests — Max {menu.maxGuests || 100} guests
-                                </p>
-                              )}
+                              {/* Shopping List + Guest info */}
+                              <div className="flex items-center justify-between mt-3 pt-3 border-t">
+                                {menu.minGuests && (
+                                  <p className="text-xs text-gray-400">
+                                    Min {menu.minGuests} — Max {menu.maxGuests || 100} guests
+                                  </p>
+                                )}
+                                <button onClick={() => openShoppingList(menu.id)}
+                                  className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#003B95] bg-blue-50 px-3 py-1.5 rounded-full hover:bg-blue-100 transition">
+                                  <span>🛒</span> View Shopping List
+                                </button>
+                              </div>
                             </>
                           )}
                         </div>
@@ -538,6 +599,92 @@ export default function ChefProfilePage() {
           )}
         </div>
       </div>
+
+      {/* ── Shopping List Modal ── */}
+      {showShoppingModal && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={() => setShowShoppingModal(false)}>
+          <div className="bg-white rounded-2xl max-w-lg w-full max-h-[85vh] overflow-hidden" onClick={e => e.stopPropagation()}>
+            <div className="bg-[#003B95] text-white p-5 flex items-center justify-between">
+              <div>
+                <h3 className="text-lg font-bold flex items-center gap-2">🛒 Shopping List</h3>
+                <p className="text-white/70 text-sm mt-0.5">{shoppingList?.menuName || 'Loading...'}</p>
+              </div>
+              <button onClick={() => setShowShoppingModal(false)} className="text-white/60 hover:text-white text-xl">&times;</button>
+            </div>
+
+            {/* Guest count selector */}
+            <div className="px-5 py-3 border-b bg-blue-50 flex items-center justify-between">
+              <span className="text-sm font-medium text-gray-700">Number of guests</span>
+              <div className="flex items-center gap-2">
+                <button onClick={() => refreshShoppingList(Math.max(1, shoppingGuests - 1))}
+                  className="w-8 h-8 rounded-full border border-gray-300 text-gray-600 hover:bg-gray-100 flex items-center justify-center font-bold">−</button>
+                <span className="w-8 text-center font-bold text-[#003B95]">{shoppingGuests}</span>
+                <button onClick={() => refreshShoppingList(shoppingGuests + 1)}
+                  className="w-8 h-8 rounded-full border border-gray-300 text-gray-600 hover:bg-gray-100 flex items-center justify-center font-bold">+</button>
+              </div>
+            </div>
+
+            <div className="overflow-y-auto max-h-[55vh] p-5">
+              {!shoppingList || !shoppingList.categories?.length ? (
+                <div className="text-center py-10 text-gray-400">
+                  <p className="text-3xl mb-2">📋</p>
+                  <p className="text-sm">No ingredient data available for this menu yet.</p>
+                  <p className="text-xs text-gray-400 mt-1">The chef hasn't added ingredient details.</p>
+                </div>
+              ) : (
+                <div className="space-y-5">
+                  {shoppingList.categories.map((cat: any) => (
+                    <div key={cat.category}>
+                      <h4 className="text-xs font-bold text-gray-500 uppercase tracking-wide flex items-center gap-1.5 mb-2">
+                        <span>{INGREDIENT_CATEGORY_ICONS[cat.category] || '📦'}</span>
+                        {cat.category.replace(/_/g, ' ')}
+                        <span className="text-gray-300 font-normal">({cat.items.length})</span>
+                      </h4>
+                      <div className="space-y-1">
+                        {cat.items.map((item: any, i: number) => (
+                          <div key={i} className={`flex items-center justify-between py-1.5 px-3 rounded-lg text-sm ${
+                            item.isOptional ? 'bg-gray-50 text-gray-500' : 'bg-white'
+                          }`}>
+                            <div className="flex-1">
+                              <span className={item.isOptional ? 'italic' : 'font-medium text-gray-800'}>
+                                {item.name}
+                                {item.isOptional && <span className="text-[10px] ml-1">(optional)</span>}
+                              </span>
+                              {item.fromDish && (
+                                <p className="text-[10px] text-gray-400">for: {item.fromDish}</p>
+                              )}
+                            </div>
+                            <span className="text-xs font-semibold text-[#003B95] whitespace-nowrap ml-3">
+                              {item.totalQuantity > 0 ? `${item.totalQuantity} ${item.unit || ''}` : 'as needed'}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div className="border-t p-4 bg-gray-50 flex items-center justify-between">
+              <p className="text-xs text-gray-400">Quantities scaled for {shoppingGuests} guest{shoppingGuests > 1 ? 's' : ''}</p>
+              <button onClick={() => {
+                if (!shoppingList?.categories?.length) return;
+                const text = shoppingList.categories.map((cat: any) =>
+                  `── ${cat.category} ──\n` + cat.items.map((i: any) =>
+                    `${i.isOptional ? '(optional) ' : ''}${i.name}: ${i.totalQuantity > 0 ? `${i.totalQuantity} ${i.unit || ''}` : 'as needed'}`
+                  ).join('\n')
+                ).join('\n\n');
+                navigator.clipboard.writeText(`Shopping List — ${shoppingList.menuName} (${shoppingGuests} guests)\n\n${text}`);
+                alert('Shopping list copied to clipboard!');
+              }}
+                className="text-xs font-semibold text-[#003B95] bg-blue-50 px-4 py-2 rounded-full hover:bg-blue-100 transition flex items-center gap-1">
+                📋 Copy List
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

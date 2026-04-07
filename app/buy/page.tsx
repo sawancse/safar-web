@@ -483,10 +483,10 @@ export default function BuyPage() {
             </span>
           </div>
 
-          {/* ── Search Card — yellow Booking.com style ── */}
-          <div className="bg-[#FFB700] rounded-xl p-1.5 max-w-5xl">
-            {/* Tabs — inside yellow bar */}
-            <div className="flex gap-1 mb-2 overflow-x-auto px-2 pt-2">
+          {/* ── Search Card — white card matching homepage ── */}
+          <div className="bg-white rounded-2xl shadow-xl p-2 max-w-5xl">
+            {/* Tabs */}
+            <div className="flex gap-1 mb-2 overflow-x-auto px-1 pt-1">
               {TAB_OPTIONS.map(tab => (
                 <button
                   key={tab.key}
@@ -494,7 +494,7 @@ export default function BuyPage() {
                   className={`px-4 py-1.5 rounded-full text-sm font-semibold transition-all whitespace-nowrap ${
                     activeTab === tab.key
                       ? 'bg-[#003B95] text-white'
-                      : 'text-[#003B95]/70 hover:text-[#003B95] hover:bg-white/50'
+                      : 'text-gray-500 hover:text-[#003B95] hover:bg-blue-50'
                   }`}
                 >
                   {tab.label}
@@ -505,7 +505,7 @@ export default function BuyPage() {
             {/* Search input row */}
             <div className="flex flex-col sm:flex-row gap-1">
             <div ref={searchRef} className="relative flex-1">
-              <div className="relative flex items-center bg-white rounded-lg">
+              <div className="relative flex items-center bg-white border border-gray-200 rounded-lg">
                 <svg className="w-5 h-5 text-gray-400 absolute left-3.5 top-1/2 -translate-y-1/2 z-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                 </svg>
@@ -555,7 +555,7 @@ export default function BuyPage() {
               </div>
             </div>
 
-            {/* Search button inside yellow bar */}
+            {/* Search button */}
             <button
               type="button"
               onClick={handleSearch}
@@ -579,11 +579,11 @@ export default function BuyPage() {
                 />
               </div>
               <div>
-                <label className="text-xs font-medium text-[#003B95]/70 mb-1 block">Price Min</label>
+                <label className="text-xs font-medium text-gray-500 mb-1 block">Price Min</label>
                 <select
                   value={priceMin}
                   onChange={e => setPriceMin(e.target.value)}
-                  className="w-full border-0 rounded-lg px-3 py-2 text-sm text-gray-800 bg-white outline-none"
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-800 bg-white outline-none focus:ring-2 focus:ring-[#003B95]/30"
                 >
                   {PRICE_OPTIONS.map(o => (
                     <option key={`min-${o.value}`} value={o.value}>{o.label}</option>
@@ -591,11 +591,11 @@ export default function BuyPage() {
                 </select>
               </div>
               <div>
-                <label className="text-xs font-medium text-[#003B95]/70 mb-1 block">Price Max</label>
+                <label className="text-xs font-medium text-gray-500 mb-1 block">Price Max</label>
                 <select
                   value={priceMax}
                   onChange={e => setPriceMax(e.target.value)}
-                  className="w-full border-0 rounded-lg px-3 py-2 text-sm text-gray-800 bg-white outline-none"
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-800 bg-white outline-none focus:ring-2 focus:ring-[#003B95]/30"
                 >
                   {PRICE_MAX_OPTIONS.map(o => (
                     <option key={`max-${o.value}`} value={o.value}>{o.label}</option>
@@ -603,33 +603,33 @@ export default function BuyPage() {
                 </select>
               </div>
               <div>
-                <label className="text-xs font-medium text-[#003B95]/70 mb-1 block">Min BHK</label>
+                <label className="text-xs font-medium text-gray-500 mb-1 block">Min BHK</label>
                 <select
                   value={minBhk}
                   onChange={e => { setMinBhk(e.target.value); setQuickBhk(null); }}
-                  className="w-full border-0 rounded-lg px-3 py-2 text-sm text-gray-800 bg-white outline-none"
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-800 bg-white outline-none focus:ring-2 focus:ring-[#003B95]/30"
                 >
                   <option value="">Any</option>
                   {[1,2,3,4,5].map(n => <option key={n} value={n}>{n} BHK</option>)}
                 </select>
               </div>
               <div>
-                <label className="text-xs font-medium text-[#003B95]/70 mb-1 block">Max BHK</label>
+                <label className="text-xs font-medium text-gray-500 mb-1 block">Max BHK</label>
                 <select
                   value={maxBhk}
                   onChange={e => { setMaxBhk(e.target.value); setQuickBhk(null); }}
-                  className="w-full border-0 rounded-lg px-3 py-2 text-sm text-gray-800 bg-white outline-none"
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-800 bg-white outline-none focus:ring-2 focus:ring-[#003B95]/30"
                 >
                   <option value="">Any</option>
                   {[1,2,3,4,5].map(n => <option key={n} value={n}>{n} BHK</option>)}
                 </select>
               </div>
               <div>
-                <label className="text-xs font-medium text-[#003B95]/70 mb-1 block">Status</label>
+                <label className="text-xs font-medium text-gray-500 mb-1 block">Status</label>
                 <select
                   value={status}
                   onChange={e => setStatus(e.target.value)}
-                  className="w-full border-0 rounded-lg px-3 py-2 text-sm text-gray-800 bg-white outline-none"
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-800 bg-white outline-none focus:ring-2 focus:ring-[#003B95]/30"
                 >
                   {STATUS_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
                 </select>
@@ -638,7 +638,7 @@ export default function BuyPage() {
 
           </div>
 
-          {/* Quick filters below yellow card */}
+          {/* Quick filters below search card */}
           <div className="flex flex-wrap items-center gap-3 mt-4">
             <label className="flex items-center gap-2 cursor-pointer select-none">
               <input

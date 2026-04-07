@@ -229,6 +229,7 @@ export default function ProjectDetailPage() {
   /* Photo gallery */
   const [selectedPhotoIdx, setSelectedPhotoIdx] = useState(0);
   const [lightboxOpen, setLightboxOpen] = useState(false);
+  const [showAllPhotos, setShowAllPhotos] = useState(false);
 
   /* Price calculator */
   const [calcUnitTypeId, setCalcUnitTypeId] = useState('');
@@ -502,86 +503,188 @@ export default function ProjectDetailPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* ── Photo Gallery with Offer Badges (Feature 8) ── */}
-      <div className="bg-black">
-        <div className="max-w-7xl mx-auto">
-          <div className="relative">
-            {/* Offer/Deal Badges */}
-            <div className="absolute top-4 left-4 z-10 flex flex-col gap-2">
-              {project.projectStatus === 'UNDER_CONSTRUCTION' && (
-                <span className="bg-orange-500 text-white text-xs font-bold px-3 py-1.5 rounded-full shadow-lg animate-pulse">
-                  Early Bird Offer
-                </span>
-              )}
-              <span className="bg-green-500 text-white text-xs font-bold px-3 py-1.5 rounded-full shadow-lg">
-                Zero Brokerage
+      {/* ── Photo Gallery — Airbnb grid style ── */}
+      <div className="max-w-7xl mx-auto px-4 pt-6">
+        <div className="relative rounded-2xl overflow-hidden">
+          {/* Offer Badges */}
+          <div className="absolute top-4 left-4 z-10 flex flex-col gap-2">
+            {project.projectStatus === 'UNDER_CONSTRUCTION' && (
+              <span className="bg-orange-500 text-white text-xs font-bold px-3 py-1.5 rounded-full shadow-lg animate-pulse">
+                Early Bird Offer
               </span>
-              <span className="bg-gradient-to-r from-purple-500 to-pink-500 text-white text-xs font-bold px-3 py-1.5 rounded-full shadow-lg">
-                Festive Deal
-              </span>
-            </div>
-
-            {photos.length > 0 ? (
-              <div className="flex overflow-x-auto snap-x snap-mandatory scrollbar-hide" style={{ scrollbarWidth: 'none' }}>
-                {photos.map((url, idx) => (
-                  <div
-                    key={idx}
-                    className="flex-shrink-0 w-full sm:w-2/3 lg:w-1/2 snap-start cursor-pointer"
-                    onClick={() => { setSelectedPhotoIdx(idx); setLightboxOpen(true); }}
-                  >
-                    <img
-                      src={url}
-                      alt={`${project.projectName} photo ${idx + 1}`}
-                      className="w-full h-64 sm:h-80 lg:h-96 object-cover"
-                    />
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="h-64 sm:h-80 lg:h-96 bg-gradient-to-br from-gray-700 to-gray-900 flex items-center justify-center">
-                <svg className="w-24 h-24 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-                </svg>
-              </div>
             )}
-            {photos.length > 1 && (
-              <div className="absolute bottom-4 right-4 bg-black/60 text-white text-xs px-3 py-1.5 rounded-full">
-                {photos.length} Photos
+            <span className="bg-green-500 text-white text-xs font-bold px-3 py-1.5 rounded-full shadow-lg">
+              Zero Brokerage
+            </span>
+          </div>
+
+          {photos.length > 0 ? (
+            <div className="grid grid-cols-1 sm:grid-cols-4 gap-1 sm:h-[420px]">
+              {/* Main large photo */}
+              <div className="sm:col-span-2 sm:row-span-2 cursor-pointer relative group"
+                onClick={() => { setSelectedPhotoIdx(0); setLightboxOpen(true); }}>
+                <img src={photos[0]} alt={project.projectName}
+                  className="w-full h-64 sm:h-full object-cover group-hover:brightness-90 transition" />
               </div>
+              {/* 4 smaller photos */}
+              {photos.slice(1, 5).map((url, idx) => (
+                <div key={idx} className="hidden sm:block cursor-pointer relative group"
+                  onClick={() => { setSelectedPhotoIdx(idx + 1); setLightboxOpen(true); }}>
+                  <img src={url} alt={`Photo ${idx + 2}`}
+                    className="w-full h-full object-cover group-hover:brightness-90 transition" />
+                  {/* "+N more" overlay on last visible photo */}
+                  {idx === 3 && photos.length > 5 && (
+                    <div className="absolute inset-0 bg-black/40 flex items-center justify-center"
+                      onClick={e => { e.stopPropagation(); setShowAllPhotos(true); }}>
+                      <span className="text-white text-lg font-bold">+{photos.length - 5} more</span>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="h-64 sm:h-[420px] bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center rounded-2xl">
+              <svg className="w-24 h-24 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+              </svg>
+            </div>
+          )}
+
+          {/* Bottom bar with actions */}
+          {photos.length > 0 && (
+            <div className="absolute bottom-4 right-4 flex gap-2">
+              {project.walkthroughUrl && (
+                <a href={project.walkthroughUrl} target="_blank" rel="noopener noreferrer"
+                  className="bg-white/95 backdrop-blur-sm text-gray-800 text-xs font-semibold px-3 py-2 rounded-lg shadow-md hover:bg-white transition flex items-center gap-1.5">
+                  <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20"><path d="M6.3 2.841A1.5 1.5 0 004 4.11v11.78a1.5 1.5 0 002.3 1.269l9.344-5.89a1.5 1.5 0 000-2.538L6.3 2.84z"/></svg>
+                  Walkthrough
+                </a>
+              )}
+              <button onClick={() => setShowAllPhotos(true)}
+                className="bg-white/95 backdrop-blur-sm text-gray-800 text-xs font-semibold px-3 py-2 rounded-lg shadow-md hover:bg-white transition flex items-center gap-1.5">
+                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
+                </svg>
+                All {photos.length} Photos
+              </button>
+            </div>
+          )}
+        </div>
+
+        {/* Documents strip */}
+        {(project.masterPlanUrl || project.brochureUrl) && (
+          <div className="flex gap-3 mt-3">
+            {project.masterPlanUrl && (
+              <a href={project.masterPlanUrl} target="_blank" rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 px-4 py-2 bg-blue-50 text-[#003B95] rounded-xl text-sm font-medium hover:bg-blue-100 transition border border-blue-100">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" /></svg>
+                Master Plan
+              </a>
+            )}
+            {project.brochureUrl && (
+              <a href={project.brochureUrl} target="_blank" rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 px-4 py-2 bg-blue-50 text-[#003B95] rounded-xl text-sm font-medium hover:bg-blue-100 transition border border-blue-100">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+                Download Brochure
+              </a>
             )}
           </div>
-        </div>
+        )}
       </div>
 
       {/* ── Lightbox ── */}
       {lightboxOpen && photos.length > 0 && (
-        <div className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center" onClick={() => setLightboxOpen(false)}>
-          <button
-            className="absolute top-4 right-4 text-white text-3xl font-light hover:text-gray-300 z-10"
-            onClick={() => setLightboxOpen(false)}
-          >
-            &times;
-          </button>
-          <button
-            className="absolute left-4 top-1/2 -translate-y-1/2 text-white text-4xl hover:text-gray-300"
-            onClick={e => { e.stopPropagation(); setSelectedPhotoIdx(prev => Math.max(0, prev - 1)); }}
-          >
-            &#8249;
-          </button>
-          <img
-            src={photos[selectedPhotoIdx]}
-            alt=""
-            className="max-h-[85vh] max-w-[90vw] object-contain"
-            onClick={e => e.stopPropagation()}
-          />
-          <button
-            className="absolute right-4 top-1/2 -translate-y-1/2 text-white text-4xl hover:text-gray-300"
-            onClick={e => { e.stopPropagation(); setSelectedPhotoIdx(prev => Math.min(photos.length - 1, prev + 1)); }}
-          >
-            &#8250;
-          </button>
-          <div className="absolute bottom-4 text-white text-sm">
-            {selectedPhotoIdx + 1} / {photos.length}
+        <div className="fixed inset-0 z-50 bg-black/95 flex flex-col" onClick={() => setLightboxOpen(false)}>
+          {/* Top bar */}
+          <div className="flex items-center justify-between px-4 py-3 text-white">
+            <span className="text-sm font-medium">{selectedPhotoIdx + 1} / {photos.length}</span>
+            <button onClick={() => setLightboxOpen(false)} className="text-white/70 hover:text-white text-2xl">&times;</button>
+          </div>
+          {/* Main image */}
+          <div className="flex-1 flex items-center justify-center relative">
+            <button
+              className="absolute left-4 top-1/2 -translate-y-1/2 w-10 h-10 bg-white/10 hover:bg-white/20 rounded-full flex items-center justify-center text-white text-xl transition"
+              onClick={e => { e.stopPropagation(); setSelectedPhotoIdx(prev => Math.max(0, prev - 1)); }}>
+              &#8249;
+            </button>
+            <img src={photos[selectedPhotoIdx]} alt=""
+              className="max-h-[75vh] max-w-[85vw] object-contain rounded-lg" onClick={e => e.stopPropagation()} />
+            <button
+              className="absolute right-4 top-1/2 -translate-y-1/2 w-10 h-10 bg-white/10 hover:bg-white/20 rounded-full flex items-center justify-center text-white text-xl transition"
+              onClick={e => { e.stopPropagation(); setSelectedPhotoIdx(prev => Math.min(photos.length - 1, prev + 1)); }}>
+              &#8250;
+            </button>
+          </div>
+          {/* Thumbnail strip */}
+          <div className="flex gap-1.5 justify-center px-4 py-3 overflow-x-auto" onClick={e => e.stopPropagation()}>
+            {photos.map((url, idx) => (
+              <button key={idx} onClick={() => setSelectedPhotoIdx(idx)}
+                className={`w-14 h-10 rounded-md overflow-hidden shrink-0 transition-all ${
+                  idx === selectedPhotoIdx ? 'ring-2 ring-white scale-110' : 'opacity-50 hover:opacity-80'
+                }`}>
+                <img src={url} alt="" className="w-full h-full object-cover" />
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* ── All Photos Modal ── */}
+      {showAllPhotos && photos.length > 0 && (
+        <div className="fixed inset-0 z-50 bg-white overflow-y-auto">
+          <div className="sticky top-0 bg-white border-b z-10">
+            <div className="max-w-5xl mx-auto px-4 py-3 flex items-center justify-between">
+              <h2 className="text-lg font-bold text-gray-900">{project.projectName} — {photos.length} Photos</h2>
+              <button onClick={() => setShowAllPhotos(false)}
+                className="text-gray-500 hover:text-gray-800 text-2xl">&times;</button>
+            </div>
+          </div>
+          <div className="max-w-5xl mx-auto px-4 py-6">
+            {/* Group photos: Exterior (first 3), Interior (next batch), Amenities (rest) */}
+            {[
+              { label: 'Exterior & Overview', start: 0, end: Math.min(3, photos.length) },
+              { label: 'Interior & Rooms', start: 3, end: Math.min(7, photos.length) },
+              { label: 'Amenities & Surroundings', start: 7, end: photos.length },
+            ].filter(g => g.start < photos.length && g.start < g.end).map(group => (
+              <div key={group.label} className="mb-8">
+                <h3 className="text-sm font-bold text-gray-500 uppercase tracking-wide mb-3">{group.label}</h3>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                  {photos.slice(group.start, group.end).map((url, idx) => (
+                    <div key={group.start + idx}
+                      className="aspect-[4/3] rounded-xl overflow-hidden cursor-pointer group"
+                      onClick={() => { setSelectedPhotoIdx(group.start + idx); setShowAllPhotos(false); setLightboxOpen(true); }}>
+                      <img src={url} alt={`Photo ${group.start + idx + 1}`}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
+
+            {/* Unit type floor plans */}
+            {unitTypes.some(u => u.floorPlanUrl) && (
+              <div className="mb-8">
+                <h3 className="text-sm font-bold text-gray-500 uppercase tracking-wide mb-3">Floor Plans</h3>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                  {unitTypes.filter(u => u.floorPlanUrl).map(u => (
+                    <div key={u.id} className="aspect-[4/3] rounded-xl overflow-hidden border bg-white p-2 flex flex-col">
+                      <img src={u.floorPlanUrl!} alt={`${u.name} floor plan`} className="flex-1 object-contain" />
+                      <p className="text-xs font-medium text-gray-600 text-center mt-1">{u.name} — {u.bhk} BHK</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Master Plan */}
+            {project.masterPlanUrl && (
+              <div className="mb-8">
+                <h3 className="text-sm font-bold text-gray-500 uppercase tracking-wide mb-3">Master Plan</h3>
+                <div className="rounded-xl overflow-hidden border bg-white p-3">
+                  <img src={project.masterPlanUrl} alt="Master Plan" className="w-full object-contain max-h-[500px]" />
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}

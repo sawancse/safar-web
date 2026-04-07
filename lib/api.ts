@@ -1951,6 +1951,12 @@ export const api = {
   getMenuItems: (menuId: string) =>
     apiFetch<any[]>(`/api/v1/chefs/menus/${menuId}/items`),
 
+  getMenuItemIngredients: (menuItemId: string) =>
+    apiFetch<any[]>(`/api/v1/chefs/menu-items/${menuItemId}/ingredients`),
+
+  getShoppingList: (menuId: string, guests: number) =>
+    apiFetch<any>(`/api/v1/chefs/menus/${menuId}/shopping-list?guests=${guests}`),
+
   getMyChefProfile: (token: string) =>
     apiFetch<any>('/api/v1/chefs/me', {
       headers: { Authorization: `Bearer ${token}` },
