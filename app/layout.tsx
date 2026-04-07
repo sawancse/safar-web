@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import './globals.css';
 import Navbar from '@/components/Navbar';
 import CookCartButton from '@/components/CookCartButton';
+import LeadCapturePopup from '@/components/LeadCapturePopup';
 import GoogleAnalytics from '@/components/GoogleAnalytics';
 import { I18nProvider } from '@/lib/i18n';
 
@@ -80,6 +81,7 @@ export default function RootLayout({
           <Navbar />
           <main>{children}</main>
           <CookCartButton />
+          <LeadCapturePopup />
           <footer className="bg-[#F5F5F5] border-t mt-16">
             <div className="max-w-6xl mx-auto px-4 sm:px-6 pt-10 pb-6">
               {/* Footer columns */}
