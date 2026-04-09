@@ -32,6 +32,23 @@ const CUISINE_OPTIONS = [
   'Thai', 'Mexican', 'Ghar ka Khaana', 'Street Food', 'Jain', 'Navratri Special',
 ];
 
+const CATEGORY_META: Record<string, { label: string; icon: string; optional?: boolean }> = {
+  SOUPS_BEVERAGES: { label: 'Soups & Beverages', icon: '🍜', optional: true },
+  APPETIZERS:      { label: 'Appetizers', icon: '🥘' },
+  MAIN_COURSE:     { label: 'Main Course', icon: '🍛' },
+  BREADS:          { label: 'Breads', icon: '🫓' },
+  RICE:            { label: 'Rice', icon: '🍚' },
+  RAITA:           { label: 'Raita', icon: '🥣' },
+  DESSERTS:        { label: 'Desserts', icon: '🍮', optional: true },
+};
+const CATEGORY_ORDER = ['SOUPS_BEVERAGES', 'APPETIZERS', 'MAIN_COURSE', 'BREADS', 'RICE', 'RAITA', 'DESSERTS'];
+
+type Dish = {
+  id: string; name: string; description?: string; category: string;
+  pricePaise: number; photoUrl?: string; isVeg: boolean;
+  isRecommended: boolean; noOnionGarlic: boolean; isFried: boolean;
+};
+
 // Fallbacks used while API loads or if it fails
 const FALLBACK_COUNTERS = [
   { key: 'dosa', label: 'Live Dosa Counter', icon: '🥞', paise: 300000 },
@@ -87,6 +104,7 @@ export default function EventBookingPage() {
   const [specialRequests, setSpecialRequests] = useState('');
   const [customerName, setCustomerName] = useState('');
   const [customerPhone, setCustomerPhone] = useState('');
+  const [gasBurners, setGasBurners] = useState(2);
 
   // Add-ons
   const [selectedAddons, setSelectedAddons] = useState<Set<string>>(new Set());
@@ -97,6 +115,80 @@ export default function EventBookingPage() {
   // Dynamic pricing from API
   const [pricingItems, setPricingItems] = useState<PricingItem[]>([]);
   const [pricingLoaded, setPricingLoaded] = useState(false);
+
+  // ── Dish catalog state ──
+  const [dishCatalog, setDishCatalog] = useState<Record<string, Dish[]>>({});
+  const [dishLoading, setDishLoading] = useState(true);
+  const [categoryCounts, setCategoryCounts] = useState<Record<string, number>>({});
+  const [selectedDishes, setSelectedDishes] = useState<Record<string, string[]>>({});
+  const [selectDishesNow, setSelectDishesNow] = useState(false);
+  const [activeSelectionCat, setActiveSelectionCat] = useState<string | null>(null);
+  const [filterVeg, setFilterVeg] = useState<'all' | 'veg' | 'nonveg'>('all');
+  const [filterFried, setFilterFried] = useState(false);
+  const [filterRecommended, setFilterRecommended] = useState(false);
+  const [filterNoOnionGarlic, setFilterNoOnionGarlic] = useState(false);
+  const [dishSearch, setDishSearch] = useState('');
+
+  // Load dish catalog
+  useEffect(() => {
+    setDishLoading(true);
+    api.getDishCatalog()
+      .then((data: any) => setDishCatalog(data || {}))
+      .catch(() => setDishCatalog({}))
+      .finally(() => setDishLoading(false));
+  }, []);
+
+  function adjustCount(cat: string, delta: number) {
+    setCategoryCounts(prev => {
+      const cur = prev[cat] || 0;
+      const next = Math.max(0, cur + delta);
+      if (next < (selectedDishes[cat]?.length || 0)) {
+        setSelectedDishes(sd => ({ ...sd, [cat]: (sd[cat] || []).slice(0, next) }));
+      }
+      return { ...prev, [cat]: next };
+    });
+  }
+
+  function toggleDish(cat: string, dishId: string) {
+    const max = categoryCounts[cat] || 0;
+    setSelectedDishes(prev => {
+      const current = prev[cat] || [];
+      if (current.includes(dishId)) return { ...prev, [cat]: current.filter(d => d !== dishId) };
+      if (current.length >= max) return prev;
+      return { ...prev, [cat]: [...current, dishId] };
+    });
+  }
+
+  function totalDishCount(): number {
+    return Object.values(categoryCounts).reduce((sum, n) => sum + n, 0);
+  }
+
+  function totalSelectedDishes(): number {
+    return Object.values(selectedDishes).reduce((sum, arr) => sum + arr.length, 0);
+  }
+
+  function getFilteredDishes(cat: string): Dish[] {
+    return (dishCatalog[cat] || []).filter(d => {
+      if (filterVeg === 'veg' && !d.isVeg) return false;
+      if (filterVeg === 'nonveg' && d.isVeg) return false;
+      if (filterFried && !d.isFried) return false;
+      if (filterRecommended && !d.isRecommended) return false;
+      if (filterNoOnionGarlic && !d.noOnionGarlic) return false;
+      if (dishSearch && !d.name.toLowerCase().includes(dishSearch.toLowerCase())) return false;
+      return true;
+    });
+  }
+
+  function dishMenuTotal(): number {
+    const allIds = Object.values(selectedDishes).flat();
+    let total = 0;
+    for (const dishes of Object.values(dishCatalog)) {
+      for (const d of dishes) {
+        if (allIds.includes(d.id)) total += d.pricePaise;
+      }
+    }
+    return total * guestCount;
+  }
 
   useEffect(() => {
     api.getEventPricing(chefId || undefined)
@@ -120,7 +212,8 @@ export default function EventBookingPage() {
   const platformFeePct = (pricingItems.find(i => i.itemKey === 'platform_fee_pct')?.pricePaise ?? 1000) / 10000; // basis points → fraction
 
   // Price estimate
-  const foodPaise = guestCount * perPlatePaise;
+  const menuPaise = selectDishesNow && totalSelectedDishes() > 0 ? dishMenuTotal() : 0;
+  const foodPaise = menuPaise > 0 ? menuPaise : guestCount * perPlatePaise;
   const countersPaise = [...selectedCounters].reduce((sum, k) => sum + (LIVE_COUNTERS.find(c => c.key === k)?.paise ?? 0), 0);
   const addonsPaise = [...selectedAddons].reduce((sum, k) => sum + (ADDONS.find(a => a.key === k)?.paise ?? 0), 0);
   const staffPaise = extraStaff ? staffCount * staffRatePaise : 0;
@@ -147,6 +240,7 @@ export default function EventBookingPage() {
     setSubmitting(true);
     setError('');
     try {
+      const allSelectedDishIds = Object.values(selectedDishes).flat();
       const addOnsJson = JSON.stringify({
         decoration: selectedAddons.has('decoration'),
         cake: selectedAddons.has('cake'),
@@ -156,6 +250,8 @@ export default function EventBookingPage() {
         liveCounters: [...selectedCounters],
         extraStaff, staffCount: extraStaff ? staffCount : 0,
         vegNonVeg,
+        selectedDishIds: allSelectedDishIds.length > 0 ? allSelectedDishIds : undefined,
+        categoryCounts: totalDishCount() > 0 ? categoryCounts : undefined,
       });
       await api.createEventBooking({
         chefId: chefId || undefined,
@@ -279,6 +375,20 @@ export default function EventBookingPage() {
                     </div>
                   </div>
 
+                  {/* Gas Burners */}
+                  <div className="border-t pt-5">
+                    <label className="block text-xs font-medium text-gray-600 mb-2">No. of Gas Burners in your kitchen</label>
+                    <div className="flex flex-wrap gap-2">
+                      {[1,2,3,4,5,6].map(n => (
+                        <button key={n} type="button" onClick={() => setGasBurners(n)}
+                          className={`px-4 py-2 rounded-lg text-sm font-medium border transition
+                            ${gasBurners === n ? 'bg-orange-500 text-white border-orange-500' : 'border-gray-200 text-gray-600 hover:border-orange-300'}`}>
+                          {n} burner{n > 1 ? 's' : ''}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
                   {/* Contact */}
                   <div className="border-t pt-5 space-y-4">
                     <h3 className="font-semibold text-gray-900">Your Details</h3>
@@ -306,15 +416,16 @@ export default function EventBookingPage() {
               {/* Step 2: Menu & Add-ons */}
               {step === 2 && (
                 <div className="space-y-6">
-                  {/* Menu Preferences */}
+                  {/* Menu Preferences — Coox.in-style dish selection */}
                   <div className="bg-white rounded-xl shadow-sm border p-6 space-y-5">
                     <div>
                       <h2 className="text-xl font-bold text-gray-900 mb-1">Menu Preferences</h2>
-                      <p className="text-sm text-gray-500">Tell us about the food you'd like served</p>
+                      <p className="text-sm text-gray-500">Select dishes for your {eventLabel} ({guestCount} guests)</p>
                     </div>
 
+                    {/* Cuisine quick-pick */}
                     <div>
-                      <label className="block text-xs font-medium text-gray-600 mb-2">Cuisine</label>
+                      <label className="block text-xs font-medium text-gray-600 mb-2">Cuisine Style</label>
                       <div className="flex flex-wrap gap-2">
                         {CUISINE_OPTIONS.map(c => (
                           <button key={c} type="button" onClick={() => setCuisineType(c)}
@@ -326,6 +437,7 @@ export default function EventBookingPage() {
                       </div>
                     </div>
 
+                    {/* Food Preference */}
                     <div>
                       <label className="block text-xs font-medium text-gray-600 mb-2">Food Preference</label>
                       <div className="flex gap-3">
@@ -345,12 +457,193 @@ export default function EventBookingPage() {
                       </div>
                     </div>
 
-                    <div>
-                      <label className="block text-xs font-medium text-gray-600 mb-1">Special Requests</label>
-                      <textarea value={specialRequests} onChange={e => setSpecialRequests(e.target.value)}
-                        placeholder="Specific dishes, dietary restrictions, allergies..."
-                        rows={3} className="w-full border rounded-lg px-4 py-2.5 text-sm resize-none" />
+                    {/* No. of Dishes per category */}
+                    {!dishLoading && (
+                      <div>
+                        <label className="block text-xs font-medium text-gray-600 mb-3">No. of Dishes</label>
+                        <div className="space-y-3">
+                          {CATEGORY_ORDER.map(cat => {
+                            const meta = CATEGORY_META[cat];
+                            const count = categoryCounts[cat] || 0;
+                            const dishCount = (dishCatalog[cat] || []).length;
+                            return (
+                              <div key={cat} className="flex items-center justify-between">
+                                <div className="flex items-center gap-2">
+                                  <span className="text-lg">{meta.icon}</span>
+                                  <span className="text-sm font-medium text-gray-800">{meta.label}</span>
+                                  {meta.optional && <span className="text-[10px] text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded">optional</span>}
+                                  <span className="text-[10px] text-gray-400">({dishCount})</span>
+                                </div>
+                                <div className="flex items-center">
+                                  <button type="button" onClick={() => adjustCount(cat, -1)}
+                                    className="w-8 h-8 rounded-l-lg border border-r-0 bg-gray-50 text-gray-600 hover:bg-gray-100 font-bold text-lg flex items-center justify-center">-</button>
+                                  <div className="w-10 h-8 border flex items-center justify-center text-sm font-bold bg-orange-500 text-white">
+                                    {count}
+                                  </div>
+                                  <button type="button" onClick={() => adjustCount(cat, 1)}
+                                    className="w-8 h-8 rounded-r-lg border border-l-0 bg-gray-50 text-gray-600 hover:bg-gray-100 font-bold text-lg flex items-center justify-center">+</button>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+
+                        {/* Select dishes checkbox */}
+                        {totalDishCount() > 0 && (
+                          <label className="flex items-center gap-2 mt-5 pt-4 border-t cursor-pointer">
+                            <input type="checkbox" checked={selectDishesNow} onChange={e => setSelectDishesNow(e.target.checked)}
+                              className="w-4 h-4 rounded border-gray-300 text-orange-500 focus:ring-orange-500" />
+                            <span className="text-sm text-gray-700">I want to select dishes right now</span>
+                          </label>
+                        )}
+                      </div>
+                    )}
+
+                    {dishLoading && (
+                      <div className="animate-pulse space-y-3">
+                        {[1,2,3,4].map(i => <div key={i} className="h-10 bg-gray-100 rounded-lg" />)}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* ── Dish selection (expandable per category) ── */}
+                  {selectDishesNow && totalDishCount() > 0 && (
+                    <div className="bg-white rounded-xl shadow-sm border p-6">
+                      <div className="flex items-center justify-between mb-3">
+                        <h3 className="text-sm font-semibold text-gray-700">Select Dishes</h3>
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <button type="button" onClick={() => setFilterVeg(filterVeg === 'veg' ? 'all' : 'veg')}
+                            className={`text-[10px] px-2 py-1 rounded-full font-semibold border transition ${filterVeg === 'veg' ? 'bg-green-500 text-white border-green-500' : 'text-green-600 border-green-300'}`}>Veg</button>
+                          <button type="button" onClick={() => setFilterVeg(filterVeg === 'nonveg' ? 'all' : 'nonveg')}
+                            className={`text-[10px] px-2 py-1 rounded-full font-semibold border transition ${filterVeg === 'nonveg' ? 'bg-red-500 text-white border-red-500' : 'text-red-600 border-red-300'}`}>Non-Veg</button>
+                          <button type="button" onClick={() => setFilterFried(!filterFried)}
+                            className={`text-[10px] px-2 py-1 rounded-full font-semibold border transition ${filterFried ? 'bg-orange-500 text-white border-orange-500' : 'text-orange-600 border-orange-300'}`}>Fried</button>
+                          <button type="button" onClick={() => setFilterRecommended(!filterRecommended)}
+                            className={`text-[10px] px-2 py-1 rounded-full font-semibold border transition ${filterRecommended ? 'bg-blue-600 text-white border-blue-600' : 'text-blue-600 border-blue-300'}`}>Recommended</button>
+                          <button type="button" onClick={() => setFilterNoOnionGarlic(!filterNoOnionGarlic)}
+                            className={`text-[10px] px-2 py-1 rounded-full font-semibold border transition ${filterNoOnionGarlic ? 'bg-purple-500 text-white border-purple-500' : 'text-purple-600 border-purple-300'}`}>No Onion/Garlic</button>
+                        </div>
+                      </div>
+
+                      {/* Search */}
+                      <div className="relative mb-4">
+                        <svg className="absolute left-3 top-2.5 w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                        </svg>
+                        <input value={dishSearch} onChange={e => setDishSearch(e.target.value)}
+                          placeholder="Search Dish..." className="w-full border rounded-lg pl-9 pr-3 py-2 text-sm focus:ring-2 focus:ring-orange-300 outline-none" />
+                      </div>
+
+                      {/* Category sections */}
+                      {CATEGORY_ORDER.filter(cat => (categoryCounts[cat] || 0) > 0).map(cat => {
+                        const meta = CATEGORY_META[cat];
+                        const maxCount = categoryCounts[cat] || 0;
+                        const selected = selectedDishes[cat] || [];
+                        const filtered = getFilteredDishes(cat);
+                        const isExpanded = activeSelectionCat === cat;
+
+                        return (
+                          <div key={cat} className="mb-4">
+                            <button type="button" onClick={() => setActiveSelectionCat(isExpanded ? null : cat)}
+                              className="w-full flex items-center justify-between py-2.5 border-b hover:bg-gray-50 transition px-2 rounded">
+                              <div className="flex items-center gap-2">
+                                <span>{meta.icon}</span>
+                                <span className="text-sm font-semibold text-gray-800">{meta.label}</span>
+                                <span className="text-xs text-gray-400">({selected.length}/{maxCount})</span>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                {selected.length > 0 && (
+                                  <div className="flex flex-wrap gap-1">
+                                    {selected.map(id => {
+                                      const d = (dishCatalog[cat] || []).find(x => x.id === id);
+                                      return d ? (
+                                        <span key={id} className="text-[10px] bg-orange-50 text-orange-700 px-2 py-0.5 rounded-full font-medium flex items-center gap-1">
+                                          {d.name} ({formatPaise(d.pricePaise)})
+                                          <button type="button" onClick={e => { e.stopPropagation(); toggleDish(cat, id); }}
+                                            className="text-red-400 hover:text-red-600 ml-0.5">&times;</button>
+                                        </span>
+                                      ) : null;
+                                    })}
+                                  </div>
+                                )}
+                                <svg className={`w-4 h-4 text-gray-400 transition ${isExpanded ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                                </svg>
+                              </div>
+                            </button>
+
+                            {isExpanded && (
+                              <div className="mt-2 space-y-1 max-h-72 overflow-y-auto">
+                                {filtered.length === 0 ? (
+                                  <p className="text-sm text-gray-400 py-3 text-center">No dishes match your filters</p>
+                                ) : filtered.map(dish => {
+                                  const isSelected = selected.includes(dish.id);
+                                  const canSelect = selected.length < maxCount;
+                                  return (
+                                    <button key={dish.id} type="button" onClick={() => toggleDish(cat, dish.id)}
+                                      disabled={!isSelected && !canSelect}
+                                      className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl border transition text-left
+                                        ${isSelected ? 'bg-orange-50 border-orange-300 ring-1 ring-orange-200' : 'border-gray-100 hover:bg-gray-50'}
+                                        ${!isSelected && !canSelect ? 'opacity-40 cursor-not-allowed' : ''}`}>
+                                      <div className="w-11 h-11 rounded-lg bg-gradient-to-br from-orange-50 to-amber-50 flex items-center justify-center shrink-0 overflow-hidden">
+                                        {dish.photoUrl ? (
+                                          <img src={dish.photoUrl} alt={dish.name} className="w-full h-full object-cover" />
+                                        ) : (
+                                          <span className="text-lg opacity-50">{meta.icon}</span>
+                                        )}
+                                      </div>
+                                      <div className="flex-1 min-w-0">
+                                        <div className="flex items-center gap-1.5">
+                                          <span className={`w-3.5 h-3.5 rounded-sm border-2 flex items-center justify-center shrink-0 ${dish.isVeg ? 'border-green-500' : 'border-red-500'}`}>
+                                            <span className={`w-1.5 h-1.5 rounded-full ${dish.isVeg ? 'bg-green-500' : 'bg-red-500'}`} />
+                                          </span>
+                                          <span className="text-sm font-medium text-gray-900 truncate">{dish.name}</span>
+                                          {dish.isRecommended && <span className="text-[9px] bg-orange-500 text-white px-1.5 py-0.5 rounded font-bold shrink-0">TOP</span>}
+                                          {dish.isFried && <span className="text-[9px] bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded font-medium shrink-0">Fried</span>}
+                                        </div>
+                                        {dish.noOnionGarlic && <p className="text-[10px] text-purple-500 mt-0.5">Can be made without onion, garlic</p>}
+                                      </div>
+                                      <span className="text-sm font-semibold text-gray-700 shrink-0">{formatPaise(dish.pricePaise)}</span>
+                                      {isSelected && (
+                                        <svg className="w-5 h-5 text-orange-500 shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                                          <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                                        </svg>
+                                      )}
+                                    </button>
+                                  );
+                                })}
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+
+                      <label className="flex items-center gap-2 mt-3 pt-3 border-t cursor-pointer">
+                        <input type="checkbox" onChange={() => setSelectDishesNow(false)}
+                          className="w-4 h-4 rounded border-gray-300 text-gray-400" />
+                        <span className="text-sm text-gray-500">I will select dishes later</span>
+                      </label>
                     </div>
+                  )}
+
+                  {/* Dish selection summary */}
+                  {totalDishCount() > 0 && selectDishesNow && totalSelectedDishes() > 0 && (
+                    <div className="bg-orange-50 border border-orange-200 rounded-xl p-4">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-sm font-semibold text-orange-800">{totalSelectedDishes()} dishes selected for {guestCount} guests</p>
+                          <p className="text-xs text-orange-600 mt-0.5">Menu cost: {formatPaise(dishMenuTotal())} ({formatPaise(Math.round(dishMenuTotal() / guestCount))}/person)</p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Special requests */}
+                  <div className="bg-white rounded-xl shadow-sm border p-6">
+                    <label className="block text-xs font-medium text-gray-600 mb-1">Special Requests</label>
+                    <textarea value={specialRequests} onChange={e => setSpecialRequests(e.target.value)}
+                      placeholder="Specific dishes, dietary restrictions, allergies..."
+                      rows={3} className="w-full border rounded-lg px-4 py-2.5 text-sm resize-none" />
                   </div>
 
                   {/* Live Counters */}
@@ -512,7 +805,7 @@ export default function EventBookingPage() {
               <h3 className="font-bold text-gray-900 mb-4">Price Estimate</h3>
               <div className="space-y-2.5 text-sm">
                 <div className="flex justify-between">
-                  <span className="text-gray-600">Food ({guestCount} x {formatPaise(perPlatePaise)})</span>
+                  <span className="text-gray-600">{menuPaise > 0 ? `Menu (${totalSelectedDishes()} dishes x ${guestCount})` : `Food (${guestCount} x ${formatPaise(perPlatePaise)})`}</span>
                   <span className="font-medium">{formatPaise(foodPaise)}</span>
                 </div>
                 {[...selectedCounters].map(k => {
