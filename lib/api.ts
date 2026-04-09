@@ -605,6 +605,39 @@ export const api = {
       headers: { Authorization: `Bearer ${token}` },
     }),
 
+  // ── Service Requests (Hotel/Apartment) ──────────────────────────────
+  createServiceRequest: (bookingId: string, data: {
+    category: string; title: string; description?: string; photoUrls?: string; priority?: string;
+  }, token: string) =>
+    apiFetch<any>(`/api/v1/bookings/${bookingId}/service-requests`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+      headers: { Authorization: `Bearer ${token}` },
+    }),
+
+  getServiceRequests: (bookingId: string, token: string, status?: string) =>
+    apiFetch<any>(`/api/v1/bookings/${bookingId}/service-requests${status ? '?status=' + status : ''}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    }),
+
+  getServiceRequest: (bookingId: string, requestId: string, token: string) =>
+    apiFetch<any>(`/api/v1/bookings/${bookingId}/service-requests/${requestId}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    }),
+
+  rateServiceRequest: (bookingId: string, requestId: string, rating: number, feedback: string, token: string) =>
+    apiFetch<any>(`/api/v1/bookings/${bookingId}/service-requests/${requestId}/rate?rating=${rating}&feedback=${encodeURIComponent(feedback)}`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}` },
+    }),
+
+  addServiceRequestComment: (bookingId: string, requestId: string, commentText: string, token: string) =>
+    apiFetch<any>(`/api/v1/bookings/${bookingId}/service-requests/${requestId}/comments`, {
+      method: 'POST',
+      body: JSON.stringify({ commentText }),
+      headers: { Authorization: `Bearer ${token}` },
+    }),
+
   confirmBooking: (id: string, token: string) =>
     apiFetch<Booking>(`/api/v1/bookings/${id}/confirm`, {
       method: 'POST',
@@ -1956,6 +1989,26 @@ export const api = {
 
   getShoppingList: (menuId: string, guests: number) =>
     apiFetch<any>(`/api/v1/chefs/menus/${menuId}/shopping-list?guests=${guests}`),
+
+  // ── Dish Catalog (public) ────────────────────────────────────────────
+  getDishCatalog: (category?: string) =>
+    apiFetch<any>(`/api/v1/dishes${category ? `?category=${category}` : ''}`),
+
+  matchChefsForDishes: (dishIds: string[]) =>
+    apiFetch<any[]>('/api/v1/dishes/match-chefs', {
+      method: 'POST',
+      body: JSON.stringify({ dishIds }),
+    }),
+
+  getChefDishOfferings: (chefId: string) =>
+    apiFetch<any[]>(`/api/v1/chefs/${chefId}/dish-offerings`),
+
+  addChefDishOfferings: (chefId: string, dishIds: string[], token: string) =>
+    apiFetch<any[]>(`/api/v1/chefs/${chefId}/dish-offerings`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ dishIds }),
+    }),
 
   getMyChefProfile: (token: string) =>
     apiFetch<any>('/api/v1/chefs/me', {
