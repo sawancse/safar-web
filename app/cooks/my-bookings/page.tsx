@@ -311,6 +311,23 @@ export default function MyChefBookingsPage() {
                       <p className="font-semibold text-gray-900">{e.chefName || 'Cook'} — {e.eventType}</p>
                       <p className="text-xs text-gray-500">Ref: {e.bookingRef} | {e.eventDate} at {e.eventTime}</p>
                       <p className="text-xs text-gray-500">{e.guestCount} guests | {e.venueAddress}</p>
+                      {e.menuDescription && (() => {
+                        try {
+                          const md = JSON.parse(e.menuDescription);
+                          const tags: string[] = [];
+                          if (md.vegNonVeg) tags.push(md.vegNonVeg === 'VEG' ? 'Veg' : md.vegNonVeg === 'NON_VEG' ? 'Non-Veg' : 'Veg + Non-Veg');
+                          if (md.decoration) tags.push('Decoration');
+                          if (md.cake) tags.push('Cake');
+                          if (md.liveCounters?.length) tags.push(`${md.liveCounters.length} counter${md.liveCounters.length > 1 ? 's' : ''}`);
+                          if (md.extraStaff) tags.push(`${md.staffCount || 2} staff`);
+                          if (md.selectedDishIds?.length) tags.push(`${md.selectedDishIds.length} dishes`);
+                          return tags.length > 0 ? (
+                            <div className="flex flex-wrap gap-1 mt-1">
+                              {tags.map(t => <span key={t} className="text-[10px] bg-orange-50 text-orange-600 px-2 py-0.5 rounded-full">{t}</span>)}
+                            </div>
+                          ) : null;
+                        } catch { return e.menuDescription ? <p className="text-xs text-gray-400 mt-1 truncate max-w-xs">{e.menuDescription}</p> : null; }
+                      })()}
                     </div>
                     <div className="text-right">
                       <span className={`text-xs px-2 py-1 rounded-full font-medium ${STATUS_COLORS[e.status] || 'bg-gray-100'}`}>{e.status}</span>
@@ -394,7 +411,11 @@ export default function MyChefBookingsPage() {
                     <CityAutocomplete value={editForm.city} onChange={(v: string) => setEditForm({...editForm, city: v})} />
                     <Field label="Pincode" value={editForm.pincode} onChange={(v: string) => setEditForm({...editForm, pincode: v})} />
                   </div>
-                  <Field label="Menu Description" value={editForm.menuDescription} onChange={(v: string) => setEditForm({...editForm, menuDescription: v})} textarea />
+                  {/* Menu Details — parse JSON menuDescription into readable form */}
+                  <MenuDescriptionEditor
+                    value={editForm.menuDescription}
+                    onChange={(v: string) => setEditForm({...editForm, menuDescription: v})}
+                  />
                   <Field label="Special Requests" value={editForm.specialRequests} onChange={(v: string) => setEditForm({...editForm, specialRequests: v})} textarea />
                 </>
               )}
@@ -454,6 +475,135 @@ ${inv.staffPaise > 0 ? `<tr><td>Staff</td><td class="right">${fmt(inv.staffPaise
 <p style="text-align:center;color:#aaa;margin-top:40px;font-size:12px">Thank you for choosing Safar Cooks!</p>
 <button onclick="window.print()" style="margin:20px auto;display:block;padding:8px 24px;background:#f97316;color:#fff;border:none;border-radius:8px;cursor:pointer">Print Invoice</button>
 </body></html>`;
+}
+
+function MenuDescriptionEditor({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  let parsed: any = null;
+  try { parsed = JSON.parse(value); } catch { /* not JSON */ }
+
+  if (!parsed || typeof parsed !== 'object') {
+    // Plain text — show as-is
+    return <Field label="Menu Description" value={value} onChange={onChange} textarea />;
+  }
+
+  // Editable parsed view
+  function update(key: string, val: any) {
+    const next = { ...parsed, [key]: val };
+    onChange(JSON.stringify(next));
+  }
+
+  const VEG_LABELS: Record<string, string> = { VEG: 'Veg Only', NON_VEG: 'Non-Veg Only', BOTH: 'Both Veg & Non-Veg' };
+  const COUNTER_LABELS: Record<string, string> = {
+    dosa: 'Live Dosa Counter', pasta: 'Live Pasta Counter', bbq: 'Live BBQ Counter',
+    chaat: 'Live Chaat Counter', tandoor: 'Live Tandoor Counter',
+  };
+
+  return (
+    <div className="space-y-3">
+      <p className="text-xs font-medium text-gray-600">Menu Preferences</p>
+
+      {/* Veg/Non-Veg */}
+      {parsed.vegNonVeg && (
+        <div>
+          <label className="text-[11px] text-gray-500 mb-1 block">Food Preference</label>
+          <div className="flex gap-2">
+            {['VEG', 'NON_VEG', 'BOTH'].map(opt => (
+              <button key={opt} type="button" onClick={() => update('vegNonVeg', opt)}
+                className={`flex-1 py-1.5 rounded-lg text-xs font-medium border transition
+                  ${parsed.vegNonVeg === opt
+                    ? opt === 'VEG' ? 'bg-green-50 border-green-500 text-green-600'
+                    : opt === 'NON_VEG' ? 'bg-red-50 border-red-500 text-red-600'
+                    : 'bg-orange-50 border-orange-500 text-orange-600'
+                    : 'border-gray-200 text-gray-500'}`}>
+                {VEG_LABELS[opt]}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Add-ons toggles */}
+      <div>
+        <label className="text-[11px] text-gray-500 mb-1 block">Add-ons</label>
+        <div className="flex flex-wrap gap-2">
+          {[
+            { key: 'decoration', label: 'Decoration', icon: '🎈' },
+            { key: 'cake', label: 'Designer Cake', icon: '🎂' },
+            { key: 'crockery', label: 'Crockery', icon: '🍽️' },
+            { key: 'appliances', label: 'Appliances', icon: '🔌' },
+            { key: 'tableSetup', label: 'Table Setup', icon: '🕯️' },
+          ].map(addon => (
+            <button key={addon.key} type="button"
+              onClick={() => update(addon.key, !parsed[addon.key])}
+              className={`text-xs px-3 py-1.5 rounded-lg border transition flex items-center gap-1
+                ${parsed[addon.key] ? 'bg-orange-50 border-orange-400 text-orange-700' : 'border-gray-200 text-gray-500 hover:border-gray-300'}`}>
+              <span>{addon.icon}</span> {addon.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Live Counters */}
+      {parsed.liveCounters && (
+        <div>
+          <label className="text-[11px] text-gray-500 mb-1 block">Live Counters</label>
+          <div className="flex flex-wrap gap-2">
+            {Object.entries(COUNTER_LABELS).map(([key, label]) => {
+              const selected = (parsed.liveCounters || []).includes(key);
+              return (
+                <button key={key} type="button"
+                  onClick={() => {
+                    const counters = parsed.liveCounters || [];
+                    update('liveCounters', selected ? counters.filter((c: string) => c !== key) : [...counters, key]);
+                  }}
+                  className={`text-xs px-3 py-1.5 rounded-lg border transition
+                    ${selected ? 'bg-orange-50 border-orange-400 text-orange-700' : 'border-gray-200 text-gray-500 hover:border-gray-300'}`}>
+                  {label}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Extra Staff */}
+      <div className="flex items-center gap-3">
+        <label className="flex items-center gap-2 cursor-pointer">
+          <input type="checkbox" checked={!!parsed.extraStaff}
+            onChange={e => update('extraStaff', e.target.checked)}
+            className="w-4 h-4 rounded border-gray-300 text-orange-500" />
+          <span className="text-xs text-gray-700">Extra Serving Staff</span>
+        </label>
+        {parsed.extraStaff && (
+          <input type="number" min={1} max={20} value={parsed.staffCount || 2}
+            onChange={e => update('staffCount', Number(e.target.value))}
+            className="w-16 border rounded px-2 py-1 text-xs" />
+        )}
+      </div>
+
+      {/* Selected dishes summary (read-only) */}
+      {parsed.selectedDishIds && parsed.selectedDishIds.length > 0 && (
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+          <p className="text-[11px] text-blue-700 font-medium mb-1">{parsed.selectedDishIds.length} dishes selected from catalog</p>
+          <p className="text-[10px] text-blue-500">To change dishes, create a new event booking from the Events page.</p>
+        </div>
+      )}
+
+      {/* Category counts (read-only) */}
+      {parsed.categoryCounts && Object.keys(parsed.categoryCounts).length > 0 && (
+        <div>
+          <label className="text-[11px] text-gray-500 mb-1 block">Dish Counts by Category</label>
+          <div className="flex flex-wrap gap-1.5">
+            {Object.entries(parsed.categoryCounts as Record<string, number>).filter(([,v]) => v > 0).map(([cat, count]) => (
+              <span key={cat} className="text-[10px] bg-gray-100 text-gray-600 px-2 py-1 rounded-full">
+                {cat.replace(/_/g, ' ')}: {count as number}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
 }
 
 function Field({ label, value, onChange, type = 'text', placeholder, textarea }: {
