@@ -477,19 +477,94 @@ ${inv.staffPaise > 0 ? `<tr><td>Staff</td><td class="right">${fmt(inv.staffPaise
 </body></html>`;
 }
 
+const CATEGORY_META: Record<string, { label: string; icon: string; optional?: boolean }> = {
+  SOUPS_BEVERAGES: { label: 'Soups & Beverages', icon: '🍜', optional: true },
+  APPETIZERS:      { label: 'Appetizers', icon: '🥘' },
+  MAIN_COURSE:     { label: 'Main Course', icon: '🍛' },
+  BREADS:          { label: 'Breads', icon: '🫓' },
+  RICE:            { label: 'Rice', icon: '🍚' },
+  RAITA:           { label: 'Raita', icon: '🥣' },
+  DESSERTS:        { label: 'Desserts', icon: '🍮', optional: true },
+};
+const CATEGORY_ORDER = ['SOUPS_BEVERAGES', 'APPETIZERS', 'MAIN_COURSE', 'BREADS', 'RICE', 'RAITA', 'DESSERTS'];
+
+type CatalogDish = {
+  id: string; name: string; category: string; pricePaise: number;
+  photoUrl?: string; isVeg: boolean; isRecommended: boolean;
+  noOnionGarlic: boolean; isFried: boolean;
+};
+
 function MenuDescriptionEditor({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  const [catalog, setCatalog] = useState<Record<string, CatalogDish[]>>({});
+  const [catalogLoading, setCatalogLoading] = useState(false);
+  const [expandedCat, setExpandedCat] = useState<string | null>(null);
+  const [dishSearch, setDishSearch] = useState('');
+
   let parsed: any = null;
   try { parsed = JSON.parse(value); } catch { /* not JSON */ }
 
+  // Load dish catalog on mount
+  useEffect(() => {
+    setCatalogLoading(true);
+    api.getDishCatalog()
+      .then((data: any) => setCatalog(data || {}))
+      .catch(() => setCatalog({}))
+      .finally(() => setCatalogLoading(false));
+  }, []);
+
   if (!parsed || typeof parsed !== 'object') {
-    // Plain text — show as-is
     return <Field label="Menu Description" value={value} onChange={onChange} textarea />;
   }
 
-  // Editable parsed view
   function update(key: string, val: any) {
     const next = { ...parsed, [key]: val };
     onChange(JSON.stringify(next));
+  }
+
+  function updateMulti(updates: Record<string, any>) {
+    const next = { ...parsed, ...updates };
+    onChange(JSON.stringify(next));
+  }
+
+  const categoryCounts: Record<string, number> = parsed.categoryCounts || {};
+  const selectedDishIds: string[] = parsed.selectedDishIds || [];
+
+  function getSelectedByCategory(cat: string): string[] {
+    return (catalog[cat] || []).filter(d => selectedDishIds.includes(d.id)).map(d => d.id);
+  }
+
+  function adjustCount(cat: string, delta: number) {
+    const cur = categoryCounts[cat] || 0;
+    const next = Math.max(0, cur + delta);
+    const newCounts = { ...categoryCounts, [cat]: next };
+    // Trim selected if count reduced
+    const catSelected = getSelectedByCategory(cat);
+    let newIds = [...selectedDishIds];
+    if (next < catSelected.length) {
+      const toRemove = catSelected.slice(next);
+      newIds = newIds.filter(id => !toRemove.includes(id));
+    }
+    updateMulti({ categoryCounts: newCounts, selectedDishIds: newIds });
+  }
+
+  function toggleDish(cat: string, dishId: string) {
+    const max = categoryCounts[cat] || 0;
+    const catSelected = getSelectedByCategory(cat);
+    let newIds = [...selectedDishIds];
+    if (catSelected.includes(dishId)) {
+      newIds = newIds.filter(id => id !== dishId);
+    } else {
+      if (catSelected.length >= max) return;
+      newIds.push(dishId);
+    }
+    updateMulti({ selectedDishIds: newIds });
+  }
+
+  function getFilteredDishes(cat: string): CatalogDish[] {
+    return (catalog[cat] || []).filter(d => {
+      if (dishSearch && !d.name.toLowerCase().includes(dishSearch.toLowerCase())) return false;
+      return true;
+    });
   }
 
   const VEG_LABELS: Record<string, string> = { VEG: 'Veg Only', NON_VEG: 'Non-Veg Only', BOTH: 'Both Veg & Non-Veg' };
@@ -503,26 +578,24 @@ function MenuDescriptionEditor({ value, onChange }: { value: string; onChange: (
       <p className="text-xs font-medium text-gray-600">Menu Preferences</p>
 
       {/* Veg/Non-Veg */}
-      {parsed.vegNonVeg && (
-        <div>
-          <label className="text-[11px] text-gray-500 mb-1 block">Food Preference</label>
-          <div className="flex gap-2">
-            {['VEG', 'NON_VEG', 'BOTH'].map(opt => (
-              <button key={opt} type="button" onClick={() => update('vegNonVeg', opt)}
-                className={`flex-1 py-1.5 rounded-lg text-xs font-medium border transition
-                  ${parsed.vegNonVeg === opt
-                    ? opt === 'VEG' ? 'bg-green-50 border-green-500 text-green-600'
-                    : opt === 'NON_VEG' ? 'bg-red-50 border-red-500 text-red-600'
-                    : 'bg-orange-50 border-orange-500 text-orange-600'
-                    : 'border-gray-200 text-gray-500'}`}>
-                {VEG_LABELS[opt]}
-              </button>
-            ))}
-          </div>
+      <div>
+        <label className="text-[11px] text-gray-500 mb-1 block">Food Preference</label>
+        <div className="flex gap-2">
+          {['VEG', 'NON_VEG', 'BOTH'].map(opt => (
+            <button key={opt} type="button" onClick={() => update('vegNonVeg', opt)}
+              className={`flex-1 py-1.5 rounded-lg text-xs font-medium border transition
+                ${(parsed.vegNonVeg || 'BOTH') === opt
+                  ? opt === 'VEG' ? 'bg-green-50 border-green-500 text-green-600'
+                  : opt === 'NON_VEG' ? 'bg-red-50 border-red-500 text-red-600'
+                  : 'bg-orange-50 border-orange-500 text-orange-600'
+                  : 'border-gray-200 text-gray-500'}`}>
+              {VEG_LABELS[opt]}
+            </button>
+          ))}
         </div>
-      )}
+      </div>
 
-      {/* Add-ons toggles */}
+      {/* Add-ons */}
       <div>
         <label className="text-[11px] text-gray-500 mb-1 block">Add-ons</label>
         <div className="flex flex-wrap gap-2">
@@ -533,10 +606,9 @@ function MenuDescriptionEditor({ value, onChange }: { value: string; onChange: (
             { key: 'appliances', label: 'Appliances', icon: '🔌' },
             { key: 'tableSetup', label: 'Table Setup', icon: '🕯️' },
           ].map(addon => (
-            <button key={addon.key} type="button"
-              onClick={() => update(addon.key, !parsed[addon.key])}
+            <button key={addon.key} type="button" onClick={() => update(addon.key, !parsed[addon.key])}
               className={`text-xs px-3 py-1.5 rounded-lg border transition flex items-center gap-1
-                ${parsed[addon.key] ? 'bg-orange-50 border-orange-400 text-orange-700' : 'border-gray-200 text-gray-500 hover:border-gray-300'}`}>
+                ${parsed[addon.key] ? 'bg-orange-50 border-orange-400 text-orange-700' : 'border-gray-200 text-gray-500'}`}>
               <span>{addon.icon}</span> {addon.label}
             </button>
           ))}
@@ -544,27 +616,25 @@ function MenuDescriptionEditor({ value, onChange }: { value: string; onChange: (
       </div>
 
       {/* Live Counters */}
-      {parsed.liveCounters && (
-        <div>
-          <label className="text-[11px] text-gray-500 mb-1 block">Live Counters</label>
-          <div className="flex flex-wrap gap-2">
-            {Object.entries(COUNTER_LABELS).map(([key, label]) => {
-              const selected = (parsed.liveCounters || []).includes(key);
-              return (
-                <button key={key} type="button"
-                  onClick={() => {
-                    const counters = parsed.liveCounters || [];
-                    update('liveCounters', selected ? counters.filter((c: string) => c !== key) : [...counters, key]);
-                  }}
-                  className={`text-xs px-3 py-1.5 rounded-lg border transition
-                    ${selected ? 'bg-orange-50 border-orange-400 text-orange-700' : 'border-gray-200 text-gray-500 hover:border-gray-300'}`}>
-                  {label}
-                </button>
-              );
-            })}
-          </div>
+      <div>
+        <label className="text-[11px] text-gray-500 mb-1 block">Live Counters</label>
+        <div className="flex flex-wrap gap-2">
+          {Object.entries(COUNTER_LABELS).map(([key, label]) => {
+            const selected = (parsed.liveCounters || []).includes(key);
+            return (
+              <button key={key} type="button"
+                onClick={() => {
+                  const counters = parsed.liveCounters || [];
+                  update('liveCounters', selected ? counters.filter((c: string) => c !== key) : [...counters, key]);
+                }}
+                className={`text-xs px-3 py-1.5 rounded-lg border transition
+                  ${selected ? 'bg-orange-50 border-orange-400 text-orange-700' : 'border-gray-200 text-gray-500'}`}>
+                {label}
+              </button>
+            );
+          })}
         </div>
-      )}
+      </div>
 
       {/* Extra Staff */}
       <div className="flex items-center gap-3">
@@ -581,27 +651,142 @@ function MenuDescriptionEditor({ value, onChange }: { value: string; onChange: (
         )}
       </div>
 
-      {/* Selected dishes summary (read-only) */}
-      {parsed.selectedDishIds && parsed.selectedDishIds.length > 0 && (
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-          <p className="text-[11px] text-blue-700 font-medium mb-1">{parsed.selectedDishIds.length} dishes selected from catalog</p>
-          <p className="text-[10px] text-blue-500">To change dishes, create a new event booking from the Events page.</p>
-        </div>
-      )}
+      {/* ── Dish Selection (full Coox.in picker) ── */}
+      <div className="border-t pt-3">
+        <p className="text-xs font-medium text-gray-600 mb-2">Dish Selection</p>
 
-      {/* Category counts (read-only) */}
-      {parsed.categoryCounts && Object.keys(parsed.categoryCounts).length > 0 && (
-        <div>
-          <label className="text-[11px] text-gray-500 mb-1 block">Dish Counts by Category</label>
-          <div className="flex flex-wrap gap-1.5">
-            {Object.entries(parsed.categoryCounts as Record<string, number>).filter(([,v]) => v > 0).map(([cat, count]) => (
-              <span key={cat} className="text-[10px] bg-gray-100 text-gray-600 px-2 py-1 rounded-full">
-                {cat.replace(/_/g, ' ')}: {count as number}
-              </span>
-            ))}
+        {catalogLoading ? (
+          <div className="animate-pulse space-y-2">
+            {[1,2,3].map(i => <div key={i} className="h-8 bg-gray-100 rounded" />)}
           </div>
-        </div>
-      )}
+        ) : (
+          <>
+            {/* Category dish counts */}
+            <div className="space-y-2 mb-3">
+              {CATEGORY_ORDER.map(cat => {
+                const meta = CATEGORY_META[cat];
+                const count = categoryCounts[cat] || 0;
+                const dishCount = (catalog[cat] || []).length;
+                return (
+                  <div key={cat} className="flex items-center justify-between">
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-sm">{meta.icon}</span>
+                      <span className="text-xs font-medium text-gray-700">{meta.label}</span>
+                      {meta.optional && <span className="text-[9px] text-gray-400 bg-gray-50 px-1 py-0.5 rounded">opt</span>}
+                      <span className="text-[9px] text-gray-400">({dishCount})</span>
+                    </div>
+                    <div className="flex items-center">
+                      <button type="button" onClick={() => adjustCount(cat, -1)}
+                        className="w-7 h-7 rounded-l border border-r-0 bg-gray-50 text-gray-600 hover:bg-gray-100 font-bold text-sm flex items-center justify-center">-</button>
+                      <div className="w-8 h-7 border flex items-center justify-center text-xs font-bold bg-orange-500 text-white">{count}</div>
+                      <button type="button" onClick={() => adjustCount(cat, 1)}
+                        className="w-7 h-7 rounded-r border border-l-0 bg-gray-50 text-gray-600 hover:bg-gray-100 font-bold text-sm flex items-center justify-center">+</button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Dish picker per category */}
+            {CATEGORY_ORDER.filter(cat => (categoryCounts[cat] || 0) > 0).length > 0 && (
+              <div className="border rounded-lg p-3 bg-gray-50">
+                {/* Search */}
+                <div className="relative mb-2">
+                  <svg className="absolute left-2.5 top-2 w-3.5 h-3.5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                  </svg>
+                  <input value={dishSearch} onChange={e => setDishSearch(e.target.value)}
+                    placeholder="Search dishes..." className="w-full border rounded pl-8 pr-3 py-1.5 text-xs bg-white outline-none focus:ring-1 focus:ring-orange-300" />
+                </div>
+
+                {CATEGORY_ORDER.filter(cat => (categoryCounts[cat] || 0) > 0).map(cat => {
+                  const meta = CATEGORY_META[cat];
+                  const maxCount = categoryCounts[cat] || 0;
+                  const catSelected = getSelectedByCategory(cat);
+                  const filtered = getFilteredDishes(cat);
+                  const isExpanded = expandedCat === cat;
+
+                  return (
+                    <div key={cat} className="mb-2">
+                      <button type="button" onClick={() => setExpandedCat(isExpanded ? null : cat)}
+                        className="w-full flex items-center justify-between py-2 border-b hover:bg-white transition px-1 rounded text-left">
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-sm">{meta.icon}</span>
+                          <span className="text-xs font-semibold text-gray-700">{meta.label}</span>
+                          <span className="text-[10px] text-gray-400">({catSelected.length}/{maxCount})</span>
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                          {catSelected.length > 0 && (
+                            <div className="flex flex-wrap gap-1 max-w-[200px]">
+                              {catSelected.map(id => {
+                                const d = (catalog[cat] || []).find(x => x.id === id);
+                                return d ? (
+                                  <span key={id} className="text-[9px] bg-orange-50 text-orange-700 px-1.5 py-0.5 rounded-full flex items-center gap-0.5">
+                                    {d.name}
+                                    <button type="button" onClick={e => { e.stopPropagation(); toggleDish(cat, id); }}
+                                      className="text-red-400 hover:text-red-600">&times;</button>
+                                  </span>
+                                ) : null;
+                              })}
+                            </div>
+                          )}
+                          <svg className={`w-3.5 h-3.5 text-gray-400 transition ${isExpanded ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                          </svg>
+                        </div>
+                      </button>
+
+                      {isExpanded && (
+                        <div className="mt-1 space-y-0.5 max-h-52 overflow-y-auto">
+                          {filtered.length === 0 ? (
+                            <p className="text-[10px] text-gray-400 py-2 text-center">No dishes match</p>
+                          ) : filtered.map(dish => {
+                            const isSelected = catSelected.includes(dish.id);
+                            const canSelect = catSelected.length < maxCount;
+                            return (
+                              <button key={dish.id} type="button" onClick={() => toggleDish(cat, dish.id)}
+                                disabled={!isSelected && !canSelect}
+                                className={`w-full flex items-center gap-2 px-2 py-2 rounded-lg border transition text-left
+                                  ${isSelected ? 'bg-orange-50 border-orange-300' : 'border-transparent hover:bg-white'}
+                                  ${!isSelected && !canSelect ? 'opacity-30 cursor-not-allowed' : ''}`}>
+                                <div className="w-8 h-8 rounded bg-gradient-to-br from-orange-50 to-amber-50 flex items-center justify-center shrink-0 overflow-hidden">
+                                  {dish.photoUrl ? <img src={dish.photoUrl} alt="" className="w-full h-full object-cover" /> : <span className="text-sm opacity-40">{meta.icon}</span>}
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-center gap-1">
+                                    <span className={`w-3 h-3 rounded-sm border-2 flex items-center justify-center shrink-0 ${dish.isVeg ? 'border-green-500' : 'border-red-500'}`}>
+                                      <span className={`w-1.5 h-1.5 rounded-full ${dish.isVeg ? 'bg-green-500' : 'bg-red-500'}`} />
+                                    </span>
+                                    <span className="text-xs font-medium text-gray-800 truncate">{dish.name}</span>
+                                    {dish.isRecommended && <span className="text-[8px] bg-orange-500 text-white px-1 py-0.5 rounded font-bold shrink-0">TOP</span>}
+                                  </div>
+                                </div>
+                                <span className="text-[10px] font-semibold text-gray-600 shrink-0">{formatPaise(dish.pricePaise)}</span>
+                                {isSelected && (
+                                  <svg className="w-4 h-4 text-orange-500 shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                                  </svg>
+                                )}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+
+                {/* Summary */}
+                {selectedDishIds.length > 0 && (
+                  <div className="mt-2 pt-2 border-t text-xs text-gray-500">
+                    {selectedDishIds.length} dish{selectedDishIds.length !== 1 ? 'es' : ''} selected
+                  </div>
+                )}
+              </div>
+            )}
+          </>
+        )}
+      </div>
     </div>
   );
 }
