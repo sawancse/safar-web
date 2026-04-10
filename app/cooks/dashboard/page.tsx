@@ -130,6 +130,29 @@ export default function ChefDashboardPage() {
     } catch (e: any) { alert(e.message || 'Failed to toggle'); }
   }
 
+  async function shareLocation(bookingId: string) {
+    if (!navigator.geolocation) {
+      alert('Geolocation is not supported by your browser');
+      return;
+    }
+    navigator.geolocation.getCurrentPosition(
+      async (pos) => {
+        const etaStr = prompt('How many minutes until you arrive? (e.g. 15)');
+        const eta = etaStr ? parseInt(etaStr) : 0;
+        try {
+          await api.updateChefLocation(bookingId, pos.coords.latitude, pos.coords.longitude, eta, token());
+          alert(`Location shared! ETA: ${eta} min\nCustomer can now track you.`);
+          // Update booking in state
+          setBookings(prev => prev.map(b => b.id === bookingId
+            ? { ...b, chefLat: pos.coords.latitude, chefLng: pos.coords.longitude, etaMinutes: eta }
+            : b));
+        } catch (e: any) { alert(e.message || 'Failed to share location'); }
+      },
+      (err) => { alert('Location access denied: ' + err.message); },
+      { enableHighAccuracy: true }
+    );
+  }
+
   // ── Non-ready states ──────────────────────────────────────────
 
   if (viewState === 'loading') return (
@@ -433,8 +456,12 @@ export default function ChefDashboardPage() {
                     </>
                   )}
                   {(b.status === 'CONFIRMED' || b.status === 'IN_PROGRESS') && (
-                    <button onClick={() => handleComplete(b.id)}
-                      className="text-xs bg-green-500 hover:bg-green-600 text-white px-4 py-1.5 rounded-lg font-medium transition">Mark Complete</button>
+                    <>
+                      <button onClick={() => handleComplete(b.id)}
+                        className="text-xs bg-green-500 hover:bg-green-600 text-white px-4 py-1.5 rounded-lg font-medium transition">Mark Complete</button>
+                      <button onClick={() => shareLocation(b.id)}
+                        className="text-xs bg-indigo-500 hover:bg-indigo-600 text-white px-4 py-1.5 rounded-lg font-medium transition">📍 Share Location</button>
+                    </>
                   )}
                   {b.status === 'COMPLETED' && <span className="text-xs text-green-600 font-medium">Completed ✓</span>}
                   {b.status === 'CANCELLED' && <span className="text-xs text-red-500">Cancelled</span>}

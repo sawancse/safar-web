@@ -47,6 +47,8 @@ export default function MyChefBookingsPage() {
   const [editModal, setEditModal] = useState<{ item: any; type: 'booking' | 'event' | 'subscription' } | null>(null);
   const [editForm, setEditForm] = useState<any>({});
   const [saving, setSaving] = useState(false);
+  const [trackingData, setTrackingData] = useState<any>(null);
+  const [trackingBooking, setTrackingBooking] = useState<any>(null);
 
   useEffect(() => {
     const token = localStorage.getItem('access_token');
@@ -260,7 +262,13 @@ export default function MyChefBookingsPage() {
                         className="text-xs text-gray-600 border border-gray-200 px-3 py-1 rounded-lg hover:bg-gray-50">View Chef</button>
                     )}
                     {(b.status === 'CONFIRMED' || b.status === 'IN_PROGRESS') && (
-                      <button onClick={async () => { const t = await api.getBookingTracking(b.id); alert(`ETA: ${t.etaMinutes > 0 ? t.etaMinutes + ' min' : 'Not shared yet'}\nLat: ${t.chefLat || '-'}\nLng: ${t.chefLng || '-'}`); }}
+                      <button onClick={async () => {
+                        try {
+                          const t = await api.getBookingTracking(b.id);
+                          setTrackingData(t);
+                          setTrackingBooking(b);
+                        } catch { alert('Could not fetch tracking info'); }
+                      }}
                         className="text-xs text-indigo-600 border border-indigo-200 px-3 py-1 rounded-lg hover:bg-indigo-50">Track Chef</button>
                     )}
                   </div>
@@ -440,6 +448,92 @@ export default function MyChefBookingsPage() {
                 className="flex-1 bg-orange-500 text-white rounded-lg py-2 text-sm font-semibold disabled:opacity-50">
                 {saving ? 'Saving...' : 'Save Changes'}
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Chef Tracking Modal ──────────────────────────────────── */}
+      {trackingData && trackingBooking && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => { setTrackingData(null); setTrackingBooking(null); }}>
+          <div className="bg-white rounded-2xl w-full max-w-md overflow-hidden" onClick={e => e.stopPropagation()}>
+            <div className="bg-gradient-to-r from-indigo-600 to-purple-600 p-5 text-white">
+              <h3 className="text-lg font-bold">Track Your Cook</h3>
+              <p className="text-sm opacity-90">{trackingBooking.chefName} — {trackingBooking.bookingRef}</p>
+            </div>
+            <div className="p-5 space-y-4">
+              {/* ETA */}
+              <div className="text-center">
+                {trackingData.etaMinutes > 0 ? (
+                  <div>
+                    <p className="text-4xl font-bold text-indigo-600">{trackingData.etaMinutes}</p>
+                    <p className="text-sm text-gray-500">minutes away</p>
+                  </div>
+                ) : (
+                  <div>
+                    <p className="text-2xl font-bold text-gray-400">—</p>
+                    <p className="text-sm text-gray-500">ETA not shared yet</p>
+                  </div>
+                )}
+              </div>
+
+              {/* Location */}
+              {trackingData.chefLat && trackingData.chefLng ? (
+                <div className="bg-gray-50 rounded-xl p-4">
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className="text-green-500 text-lg">📍</span>
+                    <span className="text-sm font-medium text-gray-700">Live Location</span>
+                    {trackingData.locationUpdatedAt && (
+                      <span className="text-[10px] text-gray-400 ml-auto">
+                        Updated {new Date(trackingData.locationUpdatedAt).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}
+                      </span>
+                    )}
+                  </div>
+                  {/* Map embed */}
+                  <iframe
+                    width="100%" height="200" style={{ border: 0, borderRadius: 12 }}
+                    loading="lazy" referrerPolicy="no-referrer-when-downgrade"
+                    src={`https://www.google.com/maps?q=${trackingData.chefLat},${trackingData.chefLng}&z=15&output=embed`}
+                  />
+                  <p className="text-[10px] text-gray-400 mt-1 text-center">
+                    {trackingData.chefLat.toFixed(6)}, {trackingData.chefLng.toFixed(6)}
+                  </p>
+                </div>
+              ) : (
+                <div className="bg-gray-50 rounded-xl p-6 text-center">
+                  <p className="text-3xl mb-2">🗺️</p>
+                  <p className="text-sm text-gray-500">Your cook hasn't shared their location yet.</p>
+                  <p className="text-xs text-gray-400 mt-1">They'll share it when they're on the way.</p>
+                </div>
+              )}
+
+              {/* Booking details */}
+              <div className="bg-orange-50 rounded-xl p-3 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Service</span>
+                  <span className="font-medium">{trackingBooking.serviceDate} at {trackingBooking.serviceTime}</span>
+                </div>
+                <div className="flex justify-between mt-1">
+                  <span className="text-gray-600">Meal</span>
+                  <span className="font-medium">{trackingBooking.mealType} • {trackingBooking.guestsCount} guests</span>
+                </div>
+              </div>
+
+              {/* Refresh + Close */}
+              <div className="flex gap-3">
+                <button onClick={async () => {
+                  try {
+                    const t = await api.getBookingTracking(trackingBooking.id);
+                    setTrackingData(t);
+                  } catch { alert('Refresh failed'); }
+                }} className="flex-1 border border-indigo-200 text-indigo-600 rounded-lg py-2 text-sm font-medium hover:bg-indigo-50">
+                  🔄 Refresh
+                </button>
+                <button onClick={() => { setTrackingData(null); setTrackingBooking(null); }}
+                  className="flex-1 bg-gray-100 rounded-lg py-2 text-sm font-medium hover:bg-gray-200">
+                  Close
+                </button>
+              </div>
             </div>
           </div>
         </div>
