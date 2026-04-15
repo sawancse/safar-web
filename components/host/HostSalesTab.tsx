@@ -61,11 +61,15 @@ interface SiteVisit {
 /* ── Status Colors ─────────────────────────────────────────── */
 
 const PROPERTY_STATUS_COLORS: Record<string, string> = {
-  ACTIVE: 'bg-green-100 text-green-700',
+  PENDING: 'bg-yellow-100 text-yellow-700',
+  VERIFIED: 'bg-green-100 text-green-700',
   DRAFT: 'bg-gray-100 text-gray-600',
   PAUSED: 'bg-blue-100 text-blue-700',
+  REJECTED: 'bg-red-100 text-red-600',
+  ARCHIVED: 'bg-gray-100 text-gray-500',
+  SUSPENDED: 'bg-red-100 text-red-700',
   SOLD: 'bg-purple-100 text-purple-700',
-  PENDING: 'bg-yellow-100 text-yellow-700',
+  EXPIRED: 'bg-gray-100 text-gray-500',
 };
 
 const INQUIRY_STATUS_COLORS: Record<string, string> = {
@@ -135,8 +139,12 @@ export default function HostSalesTab({ token }: { token: string }) {
         const res = await api.getSellerSiteVisits(token);
         setVisits(Array.isArray(res) ? res : res.content || []);
       }
-    } catch (e) {
-      console.error('Failed to load sales data:', e);
+    } catch (e: any) {
+      console.error('Failed to load sales data:', e?.message || e);
+      // If auth error, don't show empty — show error message
+      if (e?.message?.includes('401') || e?.message?.includes('Session expired')) {
+        setProperties([]);
+      }
     }
     setLoading(false);
   }

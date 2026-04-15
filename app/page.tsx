@@ -48,12 +48,12 @@ export default async function HomePage() {
             <SearchBar />
           </div>
 
-          {/* Property types — grid that wraps to fit all */}
-          <div className="flex flex-wrap gap-2 mt-8">
+          {/* Property types — compact horizontal scroll on mobile, wrap on desktop */}
+          <div className="flex flex-nowrap sm:flex-wrap gap-1.5 sm:gap-2 mt-6 overflow-x-auto scrollbar-hide max-w-3xl">
             {PROPERTY_TYPES.map(({ key, label, icon }) => (
               <Link key={key} href={`/search?type=${key}`}
-                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full whitespace-nowrap text-sm font-medium bg-white/95 text-[#003B95] hover:bg-white hover:shadow-md hover:scale-105 transition-all duration-150 shadow-sm">
-                <span className="text-base leading-none">{icon}</span>
+                className="inline-flex items-center gap-1 px-2.5 sm:px-3 py-1.5 rounded-full whitespace-nowrap text-xs sm:text-sm font-medium bg-white/90 text-[#003B95] hover:bg-white hover:shadow-md hover:scale-105 transition-all duration-150 shadow-sm shrink-0">
+                <span className="text-sm leading-none">{icon}</span>
                 <span>{label}</span>
               </Link>
             ))}

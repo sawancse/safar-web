@@ -45,7 +45,10 @@ const TAB_OPTIONS = [
   { key: 'all', label: 'All' },
   { key: 'projects', label: 'New Projects' },
   { key: 'resale', label: 'Resale' },
-  { key: 'plots', label: 'Plots' },
+  { key: 'plots', label: 'Plots & Land' },
+  { key: 'farmland', label: 'Farm & Agriculture' },
+  { key: 'villa', label: 'Villas & Houses' },
+  { key: 'commercial', label: 'Commercial' },
 ] as const;
 
 type TabKey = typeof TAB_OPTIONS[number]['key'];
@@ -195,6 +198,7 @@ interface SaleProperty {
   carpetAreaSqft?: number;
   builtUpAreaSqft?: number;
   areaSqft?: number; // alias
+  plotAreaSqft?: number;
   salePropertyType?: string;
   propertyType?: string; // alias
   transactionType?: string;
@@ -203,6 +207,13 @@ interface SaleProperty {
   reraVerified?: boolean;
   furnishing?: string;
   sellerType?: string;
+  // Land-specific fields
+  totalAcres?: number;
+  roadAccess?: string;
+  zoneType?: string;
+  boundaryWall?: boolean;
+  titleClear?: boolean;
+  ownershipType?: string;
 }
 
 type MixedResult =
@@ -273,8 +284,8 @@ export default function BuyPage() {
     return params;
   }
 
-  function buildSaleParams(pageNum: number): Record<string, string> {
-    const params: Record<string, string> = { page: String(pageNum), size: String(PAGE_SIZE), sort: sortBy };
+  function buildSaleParams(pageNum: number): Record<string, any> {
+    const params: Record<string, any> = { page: String(pageNum), size: String(PAGE_SIZE), sort: sortBy };
     if (city) params.city = city;
     if (searchQuery) params.query = searchQuery;
     if (priceMin) params.priceMin = priceMin;
@@ -286,7 +297,10 @@ export default function BuyPage() {
     if (bhkVal) params.bedrooms = String(bhkVal);
 
     if (activeTab === 'resale') params.transactionType = 'RESALE';
-    if (activeTab === 'plots') params.type = 'PLOT';
+    if (activeTab === 'plots') params.salePropertyType = ['PLOT', 'RESIDENTIAL_PLOT', 'COMMERCIAL_LAND', 'INDUSTRIAL_LAND'];
+    if (activeTab === 'farmland') params.salePropertyType = ['AGRICULTURAL_LAND', 'FARMING_LAND', 'FARM_HOUSE'];
+    if (activeTab === 'villa') params.salePropertyType = ['VILLA', 'INDEPENDENT_HOUSE', 'ROW_HOUSE'];
+    if (activeTab === 'commercial') params.salePropertyType = ['COMMERCIAL_OFFICE', 'COMMERCIAL_SHOP', 'COMMERCIAL_SHOWROOM', 'COMMERCIAL_WAREHOUSE', 'INDUSTRIAL'];
 
     return params;
   }
@@ -885,15 +899,16 @@ export default function BuyPage() {
                 } else {
                   const p = item.data as SaleProperty;
                   const propType = p.salePropertyType || p.propertyType || '';
-                  const badgeColor = p.transactionType === 'RESALE'
-                    ? 'bg-green-600'
-                    : propType === 'PLOT'
+                  const isLandType = ['PLOT', 'RESIDENTIAL_PLOT', 'AGRICULTURAL_LAND', 'FARMING_LAND', 'COMMERCIAL_LAND', 'INDUSTRIAL_LAND'].includes(propType);
+                  const badgeColor = isLandType
                     ? 'bg-amber-600'
+                    : p.transactionType === 'RESALE'
+                    ? 'bg-green-600'
                     : 'bg-purple-600';
-                  const badgeText = p.transactionType === 'RESALE'
+                  const badgeText = isLandType
+                    ? (propType || 'LAND').replace(/_/g, ' ')
+                    : p.transactionType === 'RESALE'
                     ? 'RESALE'
-                    : propType === 'PLOT'
-                    ? 'PLOT'
                     : 'NEW BOOKING';
                   return (
                     <Link
@@ -928,19 +943,30 @@ export default function BuyPage() {
                         <p className="text-xs text-gray-500 mt-1 truncate">
                           {p.locality ? `${p.locality}, ` : ''}{p.city}
                         </p>
-                        <div className="flex items-center gap-3 mt-3 text-xs text-gray-500">
-                          {p.bedrooms != null && (
-                            <span className="bg-gray-100 px-2 py-0.5 rounded-full font-medium">{p.bedrooms} BHK</span>
-                          )}
-                          {p.bathrooms != null && (
-                            <span className="bg-gray-100 px-2 py-0.5 rounded-full font-medium">{p.bathrooms} Bath</span>
-                          )}
-                          {(p.carpetAreaSqft || p.builtUpAreaSqft || p.areaSqft) != null && (
-                            <span className="bg-gray-100 px-2 py-0.5 rounded-full font-medium">{(p.carpetAreaSqft || p.builtUpAreaSqft || p.areaSqft || 0).toLocaleString('en-IN')} sqft</span>
-                          )}
-                          {p.furnishing && (
-                            <span className="bg-gray-100 px-2 py-0.5 rounded-full font-medium capitalize">{p.furnishing.toLowerCase()}</span>
-                          )}
+                        <div className="flex items-center gap-3 mt-3 text-xs text-gray-500 flex-wrap">
+                          {(() => {
+                            const isLandCard = ['PLOT', 'RESIDENTIAL_PLOT', 'AGRICULTURAL_LAND', 'FARMING_LAND', 'COMMERCIAL_LAND', 'INDUSTRIAL_LAND'].includes(propType);
+                            if (isLandCard) {
+                              return (
+                                <>
+                                  {p.totalAcres && <span className="bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full font-medium">{p.totalAcres} Acres</span>}
+                                  {p.plotAreaSqft && <span className="bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full font-medium">{p.plotAreaSqft.toLocaleString('en-IN')} sqft</span>}
+                                  {p.zoneType && <span className="bg-gray-100 px-2 py-0.5 rounded-full font-medium capitalize">{p.zoneType.replace(/_/g, ' ').toLowerCase()}</span>}
+                                  {p.roadAccess && <span className="bg-gray-100 px-2 py-0.5 rounded-full font-medium capitalize">{p.roadAccess.replace(/_/g, ' ').toLowerCase()}</span>}
+                                </>
+                              );
+                            }
+                            return (
+                              <>
+                                {p.bedrooms != null && p.bedrooms > 0 && <span className="bg-gray-100 px-2 py-0.5 rounded-full font-medium">{p.bedrooms} BHK</span>}
+                                {p.bathrooms != null && p.bathrooms > 0 && <span className="bg-gray-100 px-2 py-0.5 rounded-full font-medium">{p.bathrooms} Bath</span>}
+                                {(p.carpetAreaSqft || p.builtUpAreaSqft || p.areaSqft) != null && (
+                                  <span className="bg-gray-100 px-2 py-0.5 rounded-full font-medium">{(p.carpetAreaSqft || p.builtUpAreaSqft || p.areaSqft || 0).toLocaleString('en-IN')} sqft</span>
+                                )}
+                                {p.furnishing && <span className="bg-gray-100 px-2 py-0.5 rounded-full font-medium capitalize">{p.furnishing.replace(/_/g, ' ').toLowerCase()}</span>}
+                              </>
+                            );
+                          })()}
                         </div>
                         <div className="mt-3 flex items-baseline justify-between">
                           <span className="text-lg font-bold text-gray-900">

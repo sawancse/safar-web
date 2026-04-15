@@ -125,8 +125,13 @@ export default function HostPage() {
     if (!tkn) return;
     api.getMyListings(tkn)
       .then((data) => {
-        setListings(data);
-        data.filter((l: Listing) => l.status === 'DRAFT').forEach((l: Listing) => {
+        const sorted = [...data].sort((a: Listing, b: Listing) => {
+          const ta = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+          const tb = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+          return tb - ta; // newest first
+        });
+        setListings(sorted);
+        sorted.filter((l: Listing) => l.status === 'DRAFT').forEach((l: Listing) => {
           fetchReadiness(l.id, tkn);
         });
       })
@@ -166,7 +171,8 @@ export default function HostPage() {
 
   const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
   const getAuthHeaders = () => ({ Authorization: `Bearer ${token}` });
-  const uploadUrl = apiUrl; // Route through API Gateway for CORS support
+  // File uploads go directly to listing-service — gateway WebFlux has issues with multipart forwarding
+  const uploadUrl = process.env.NEXT_PUBLIC_LISTING_SERVICE_URL || 'http://localhost:8083';
 
   // Subscription helpers
   const TIER_LIMITS: Record<string, number> = { STARTER: 2, PRO: 10, COMMERCIAL: Infinity };
@@ -210,17 +216,62 @@ export default function HostPage() {
     } catch { /* ignore */ }
   }
 
-  async function uploadFile(listingId: string, file: File, mediaType: string, primary = false) {
-    const formData = new FormData();
-    formData.append('file', file);
-    formData.append('mediaType', mediaType);
-    formData.append('primary', String(primary));
-    const res = await fetch(`${uploadUrl}/api/v1/listings/${listingId}/media/upload`, {
-      method: 'POST',
-      headers: getAuthHeaders(),
-      body: formData,
+  async function refreshAuthToken(): Promise<string> {
+    const refreshToken = localStorage.getItem('refresh_token');
+    if (!refreshToken) throw new Error('Session expired. Please sign in again.');
+    const res = await fetch(`${apiUrl}/api/v1/auth/refresh`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ refreshToken }),
     });
-    if (!res.ok) throw new Error(await res.text().catch(() => 'Upload failed'));
+    if (!res.ok) throw new Error('Session expired. Please sign in again.');
+    const data = await res.json();
+    localStorage.setItem('access_token', data.accessToken);
+    if (data.refreshToken) localStorage.setItem('refresh_token', data.refreshToken);
+    document.cookie = `access_token=${data.accessToken}; path=/; max-age=${30 * 24 * 60 * 60}; SameSite=Lax`;
+    setToken(data.accessToken);
+    return data.accessToken;
+  }
+
+  async function uploadFile(listingId: string, file: File, mediaType: string, primary = false) {
+    // Always grab the freshest token from localStorage
+    let authToken = localStorage.getItem('access_token') || token;
+    if (!authToken) throw new Error('Not logged in. Please sign in again.');
+
+    const buildForm = () => {
+      const fd = new FormData();
+      fd.append('file', file);
+      fd.append('mediaType', mediaType);
+      fd.append('primary', String(primary));
+      return fd;
+    };
+
+    const url = `${uploadUrl}/api/v1/listings/${listingId}/media/upload`;
+    let res = await fetch(url, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${authToken}` },
+      body: buildForm(),
+    });
+
+    // 401 → refresh token and retry once
+    if (res.status === 401) {
+      console.warn('[UPLOAD] 401 received, refreshing token...');
+      try {
+        authToken = await refreshAuthToken();
+      } catch {
+        throw new Error('Session expired. Please sign in again.');
+      }
+      res = await fetch(url, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${authToken}` },
+        body: buildForm(),
+      });
+    }
+
+    if (!res.ok) {
+      const errText = await res.text().catch(() => '');
+      if (res.status === 401) throw new Error('Session expired. Please sign in again.');
+      throw new Error(errText || `Upload failed (${res.status})`);
+    }
     return res.json();
   }
 
@@ -952,6 +1003,11 @@ export default function HostPage() {
                     </Link>
                     <p className="text-sm text-gray-500 mt-0.5">{listing.city}, {listing.state}</p>
                     <p className="text-sm font-semibold mt-1 text-gray-800">{formatPaise(listing.basePricePaise)} {listing.pricingUnit === 'MONTH' || listing.type === 'PG' || listing.type === 'COLIVING' ? '/ month' : listing.pricingUnit === 'HOUR' ? '/ hour' : '/ night'}</p>
+                    {listing.createdAt && (
+                      <p className="text-xs text-gray-400 mt-1">
+                        Created {new Date(listing.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
+                      </p>
+                    )}
                   </div>
                   <div className="flex items-center gap-3">
                     {/* Aashray badge for VERIFIED listings */}

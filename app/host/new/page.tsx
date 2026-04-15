@@ -199,6 +199,37 @@ const INDIAN_STATES = [
   'Delhi', 'Chandigarh', 'Puducherry', 'Jammu and Kashmir', 'Ladakh',
 ];
 
+/* ── PG Room Type Config ──────────────────────────────────── */
+interface PgRoomConfig {
+  name: string;
+  sharingType: 'PRIVATE' | 'TWO_SHARING' | 'THREE_SHARING' | 'FOUR_SHARING' | 'DORMITORY';
+  count: number;       // number of rooms of this type
+  basePricePaise: number; // per-bed monthly rent in paise
+  securityDepositPaise: number;
+  roomVariant: 'AC' | 'NON_AC' | 'FURNISHED' | 'SEMI_FURNISHED' | '';
+}
+
+const SHARING_OPTIONS = [
+  { value: 'PRIVATE' as const, label: 'Single (Private)', beds: 1, icon: '🛏️' },
+  { value: 'TWO_SHARING' as const, label: 'Double Sharing', beds: 2, icon: '🛏️🛏️' },
+  { value: 'THREE_SHARING' as const, label: 'Triple Sharing', beds: 3, icon: '🛏️🛏️🛏️' },
+  { value: 'FOUR_SHARING' as const, label: 'Four Sharing', beds: 4, icon: '🛏️×4' },
+  { value: 'DORMITORY' as const, label: 'Dormitory (6+)', beds: 6, icon: '🏘️' },
+];
+
+const VARIANT_OPTIONS = [
+  { value: '' as const, label: 'Not specified' },
+  { value: 'AC' as const, label: 'AC' },
+  { value: 'NON_AC' as const, label: 'Non-AC' },
+  { value: 'FURNISHED' as const, label: 'Furnished' },
+  { value: 'SEMI_FURNISHED' as const, label: 'Semi-Furnished' },
+];
+
+const DEFAULT_PG_ROOM: PgRoomConfig = {
+  name: '', sharingType: 'TWO_SHARING', count: 1,
+  basePricePaise: 0, securityDepositPaise: 0, roomVariant: '',
+};
+
 /* ── Wizard State ──────────────────────────────────────────── */
 interface WizardData {
   // Step 1
@@ -288,6 +319,7 @@ interface WizardData {
   foodType: 'VEG' | 'NON_VEG' | 'BOTH' | 'NONE';
   gateClosingTime: string;
   noticePeriodDays: number;
+  pgRoomTypes: PgRoomConfig[];
   // Hotel specific
   hotelChain: string;
   frontDesk24h: boolean;
@@ -314,7 +346,7 @@ const INITIAL_DATA: WizardData = {
   availableFrom: '', preferredTenants: [], waterSupply: '', gatedSecurity: false, nonVegAllowed: true,
   propertyCondition: '', showPropertyBy: 'OWNER', directionTips: '', visitAvailability: 'EVERYDAY',
   visitTimeFrom: '10:00', visitTimeUntil: '18:00', secondaryPhone: '', multipleUnits: false,
-  occupancyType: '', foodType: 'NONE', gateClosingTime: '22:00', noticePeriodDays: 30,
+  occupancyType: '', foodType: 'NONE', gateClosingTime: '22:00', noticePeriodDays: 30, pgRoomTypes: [{ ...DEFAULT_PG_ROOM }],
   hotelChain: '', frontDesk24h: false, checkinTime: '14:00', checkoutTime: '11:00',
   amenities: [], bedTypes: [], mealPlan: 'NONE', accessibilityFeatures: [], breakfastIncluded: false, parkingType: 'NONE',
   petFriendly: false, maxPets: 0, childrenAllowed: true,
@@ -399,12 +431,22 @@ export default function NewListingWizard() {
   const isHotel = data.type === 'HOTEL' || data.type === 'BUDGET_HOTEL';
   const isRental = ['HOME', 'APARTMENT', 'ROOM', 'VILLA', 'PG', 'COLIVING', 'FARMSTAY', 'BNB'].includes(data.type);
   const isMonthlyPricing = data.pricingUnit === 'MONTH';
-  const STEP_LABELS = ['Property Type', 'Details', isCommercial ? 'Facilities & Policies' : 'Facilities & Rules', 'Review'];
+  const STEP_LABELS = isPG
+    ? ['Property Type', 'Details', 'Facilities & Rules', 'Room Configuration', 'Review']
+    : ['Property Type', 'Details', isCommercial ? 'Facilities & Policies' : 'Facilities & Rules', 'Review'];
+  const totalSteps = STEP_LABELS.length;
+  const reviewStep = totalSteps - 1;
 
   /* ── Validation ──────────────────────────────────────────── */
   function canProceed(): boolean {
     if (step === 0) return !!data.type;
     if (step === 1) return !!(data.title && data.city && data.state && data.pincode && data.basePricePaise > 0);
+    if (isPG && step === 3) {
+      // PG Room Config step: at least 1 room type with name, count>0, price>0
+      return data.pgRoomTypes.length > 0 && data.pgRoomTypes.every(
+        rt => rt.name.trim() && rt.count > 0 && rt.basePricePaise > 0
+      );
+    }
     return true;
   }
 
@@ -487,6 +529,23 @@ export default function NewListingWizard() {
         body.gateClosingTime = data.gateClosingTime;
         body.noticePeriodDays = data.noticePeriodDays;
         body.minStayDays = 30;
+        // Send wizard-configured room types
+        if (data.pgRoomTypes.length > 0 && data.pgRoomTypes.every(rt => rt.name.trim() && rt.basePricePaise > 0)) {
+          body.roomTypes = data.pgRoomTypes.map(rt => {
+            const sharing = SHARING_OPTIONS.find(s => s.value === rt.sharingType);
+            return {
+              name: rt.name.trim(),
+              sharingType: rt.sharingType,
+              count: rt.count,
+              basePricePaise: rt.basePricePaise,
+              maxGuests: sharing ? sharing.beds : 1,
+              bedCount: sharing ? sharing.beds : 1,
+              securityDepositPaise: rt.securityDepositPaise > 0 ? rt.securityDepositPaise : (data.securityDepositPaise > 0 ? data.securityDepositPaise : null),
+              roomVariant: rt.roomVariant || null,
+              stayMode: 'MONTHLY',
+            };
+          });
+        }
       }
       if (isHotel) {
         if (data.hotelChain) body.hotelChain = data.hotelChain;
@@ -1511,6 +1570,195 @@ export default function NewListingWizard() {
     );
   }
 
+  /* ── PG Room Configuration Step ──────────────────────────── */
+  function renderStepPgRooms() {
+    const rooms = data.pgRoomTypes;
+
+    function updateRoom(idx: number, patch: Partial<PgRoomConfig>) {
+      const updated = rooms.map((r, i) => i === idx ? { ...r, ...patch } : r);
+      update({ pgRoomTypes: updated });
+    }
+    function addRoom() {
+      update({ pgRoomTypes: [...rooms, { ...DEFAULT_PG_ROOM }] });
+    }
+    function removeRoom(idx: number) {
+      if (rooms.length <= 1) return;
+      update({ pgRoomTypes: rooms.filter((_, i) => i !== idx) });
+    }
+
+    return (
+      <div>
+        <h2 className="text-xl font-bold text-gray-900 mb-2">Configure your rooms</h2>
+        <p className="text-sm text-gray-500 mb-6">
+          Set up each room type in your PG — sharing type, count, and per-bed pricing.
+          This determines your room board and occupancy tracking.
+        </p>
+
+        <div className="space-y-6">
+          {rooms.map((room, idx) => {
+            const sharing = SHARING_OPTIONS.find(s => s.value === room.sharingType);
+            const bedsPerRoom = sharing?.beds ?? 1;
+            const totalBeds = bedsPerRoom * room.count;
+
+            return (
+              <div key={idx} className="border rounded-2xl p-5 bg-white relative">
+                {rooms.length > 1 && (
+                  <button type="button" onClick={() => removeRoom(idx)}
+                    className="absolute top-3 right-3 text-gray-400 hover:text-red-500 text-lg" title="Remove">
+                    ×
+                  </button>
+                )}
+
+                <div className="flex items-center gap-2 mb-4">
+                  <span className="bg-orange-100 text-orange-700 text-xs font-bold px-2 py-1 rounded-full">
+                    Room Type {idx + 1}
+                  </span>
+                </div>
+
+                {/* Room name */}
+                <div className="mb-4">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Room Name *</label>
+                  <input type="text" value={room.name}
+                    onChange={e => updateRoom(idx, { name: e.target.value })}
+                    placeholder="e.g. AC Double Sharing, Non-AC Single Room"
+                    className="w-full border rounded-lg px-3 py-2 text-sm" />
+                </div>
+
+                {/* Sharing type */}
+                <div className="mb-4">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Sharing Type *</label>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                    {SHARING_OPTIONS.map(opt => (
+                      <button key={opt.value} type="button"
+                        onClick={() => updateRoom(idx, { sharingType: opt.value })}
+                        className={`border rounded-xl p-3 text-center text-sm transition ${
+                          room.sharingType === opt.value
+                            ? 'border-orange-500 bg-orange-50 text-orange-700 font-semibold'
+                            : 'border-gray-200 hover:border-gray-300 text-gray-600'
+                        }`}>
+                        <div className="text-lg mb-1">{opt.icon}</div>
+                        <div>{opt.label}</div>
+                        <div className="text-xs text-gray-400">{opt.beds} bed{opt.beds > 1 ? 's' : ''}/room</div>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Room variant */}
+                <div className="mb-4">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Room Variant</label>
+                  <div className="flex flex-wrap gap-2">
+                    {VARIANT_OPTIONS.map(opt => (
+                      <button key={opt.value} type="button"
+                        onClick={() => updateRoom(idx, { roomVariant: opt.value as PgRoomConfig['roomVariant'] })}
+                        className={`border rounded-lg px-3 py-1.5 text-sm transition ${
+                          room.roomVariant === opt.value
+                            ? 'border-orange-500 bg-orange-50 text-orange-700 font-medium'
+                            : 'border-gray-200 hover:border-gray-300 text-gray-600'
+                        }`}>
+                        {opt.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Count + pricing row */}
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 mb-3">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">No. of Rooms *</label>
+                    <input type="number" min={1} value={room.count || ''}
+                      onChange={e => updateRoom(idx, { count: parseInt(e.target.value) || 0 })}
+                      className="w-full border rounded-lg px-3 py-2 text-sm" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Rent / Bed / Month *</label>
+                    <div className="relative">
+                      <span className="absolute left-3 top-2 text-gray-400 text-sm">₹</span>
+                      <input type="number" min={0} value={room.basePricePaise ? room.basePricePaise / 100 : ''}
+                        onChange={e => updateRoom(idx, { basePricePaise: Math.round(parseFloat(e.target.value) * 100) || 0 })}
+                        placeholder="5000"
+                        className="w-full border rounded-lg pl-7 pr-3 py-2 text-sm" />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Security Deposit</label>
+                    <div className="relative">
+                      <span className="absolute left-3 top-2 text-gray-400 text-sm">₹</span>
+                      <input type="number" min={0} value={room.securityDepositPaise ? room.securityDepositPaise / 100 : ''}
+                        onChange={e => updateRoom(idx, { securityDepositPaise: Math.round(parseFloat(e.target.value) * 100) || 0 })}
+                        placeholder="10000"
+                        className="w-full border rounded-lg pl-7 pr-3 py-2 text-sm" />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Summary */}
+                <div className="bg-gray-50 rounded-lg p-3 text-sm text-gray-600">
+                  <span className="font-medium">{room.count} room{room.count !== 1 ? 's' : ''}</span>
+                  {' × '}<span className="font-medium">{bedsPerRoom} bed{bedsPerRoom > 1 ? 's' : ''}</span>
+                  {' = '}<span className="font-bold text-gray-800">{totalBeds} total bed{totalBeds !== 1 ? 's' : ''}</span>
+                  {room.basePricePaise > 0 && (
+                    <span className="ml-2">
+                      {'· '}
+                      <span className="font-medium text-green-700">
+                        {(room.basePricePaise / 100).toLocaleString('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 })}
+                      </span>/bed/month
+                    </span>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+
+          {/* Add room type button */}
+          <button type="button" onClick={addRoom}
+            className="w-full border-2 border-dashed border-gray-300 rounded-2xl p-4 text-sm text-gray-500 hover:border-orange-400 hover:text-orange-600 transition">
+            + Add another room type
+          </button>
+
+          {/* Grand total */}
+          {rooms.length > 0 && (
+            <div className="bg-orange-50 border border-orange-200 rounded-xl p-4">
+              <div className="flex justify-between items-center text-sm">
+                <span className="text-gray-700">
+                  <span className="font-bold">{rooms.reduce((s, r) => s + r.count, 0)}</span> rooms,{' '}
+                  <span className="font-bold">
+                    {rooms.reduce((s, r) => {
+                      const beds = (SHARING_OPTIONS.find(o => o.value === r.sharingType)?.beds ?? 1) * r.count;
+                      return s + beds;
+                    }, 0)}
+                  </span> total beds
+                </span>
+                <span className="text-gray-700">
+                  Price range:{' '}
+                  <span className="font-bold text-green-700">
+                    {Math.min(...rooms.filter(r => r.basePricePaise > 0).map(r => r.basePricePaise / 100)).toLocaleString('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 })}
+                  </span>
+                  {rooms.filter(r => r.basePricePaise > 0).length > 1 && (
+                    <>
+                      {' – '}
+                      <span className="font-bold text-green-700">
+                        {Math.max(...rooms.filter(r => r.basePricePaise > 0).map(r => r.basePricePaise / 100)).toLocaleString('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 })}
+                      </span>
+                    </>
+                  )}
+                  /bed/month
+                </span>
+              </div>
+            </div>
+          )}
+
+          <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
+            <p className="text-sm text-blue-800">
+              Each room type appears as a row in your <span className="font-semibold">Room Board</span>.
+              You can add more types, upload room photos, and adjust beds after creating the listing.
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   /* ── Step 3: Review & Create ─────────────────────────────── */
   function renderStep3() {
     const typeLabel = isCommercial
@@ -1588,6 +1836,9 @@ export default function NewListingWizard() {
                   {data.securityDepositPaise > 0 && (
                     <p className="text-gray-600">Security Deposit: <span className="font-medium">{(data.securityDepositPaise / 100).toLocaleString('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 })}</span></p>
                   )}
+                  {data.pgRoomTypes.length > 0 && data.pgRoomTypes[0].name && (
+                    <p className="text-gray-600">Room Types: <span className="font-medium">{data.pgRoomTypes.length} configured</span></p>
+                  )}
                 </>
               )}
               {isHotel && (
@@ -1644,6 +1895,33 @@ export default function NewListingWizard() {
             </div>
           )}
 
+          {/* PG Room Types summary */}
+          {isPG && data.pgRoomTypes.length > 0 && data.pgRoomTypes[0].name && (
+            <div className="border rounded-xl p-4">
+              <h4 className="text-sm font-bold text-gray-800 mb-2">Room Types ({data.pgRoomTypes.length})</h4>
+              <div className="space-y-2">
+                {data.pgRoomTypes.map((rt, i) => {
+                  const sharing = SHARING_OPTIONS.find(s => s.value === rt.sharingType);
+                  const totalBeds = (sharing?.beds ?? 1) * rt.count;
+                  return (
+                    <div key={i} className="flex items-center justify-between text-sm bg-gray-50 rounded-lg px-3 py-2">
+                      <div>
+                        <span className="font-medium text-gray-800">{rt.name}</span>
+                        <span className="text-gray-400 ml-2">{sharing?.label}{rt.roomVariant ? ` · ${rt.roomVariant.replace('_', '-')}` : ''}</span>
+                      </div>
+                      <div className="text-right text-gray-600">
+                        <span>{rt.count} room{rt.count !== 1 ? 's' : ''} · {totalBeds} bed{totalBeds !== 1 ? 's' : ''}</span>
+                        <span className="ml-2 font-medium text-green-700">
+                          {(rt.basePricePaise / 100).toLocaleString('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 })}/bed
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
           {/* Info note */}
           <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
             <p className="text-sm text-blue-800">
@@ -1667,7 +1945,8 @@ export default function NewListingWizard() {
       {step === 0 && renderStep0()}
       {step === 1 && renderStep1()}
       {step === 2 && renderStep2()}
-      {step === 3 && renderStep3()}
+      {isPG && step === 3 && renderStepPgRooms()}
+      {step === reviewStep && renderStep3()}
 
       {/* Navigation */}
       <div className="flex items-center justify-between mt-8 pt-6 border-t">
@@ -1676,7 +1955,7 @@ export default function NewListingWizard() {
           className="text-sm font-medium text-gray-600 hover:text-gray-800 px-4 py-2">
           {step === 0 ? 'Cancel' : 'Back'}
         </button>
-        {step < 3 ? (
+        {step < reviewStep ? (
           <button type="button"
             onClick={() => setStep(step + 1)}
             disabled={!canProceed()}

@@ -27,6 +27,7 @@ const STATUS_COLORS: Record<string, string> = {
 const PAYMENT_STATUS_LABELS: Record<string, { label: string; color: string }> = {
   UNPAID: { label: 'Unpaid', color: 'text-red-600' },
   ADVANCE_PAID: { label: '10% Advance Paid', color: 'text-green-600' },
+  ADDITIONAL_PAYMENT_REQUIRED: { label: 'Additional Payment Required', color: 'text-orange-600' },
   FULLY_PAID: { label: 'Fully Paid', color: 'text-green-700' },
 };
 
@@ -202,15 +203,38 @@ export default function MyChefBookingsPage() {
                   </div>
                   {/* Payment breakdown — hide for cancelled */}
                   {b.status !== 'CANCELLED' && b.totalAmountPaise > 0 && b.advanceAmountPaise > 0 && (
-                    <div className="mt-2 bg-gray-50 rounded-lg px-3 py-2 flex items-center justify-between text-xs">
-                      <div className="flex gap-4">
-                        <span className={`font-medium ${ps.color}`}>{ps.label}</span>
-                        {b.paymentStatus === 'ADVANCE_PAID' && (
-                          <span className="text-gray-500">Advance: {formatPaise(b.advanceAmountPaise)}</span>
+                    <div className="mt-2 space-y-1">
+                      <div className="bg-gray-50 rounded-lg px-3 py-2 flex items-center justify-between text-xs">
+                        <div className="flex gap-4">
+                          <span className={`font-medium ${ps.color}`}>{ps.label}</span>
+                          {(b.paymentStatus === 'ADVANCE_PAID' || b.paymentStatus === 'ADDITIONAL_PAYMENT_REQUIRED') && b.advancePaidPaise > 0 && (
+                            <span className="text-gray-500">Paid: {formatPaise(b.advancePaidPaise)}</span>
+                          )}
+                        </div>
+                        {b.balanceAmountPaise > 0 && b.paymentStatus !== 'FULLY_PAID' && (
+                          <span className="text-orange-600 font-medium">Balance due: {formatPaise(b.balanceAmountPaise)}</span>
                         )}
                       </div>
-                      {b.balanceAmountPaise > 0 && b.paymentStatus !== 'FULLY_PAID' && (
-                        <span className="text-orange-600 font-medium">Balance due: {formatPaise(b.balanceAmountPaise)}</span>
+                      {/* Price adjustment after modification */}
+                      {b.paymentAdjustmentPaise > 0 && b.paymentStatus === 'ADDITIONAL_PAYMENT_REQUIRED' && (
+                        <div className="bg-orange-50 border border-orange-200 rounded-lg px-3 py-2 text-xs">
+                          <div className="flex items-center justify-between">
+                            <span className="text-orange-700">
+                              Order modified — additional <strong>{formatPaise(b.paymentAdjustmentPaise)}</strong> required
+                              {b.previousTotalPaise > 0 && (
+                                <span className="text-orange-500 ml-1">(was {formatPaise(b.previousTotalPaise)} → now {formatPaise(b.totalAmountPaise)})</span>
+                              )}
+                            </span>
+                          </div>
+                        </div>
+                      )}
+                      {b.paymentAdjustmentPaise < 0 && b.previousTotalPaise > 0 && (
+                        <div className="bg-green-50 border border-green-200 rounded-lg px-3 py-2 text-xs">
+                          <span className="text-green-700">
+                            Order reduced — <strong>{formatPaise(Math.abs(b.paymentAdjustmentPaise))}</strong> credit applied to balance
+                            <span className="text-green-500 ml-1">(was {formatPaise(b.previousTotalPaise)} → now {formatPaise(b.totalAmountPaise)})</span>
+                          </span>
+                        </div>
                       )}
                     </div>
                   )}
@@ -228,6 +252,12 @@ export default function MyChefBookingsPage() {
                     {b.status === 'PENDING_PAYMENT' && (
                       <button onClick={() => router.push(`/cooks/book?chefId=${b.chefId}&type=DAILY&resumeBookingId=${b.id}`)}
                         className="text-xs text-green-600 border border-green-200 px-3 py-1 rounded-lg hover:bg-green-50">Complete Payment</button>
+                    )}
+                    {b.paymentStatus === 'ADDITIONAL_PAYMENT_REQUIRED' && b.paymentAdjustmentPaise > 0 && (
+                      <button onClick={() => router.push(`/cooks/book?chefId=${b.chefId}&type=DAILY&resumeBookingId=${b.id}&additionalPayment=${b.paymentAdjustmentPaise}`)}
+                        className="text-xs text-orange-600 bg-orange-50 border border-orange-200 px-3 py-1 rounded-lg hover:bg-orange-100 font-medium">
+                        Pay Additional {formatPaise(b.paymentAdjustmentPaise)}
+                      </button>
                     )}
                     {(b.status === 'PENDING' || b.status === 'PENDING_PAYMENT') && (
                       <button onClick={() => handleCancel(b.id)} className="text-xs text-red-600 border border-red-200 px-3 py-1 rounded-lg hover:bg-red-50">Cancel</button>
@@ -342,14 +372,70 @@ export default function MyChefBookingsPage() {
                       {e.totalAmountPaise > 0 && <p className="text-sm font-bold mt-1">{formatPaise(e.totalAmountPaise)}</p>}
                     </div>
                   </div>
+                  {/* Quote received banner */}
+                  {e.status === 'QUOTED' && e.totalAmountPaise > 0 && (
+                    <div className="mt-2 bg-blue-50 border border-blue-200 rounded-lg px-3 py-2">
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-blue-700 font-medium">Chef has sent a quote!</span>
+                        <span className="text-blue-800 font-bold">{formatPaise(e.totalAmountPaise)}</span>
+                      </div>
+                      <div className="text-xs text-blue-600 mt-1 space-y-0.5">
+                        <p>Advance (50%): <strong>{formatPaise(e.advanceAmountPaise)}</strong> | Balance: {formatPaise(e.balanceAmountPaise)}</p>
+                        {e.quotedAt && <p className="text-blue-400">Quoted {new Date(e.quotedAt).toLocaleDateString('en-IN')}</p>}
+                      </div>
+                    </div>
+                  )}
+                  {/* Status info banners */}
+                  {e.status === 'INQUIRY' && (
+                    <div className="mt-2 bg-yellow-50 border border-yellow-200 rounded-lg px-3 py-2 text-xs text-yellow-700">
+                      Waiting for the chef to review your inquiry and send a quote.
+                    </div>
+                  )}
+                  {e.status === 'CONFIRMED' && (
+                    <div className="mt-2 bg-green-50 border border-green-200 rounded-lg px-3 py-2 text-xs text-green-700">
+                      Event confirmed! Please pay the 50% advance to lock in the booking.
+                    </div>
+                  )}
                   <div className="flex gap-2 mt-3">
                     {MODIFIABLE_EVENT.includes(e.status) && (
                       <button onClick={() => openEdit(e, 'event')}
                         className="text-xs text-blue-600 border border-blue-200 px-3 py-1 rounded-lg hover:bg-blue-50">Modify</button>
                     )}
+                    {e.status === 'QUOTED' && (
+                      <button onClick={async () => {
+                        if (!confirm(`Accept quote of ${formatPaise(e.totalAmountPaise)}? You'll need to pay 50% advance (${formatPaise(e.advanceAmountPaise)}) to confirm.`)) return;
+                        try {
+                          const token = localStorage.getItem('access_token')!;
+                          const updated = await api.confirmEvent(e.id, token);
+                          setEvents(prev => prev.map(ev => ev.id === e.id ? updated : ev));
+                        } catch (err: any) { alert(err.message || 'Failed to confirm'); }
+                      }}
+                        className="text-xs bg-green-500 hover:bg-green-600 text-white px-4 py-1 rounded-lg font-medium transition">
+                        Accept Quote
+                      </button>
+                    )}
+                    {['INQUIRY', 'QUOTED', 'CONFIRMED'].includes(e.status) && (
+                      <button onClick={async () => {
+                        const reason = prompt('Reason for cancellation (optional):') ?? 'Customer cancelled';
+                        try {
+                          const token = localStorage.getItem('access_token')!;
+                          const updated = await api.cancelEvent(e.id, reason, token);
+                          setEvents(prev => prev.map(ev => ev.id === e.id ? updated : ev));
+                        } catch (err: any) { alert(err.message || 'Failed to cancel'); }
+                      }}
+                        className="text-xs text-red-600 border border-red-200 px-3 py-1 rounded-lg hover:bg-red-50">Cancel</button>
+                    )}
                     {(e.status === 'COMPLETED' || e.status === 'CONFIRMED' || e.status === 'ADVANCE_PAID') && (
                       <button onClick={async () => { const inv = await api.getEventInvoice(e.id); window.open(`data:text/html,${encodeURIComponent(renderInvoiceHtml(inv))}`, '_blank'); }}
                         className="text-xs text-gray-600 border border-gray-200 px-3 py-1 rounded-lg hover:bg-gray-50">Invoice</button>
+                    )}
+                    {e.status === 'COMPLETED' && !e.ratingGiven && (
+                      <button onClick={() => setRatingModal({ id: e.id, type: 'event' })}
+                        className="text-xs text-orange-600 border border-orange-200 px-3 py-1 rounded-lg hover:bg-orange-50">Rate & Review</button>
+                    )}
+                    {e.ratingGiven && <span className="text-xs text-gray-500">{'★'.repeat(e.ratingGiven)} Rated</span>}
+                    {e.status === 'CANCELLED' && e.cancellationReason && (
+                      <span className="text-xs text-red-400">{e.cancellationReason}</span>
                     )}
                   </div>
                 </div>
@@ -387,6 +473,16 @@ export default function MyChefBookingsPage() {
             <h3 className="text-lg font-bold mb-4">
               Modify {editModal.type === 'booking' ? 'Booking' : editModal.type === 'event' ? 'Event' : 'Subscription'}
             </h3>
+            {editModal.type === 'booking' && editModal.item.paymentStatus === 'ADVANCE_PAID' && (
+              <div className="text-xs bg-blue-50 border border-blue-200 p-3 rounded-lg mb-4 space-y-1">
+                <p className="text-blue-700 font-medium">You have already paid {formatPaise(editModal.item.advancePaidPaise || editModal.item.advanceAmountPaise)} as advance.</p>
+                <p className="text-blue-600">If you change guests or meals, pricing will be recalculated:</p>
+                <ul className="text-blue-600 list-disc pl-4">
+                  <li><strong>Price increases</strong> — you'll need to pay the additional difference</li>
+                  <li><strong>Price decreases</strong> — the excess will be credited to your balance</li>
+                </ul>
+              </div>
+            )}
             {editModal.type === 'event' && editModal.item.status === 'QUOTED' && (
               <p className="text-xs text-amber-600 bg-amber-50 p-2 rounded-lg mb-4">
                 Modifying a quoted event will reset it to INQUIRY status for the chef to re-quote.

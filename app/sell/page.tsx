@@ -22,19 +22,28 @@ const STEP_LABELS = [
 ];
 
 const PROPERTY_TYPES = [
+  // Residential
   { value: 'APARTMENT', label: 'Apartment', icon: '🏢' },
   { value: 'INDEPENDENT_HOUSE', label: 'Independent House', icon: '🏠' },
   { value: 'VILLA', label: 'Villa', icon: '🏡' },
-  { value: 'PLOT', label: 'Plot', icon: '📐' },
   { value: 'PENTHOUSE', label: 'Penthouse', icon: '🌆' },
   { value: 'STUDIO', label: 'Studio', icon: '🛋️' },
   { value: 'BUILDER_FLOOR', label: 'Builder Floor', icon: '🏗️' },
   { value: 'FARM_HOUSE', label: 'Farm House', icon: '🌾' },
   { value: 'ROW_HOUSE', label: 'Row House', icon: '🏘️' },
+  // Land & Plot
+  { value: 'PLOT', label: 'Residential Plot', icon: '📐' },
+  { value: 'RESIDENTIAL_PLOT', label: 'Plot / Land', icon: '🗺️' },
+  { value: 'AGRICULTURAL_LAND', label: 'Agricultural Land', icon: '🌾' },
+  { value: 'FARMING_LAND', label: 'Farming Land', icon: '🚜' },
+  { value: 'COMMERCIAL_LAND', label: 'Commercial Land', icon: '🏗️' },
+  { value: 'INDUSTRIAL_LAND', label: 'Industrial Land', icon: '🏭' },
+  // Commercial
   { value: 'COMMERCIAL_OFFICE', label: 'Commercial Office', icon: '💼' },
-  { value: 'SHOP', label: 'Shop', icon: '🏪' },
-  { value: 'SHOWROOM', label: 'Showroom', icon: '🚗' },
-  { value: 'WAREHOUSE', label: 'Warehouse', icon: '📦' },
+  { value: 'COMMERCIAL_SHOP', label: 'Shop', icon: '🏪' },
+  { value: 'COMMERCIAL_SHOWROOM', label: 'Showroom', icon: '🚗' },
+  { value: 'COMMERCIAL_WAREHOUSE', label: 'Warehouse', icon: '📦' },
+  { value: 'INDUSTRIAL', label: 'Industrial', icon: '🏭' },
 ];
 
 const INDIAN_STATES = [
@@ -186,6 +195,23 @@ interface SaleWizardData {
   vastuCompliant: boolean;
   petAllowed: boolean;
   overlooking: string[];
+  // Land-specific fields
+  totalAcres: string;
+  plotLengthFt: string;
+  plotBreadthFt: string;
+  boundaryWall: boolean;
+  cornerPlot: boolean;
+  roadAccess: string;
+  roadWidthFt: string;
+  zoneType: string;
+  irrigationType: string;
+  soilType: string;
+  waterSource: string;
+  borewellCount: number;
+  currentCrop: string;
+  organicCertified: boolean;
+  ownershipType: string;
+  titleClear: boolean;
   // Step 6
   photos: File[];
   floorPlan: File | null;
@@ -203,6 +229,10 @@ const INITIAL_DATA: SaleWizardData = {
   possessionStatus: 'READY_TO_MOVE', possessionDate: '', reraId: '', builderName: '', projectName: '',
   amenities: [], waterSupply: 'CORPORATION', powerBackup: 'FULL', gatedCommunity: false,
   cornerProperty: false, vastuCompliant: false, petAllowed: false, overlooking: [],
+  totalAcres: '', plotLengthFt: '', plotBreadthFt: '', boundaryWall: false, cornerPlot: false,
+  roadAccess: '', roadWidthFt: '', zoneType: '', irrigationType: '', soilType: '',
+  waterSource: '', borewellCount: 0, currentCrop: '', organicCertified: false,
+  ownershipType: 'FREEHOLD', titleClear: true,
   photos: [], floorPlan: null, videoTourUrl: '', brochureUrl: '',
 };
 
@@ -363,22 +393,26 @@ function SellPropertyWizardInner() {
         if (!data.pincode || data.pincode.length !== 6) errors.push('Valid 6-digit pincode is required');
         if (!data.address) errors.push('Full address is required');
         break;
-      case 2:
-        if (data.propertyType !== 'PLOT') {
+      case 2: {
+        const isLandType = ['PLOT', 'RESIDENTIAL_PLOT', 'AGRICULTURAL_LAND', 'FARMING_LAND', 'COMMERCIAL_LAND', 'INDUSTRIAL_LAND'].includes(data.propertyType);
+        if (!isLandType) {
           if (data.bhk < 1) errors.push('Select number of bedrooms');
           if (data.bathrooms < 1) errors.push('Select number of bathrooms');
           if (data.totalFloors < 1) errors.push('Total floors is required');
         }
         break;
-      case 3:
+      }
+      case 3: {
+        const isLandType3 = ['PLOT', 'RESIDENTIAL_PLOT', 'AGRICULTURAL_LAND', 'FARMING_LAND', 'COMMERCIAL_LAND', 'INDUSTRIAL_LAND'].includes(data.propertyType);
         if (data.askingPriceRupees <= 0) errors.push('Asking price is required');
-        if (data.propertyType === 'PLOT') {
+        if (isLandType3) {
           if (data.plotAreaSqft <= 0) errors.push('Plot area is required');
         } else {
           if (data.carpetAreaSqft <= 0 && data.builtUpAreaSqft <= 0) errors.push('Carpet area or built-up area is required');
         }
         if (!data.transactionType) errors.push('Transaction type is required');
         break;
+      }
       case 4:
         if (!data.possessionStatus) errors.push('Possession status is required');
         if ((data.possessionStatus === 'UNDER_CONSTRUCTION' || data.possessionStatus === 'NEW_LAUNCH') && !data.possessionDate) {
@@ -388,7 +422,7 @@ function SellPropertyWizardInner() {
       case 5:
         break; // amenities are optional
       case 6:
-        if (data.photos.length === 0 && data.propertyType !== 'PLOT') errors.push('At least one photo is required');
+        if (data.photos.length === 0 && !['PLOT', 'RESIDENTIAL_PLOT', 'AGRICULTURAL_LAND', 'FARMING_LAND', 'COMMERCIAL_LAND', 'INDUSTRIAL_LAND'].includes(data.propertyType)) errors.push('At least one photo is required');
         break;
     }
     return errors;
@@ -411,9 +445,43 @@ function SellPropertyWizardInner() {
       const token = localStorage.getItem('access_token');
       if (!token) { setError('Please login to list your property.'); setSubmitting(false); return; }
 
+      // Upload photos via presigned URL flow
+      const photoUrls: string[] = [];
+      const apiBase = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
+      for (const file of data.photos) {
+        try {
+          const ct = file.type || 'image/jpeg';
+          // Step 1: Get presigned upload URL
+          const presignRes = await fetch(
+            `${apiBase}/api/v1/media/upload/generic-presign?folder=sale-properties&contentType=${encodeURIComponent(ct)}`,
+            { method: 'POST', headers: { Authorization: `Bearer ${token}` } }
+          );
+          if (!presignRes.ok) { console.warn('Presign failed:', presignRes.status); continue; }
+          const { uploadUrl, publicUrl } = await presignRes.json();
+
+          // Step 2: Upload file directly to S3 via presigned URL
+          const s3Res = await fetch(uploadUrl, {
+            method: 'PUT',
+            headers: { 'Content-Type': ct },
+            body: file,
+          });
+          if (s3Res.ok && publicUrl) {
+            photoUrls.push(publicUrl);
+          } else {
+            console.warn('S3 upload failed:', s3Res.status);
+          }
+        } catch (e) {
+          console.warn('Photo upload failed:', e);
+        }
+      }
+
       const typeLabel = PROPERTY_TYPES.find(p => p.value === data.propertyType)?.label || data.propertyType || 'Property';
       const location = data.locality || data.city || data.state || 'India';
-      const title = `${data.bhk > 0 ? data.bhk + ' BHK ' : ''}${typeLabel} for Sale in ${location}`.trim();
+      const isLandSubmit = ['PLOT', 'RESIDENTIAL_PLOT', 'AGRICULTURAL_LAND', 'FARMING_LAND', 'COMMERCIAL_LAND', 'INDUSTRIAL_LAND'].includes(data.propertyType);
+      const sizePrefix = isLandSubmit
+        ? (data.totalAcres ? data.totalAcres + ' Acres ' : data.plotAreaSqft ? data.plotAreaSqft + ' sqft ' : '')
+        : (data.bhk > 0 ? data.bhk + ' BHK ' : '');
+      const title = `${sizePrefix}${typeLabel} for Sale in ${location}`.trim();
 
       const payload = {
         title,
@@ -460,15 +528,30 @@ function SellPropertyWizardInner() {
         overlooking: data.overlooking.length > 0 ? data.overlooking : null,
         videoTourUrl: data.videoTourUrl || null,
         brochureUrl: data.brochureUrl || null,
+        photos: photoUrls.length > 0 ? photoUrls : null,
+        // Land-specific fields
+        totalAcres: data.totalAcres ? parseFloat(data.totalAcres) : null,
+        plotLengthFt: data.plotLengthFt ? parseFloat(data.plotLengthFt) : null,
+        plotBreadthFt: data.plotBreadthFt ? parseFloat(data.plotBreadthFt) : null,
+        boundaryWall: data.boundaryWall || null,
+        cornerPlot: data.cornerPlot || null,
+        roadAccess: data.roadAccess || null,
+        roadWidthFt: data.roadWidthFt ? parseFloat(data.roadWidthFt) : null,
+        zoneType: data.zoneType || null,
+        irrigationType: data.irrigationType || null,
+        soilType: data.soilType || null,
+        waterSource: data.waterSource || null,
+        borewellCount: data.borewellCount || null,
+        currentCrop: data.currentCrop || null,
+        organicCertified: data.organicCertified || null,
+        ownershipType: data.ownershipType || null,
+        titleClear: data.titleClear,
       };
       if (editId) {
         await api.updateSaleProperty(editId, payload, token);
       } else {
-        const created = await api.createSaleProperty(payload, token);
-        // Auto-activate (publish) after creation so it appears in search
-        if (created?.id) {
-          try { await api.updateSalePropertyStatus(created.id, 'ACTIVE', token); } catch {}
-        }
+        await api.createSaleProperty(payload, token);
+        // Status stays NEW — admin reviews and activates
       }
       router.push('/host?tab=sales');
     } catch (e: any) {
@@ -592,11 +675,126 @@ function SellPropertyWizardInner() {
   }
 
   function renderStep2() {
-    const isPlot = data.propertyType === 'PLOT';
+    const isPlot = ['PLOT', 'RESIDENTIAL_PLOT', 'AGRICULTURAL_LAND', 'FARMING_LAND', 'COMMERCIAL_LAND', 'INDUSTRIAL_LAND'].includes(data.propertyType);
     return (
       <div>
         <h2 className="text-2xl font-bold mb-2">Property Details</h2>
         <p className="text-gray-500 mb-6">Tell buyers about your property configuration.</p>
+
+        {/* Land-specific fields */}
+        {isPlot && (
+          <>
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-6">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Total Acres</label>
+                <input type="number" step="0.01" value={data.totalAcres} onChange={e => update({ totalAcres: e.target.value })} placeholder="e.g. 2.5" className="w-full border rounded-xl px-4 py-3 focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Plot Length (ft)</label>
+                <input type="number" value={data.plotLengthFt} onChange={e => update({ plotLengthFt: e.target.value })} placeholder="e.g. 60" className="w-full border rounded-xl px-4 py-3 focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Plot Breadth (ft)</label>
+                <input type="number" value={data.plotBreadthFt} onChange={e => update({ plotBreadthFt: e.target.value })} placeholder="e.g. 40" className="w-full border rounded-xl px-4 py-3 focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Road Width (ft)</label>
+                <input type="number" value={data.roadWidthFt} onChange={e => update({ roadWidthFt: e.target.value })} placeholder="e.g. 30" className="w-full border rounded-xl px-4 py-3 focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Road Access</label>
+                <select value={data.roadAccess} onChange={e => update({ roadAccess: e.target.value })} className="w-full border rounded-xl px-4 py-3 focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none">
+                  <option value="">Select</option>
+                  <option value="MAIN_ROAD">Main Road</option>
+                  <option value="INTERNAL">Internal Road</option>
+                  <option value="NO_ROAD">No Road</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Zone Type</label>
+                <select value={data.zoneType} onChange={e => update({ zoneType: e.target.value })} className="w-full border rounded-xl px-4 py-3 focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none">
+                  <option value="">Select</option>
+                  <option value="RESIDENTIAL">Residential</option>
+                  <option value="COMMERCIAL">Commercial</option>
+                  <option value="INDUSTRIAL">Industrial</option>
+                  <option value="AGRICULTURAL">Agricultural</option>
+                  <option value="MIXED">Mixed Use</option>
+                </select>
+              </div>
+            </div>
+            <div className="flex flex-wrap gap-4 mb-6">
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input type="checkbox" checked={data.boundaryWall} onChange={e => update({ boundaryWall: e.target.checked })} className="w-4 h-4 text-orange-500 rounded" />
+                <span className="text-sm text-gray-700">Boundary Wall</span>
+              </label>
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input type="checkbox" checked={data.cornerPlot} onChange={e => update({ cornerPlot: e.target.checked })} className="w-4 h-4 text-orange-500 rounded" />
+                <span className="text-sm text-gray-700">Corner Plot</span>
+              </label>
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input type="checkbox" checked={data.titleClear} onChange={e => update({ titleClear: e.target.checked })} className="w-4 h-4 text-orange-500 rounded" />
+                <span className="text-sm text-gray-700">Clear Title</span>
+              </label>
+            </div>
+            <div className="grid grid-cols-2 gap-4 mb-6">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Ownership Type</label>
+                <select value={data.ownershipType} onChange={e => update({ ownershipType: e.target.value })} className="w-full border rounded-xl px-4 py-3 focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none">
+                  <option value="FREEHOLD">Freehold</option>
+                  <option value="LEASEHOLD">Leasehold</option>
+                  <option value="COOPERATIVE">Cooperative</option>
+                  <option value="POWER_OF_ATTORNEY">Power of Attorney</option>
+                </select>
+              </div>
+            </div>
+
+            {/* Agriculture-specific (only for agricultural/farming land) */}
+            {['AGRICULTURAL_LAND', 'FARMING_LAND'].includes(data.propertyType) && (
+              <>
+                <h3 className="text-lg font-semibold text-gray-800 mb-3 mt-6">Agriculture Details</h3>
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-6">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Irrigation Type</label>
+                    <select value={data.irrigationType} onChange={e => update({ irrigationType: e.target.value })} className="w-full border rounded-xl px-4 py-3 focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none">
+                      <option value="">Select</option>
+                      <option value="BOREWELL">Borewell</option>
+                      <option value="CANAL">Canal</option>
+                      <option value="RIVER">River</option>
+                      <option value="RAIN_FED">Rain Fed</option>
+                      <option value="DRIP">Drip Irrigation</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Soil Type</label>
+                    <select value={data.soilType} onChange={e => update({ soilType: e.target.value })} className="w-full border rounded-xl px-4 py-3 focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none">
+                      <option value="">Select</option>
+                      <option value="BLACK">Black Cotton</option>
+                      <option value="RED">Red</option>
+                      <option value="ALLUVIAL">Alluvial</option>
+                      <option value="LATERITE">Laterite</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Water Source</label>
+                    <input value={data.waterSource} onChange={e => update({ waterSource: e.target.value })} placeholder="e.g. Borewell, River" className="w-full border rounded-xl px-4 py-3 focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Borewells</label>
+                    <input type="number" value={data.borewellCount || ''} onChange={e => update({ borewellCount: parseInt(e.target.value) || 0 })} min={0} className="w-full border rounded-xl px-4 py-3 focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Current Crop</label>
+                    <input value={data.currentCrop} onChange={e => update({ currentCrop: e.target.value })} placeholder="e.g. Rice, Sugarcane" className="w-full border rounded-xl px-4 py-3 focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none" />
+                  </div>
+                </div>
+                <label className="flex items-center gap-2 cursor-pointer mb-6">
+                  <input type="checkbox" checked={data.organicCertified} onChange={e => update({ organicCertified: e.target.checked })} className="w-4 h-4 text-orange-500 rounded" />
+                  <span className="text-sm text-gray-700">Organic Certified</span>
+                </label>
+              </>
+            )}
+          </>
+        )}
 
         {!isPlot && (
           <>
@@ -755,7 +953,7 @@ function SellPropertyWizardInner() {
   }
 
   function renderStep3() {
-    const isPlot = data.propertyType === 'PLOT';
+    const isPlot = ['PLOT', 'RESIDENTIAL_PLOT', 'AGRICULTURAL_LAND', 'FARMING_LAND', 'COMMERCIAL_LAND', 'INDUSTRIAL_LAND'].includes(data.propertyType);
     return (
       <div>
         <h2 className="text-2xl font-bold mb-2">Area & Pricing</h2>
@@ -1204,7 +1402,7 @@ function SellPropertyWizardInner() {
   }
 
   function renderStep7() {
-    const isPlot = data.propertyType === 'PLOT';
+    const isPlot = ['PLOT', 'RESIDENTIAL_PLOT', 'AGRICULTURAL_LAND', 'FARMING_LAND', 'COMMERCIAL_LAND', 'INDUSTRIAL_LAND'].includes(data.propertyType);
     const typeLabel = PROPERTY_TYPES.find(p => p.value === data.propertyType)?.label || data.propertyType;
 
     const sections = [

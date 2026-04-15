@@ -317,6 +317,10 @@ export default function MessagesPage() {
                             );
                           }
 
+                          const isFile = msg.messageType === 'FILE';
+                          const isImage = msg.messageType === 'IMAGE';
+                          const isLocation = msg.messageType === 'LOCATION';
+
                           return (
                             <div key={msg.id} className={`flex ${isMine ? 'justify-end' : 'justify-start'} mb-1.5`}>
                               <div
@@ -326,7 +330,62 @@ export default function MessagesPage() {
                                     : 'bg-white text-gray-800 border rounded-bl-md'
                                 }`}
                               >
-                                <p className="text-sm whitespace-pre-wrap break-words">{msg.content}</p>
+                                {/* FILE message */}
+                                {isFile && msg.attachmentUrl && (
+                                  <a
+                                    href={msg.attachmentUrl}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className={`flex items-center gap-2 p-2 rounded-lg mb-1 ${isMine ? 'bg-orange-600/30' : 'bg-gray-50'}`}
+                                  >
+                                    <svg className="w-8 h-8 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                                    </svg>
+                                    <div className="min-w-0">
+                                      <p className="text-sm font-medium truncate">{msg.attachmentName || 'Document'}</p>
+                                      {msg.attachmentSize && <p className={`text-[10px] ${isMine ? 'text-orange-200' : 'text-gray-400'}`}>{(msg.attachmentSize / 1024).toFixed(0)} KB</p>}
+                                    </div>
+                                  </a>
+                                )}
+
+                                {/* IMAGE message */}
+                                {isImage && msg.attachmentUrl && (
+                                  <a href={msg.attachmentUrl} target="_blank" rel="noopener noreferrer" className="block mb-1">
+                                    <img src={msg.attachmentUrl} alt={msg.attachmentName || 'Image'} className="rounded-lg max-w-full max-h-48 object-cover" />
+                                  </a>
+                                )}
+
+                                {/* LOCATION message */}
+                                {isLocation && msg.latitude && msg.longitude && (
+                                  <a
+                                    href={`https://www.google.com/maps?q=${msg.latitude},${msg.longitude}`}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className={`block p-2 rounded-lg mb-1 ${isMine ? 'bg-orange-600/30' : 'bg-gray-50'}`}
+                                  >
+                                    <div className="flex items-center gap-2">
+                                      <svg className="w-6 h-6 flex-shrink-0 text-red-500" fill="currentColor" viewBox="0 0 24 24">
+                                        <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5a2.5 2.5 0 010-5 2.5 2.5 0 010 5z" />
+                                      </svg>
+                                      <span className="text-sm font-medium">{msg.locationLabel || 'View Location'}</span>
+                                    </div>
+                                    <img
+                                      src={`https://maps.googleapis.com/maps/api/staticmap?center=${msg.latitude},${msg.longitude}&zoom=15&size=300x150&markers=${msg.latitude},${msg.longitude}&key=`}
+                                      alt="Map"
+                                      className="rounded mt-1 w-full h-24 object-cover bg-gray-200"
+                                      onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                                    />
+                                  </a>
+                                )}
+
+                                {/* Text content (shown for all types if present) */}
+                                {msg.content && !isFile && !isImage && !isLocation && (
+                                  <p className="text-sm whitespace-pre-wrap break-words">{msg.content}</p>
+                                )}
+                                {msg.content && (isFile || isImage) && (
+                                  <p className="text-sm whitespace-pre-wrap break-words mt-1">{msg.content}</p>
+                                )}
+
                                 <div className={`flex items-center gap-1 mt-0.5 ${isMine ? 'justify-end' : ''}`}>
                                   <span className={`text-[10px] ${isMine ? 'text-orange-100' : 'text-gray-400'}`}>
                                     {formatMessageTime(msg.createdAt)}
@@ -350,6 +409,39 @@ export default function MessagesPage() {
                 {/* Input bar */}
                 <div className="p-3 border-t bg-white">
                   <div className="flex items-end gap-2">
+                    {/* File upload button */}
+                    <label className="cursor-pointer p-2.5 rounded-xl hover:bg-gray-100 transition text-gray-500 flex-shrink-0">
+                      <input
+                        type="file"
+                        className="hidden"
+                        accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.webp"
+                        onChange={async (e) => {
+                          const file = e.target.files?.[0];
+                          if (!file || !selectedConversation || !token) return;
+                          if (file.size > 10 * 1024 * 1024) { alert('File exceeds 10MB limit'); return; }
+                          setSending(true);
+                          try {
+                            const { attachmentUrl, fileName, fileSize, mimeType } = await api.uploadChatAttachment(file);
+                            const isImage = mimeType?.startsWith('image/');
+                            const otherParticipant = selectedConversation.participant1Id === userId
+                              ? selectedConversation.participant2Id : selectedConversation.participant1Id;
+                            await api.sendMessage({
+                              listingId: selectedConversation.listingId,
+                              recipientId: otherParticipant,
+                              bookingId: selectedConversation.bookingId,
+                              content: file.name,
+                              messageType: isImage ? 'IMAGE' : 'FILE',
+                              attachmentUrl, attachmentName: fileName, attachmentSize: fileSize, attachmentType: mimeType,
+                            }, token);
+                            await loadMessages(selectedId!, token);
+                          } catch (err: any) { alert(err.message || 'Failed to send file'); }
+                          finally { setSending(false); e.target.value = ''; }
+                        }}
+                      />
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
+                      </svg>
+                    </label>
                     <textarea
                       ref={inputRef}
                       value={newMessage}

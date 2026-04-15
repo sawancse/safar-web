@@ -119,18 +119,19 @@ export default function BookPage() {
     fetchFn
       .then((types) => {
         setRoomTypes(types);
+        const hasCapacity = (rt: any) => (rt.availableCount ?? rt.count ?? 0) > 0;
         // Pre-select room type from URL param (auto-add to stepper selections)
         if (preselectedRoomTypeId) {
           const match = types.find(t => t.id === preselectedRoomTypeId);
-          if (match) {
+          if (match && hasCapacity(match)) {
             setSelectedRoomType(match);
             setSelectedRoomSelections(prev =>
               prev.find(s => s.id === match.id) ? prev : [...prev, { id: match.id, c: 1, rooms: 1, gpr: 1 }]
             );
           }
         }
-        // Auto-select if only one room type
-        else if (types.length === 1 && selectedRoomSelections.length === 0) {
+        // Auto-select if only one room type (and it has capacity)
+        else if (types.length === 1 && selectedRoomSelections.length === 0 && hasCapacity(types[0])) {
           setSelectedRoomType(types[0]);
           setSelectedRoomSelections([{ id: types[0].id, c: 1, rooms: 1, gpr: 1 }]);
         }
@@ -260,7 +261,17 @@ export default function BookPage() {
 
   // Room type is required for listings that have room types defined
   const roomTypeSelected = roomTypes.length === 0 || selectedRoomSelections.length > 0;
-  const isFormValid = firstName.trim() && lastName.trim() && email.trim() && phone.trim() && (isMonthly ? leaseMonths > 0 : isHourly ? hours > 0 : nights > 0) && roomTypeSelected;
+  // Every selected room-type must still have capacity (availableCount ?? count).
+  // Prevents the UI from letting a user submit a fully-booked room type; the
+  // backend will 409 anyway, but the error is friendlier here.
+  const selectionsWithinCapacity = selectedRoomSelections.every(sel => {
+    const rt = roomTypes.find(r => r.id === sel.id);
+    if (!rt) return false;
+    const cap = (rt as any).availableCount ?? rt.count ?? 0;
+    const requested = sel.rooms ?? sel.c ?? 1;
+    return cap >= requested;
+  });
+  const isFormValid = firstName.trim() && lastName.trim() && email.trim() && phone.trim() && (isMonthly ? leaseMonths > 0 : isHourly ? hours > 0 : nights > 0) && roomTypeSelected && selectionsWithinCapacity;
 
   const guestLabel = [
     `${adults} adult${adults !== 1 ? 's' : ''}`,

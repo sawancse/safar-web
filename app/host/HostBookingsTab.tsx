@@ -82,9 +82,9 @@ export default function HostBookingsTab({ token: initialToken }: { token: string
     }).finally(() => setLoading(false));
   }, [token]);
 
-  // Enhanced filtering logic
-  const filtered = bookings
-    .filter(b => !filter || b.status === filter)
+  // Scope = bookings matching listing + date + search, BUT not the status filter.
+  // Status pills count over this scope so switching listing changes their numbers.
+  const bookingsInScope = bookings
     .filter(b => !listingFilter || b.listingId === listingFilter)
     .filter(b => {
       if (!dateFrom || !dateTo) return true;
@@ -97,7 +97,11 @@ export default function HostBookingsTab({ token: initialToken }: { token: string
       return (b.guestFirstName?.toLowerCase().includes(q)) ||
              (b.guestLastName?.toLowerCase().includes(q)) ||
              (b.bookingRef?.toLowerCase().includes(q));
-    })
+    });
+
+  // Final visible list applies the status filter on top of scope.
+  const filtered = bookingsInScope
+    .filter(b => !filter || b.status === filter)
     .sort((a, b) => {
       const dir = sortDir === 'asc' ? 1 : -1;
       if (sortBy === 'checkIn') return dir * (new Date(a.checkIn).getTime() - new Date(b.checkIn).getTime());
@@ -262,7 +266,9 @@ export default function HostBookingsTab({ token: initialToken }: { token: string
       {/* Status filter pills */}
       <div className="flex flex-wrap gap-2 mb-6">
         {FILTERS.map((f) => {
-          const count = f.value ? bookings.filter(b => b.status === f.value).length : bookings.length;
+          const count = f.value
+            ? bookingsInScope.filter(b => b.status === f.value).length
+            : bookingsInScope.length;
           return (
             <button key={f.value} onClick={() => setFilter(f.value)}
               className={`text-sm px-3 py-1.5 rounded-full font-medium transition flex items-center gap-1.5 ${
@@ -324,10 +330,16 @@ export default function HostBookingsTab({ token: initialToken }: { token: string
                         className="text-sm font-semibold text-orange-600 hover:underline truncate block">
                         {listing?.title || b.listingTitle || 'Unknown Property'}
                       </Link>
-                      {/* Room type (if applicable) */}
-                      {b.roomTypeName && (
+                      {/* Room type (multi-selection aware) */}
+                      {b.roomSelections && b.roomSelections.length > 0 ? (
+                        <p className="text-xs text-gray-500 mt-0.5">
+                          {b.roomSelections
+                            .map(s => `${s.roomTypeName}${s.count > 1 ? ` x${s.count}` : ''}`)
+                            .join(', ')}
+                        </p>
+                      ) : b.roomTypeName ? (
                         <p className="text-xs text-gray-500 mt-0.5">{b.roomTypeName}{b.roomsCount && b.roomsCount > 1 ? ` x${b.roomsCount}` : ''}</p>
-                      )}
+                      ) : null}
                       {/* Booking ref + creation date */}
                       <p className="text-xs font-mono text-gray-400 mt-0.5">
                         #{b.bookingRef} &middot; Booked {fmtDateFull(b.createdAt)}

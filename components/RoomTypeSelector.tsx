@@ -15,6 +15,7 @@ export interface RoomSelection {
   pricePerUnitPaise: number;
   maxGuests: number;
   securityDepositPaise: number;
+  availableCount: number; // cap enforced by BookingPanel + book page
 }
 
 interface InitialSelection {
@@ -74,6 +75,7 @@ export default function RoomTypeSelector({ roomTypes, perNightLabel, listingId, 
           count: totalGuests, rooms, guestsPerRoom: gpr,
           pricePerUnitPaise: rt.basePricePaise,
           maxGuests: rt.maxGuests, securityDepositPaise: rt.securityDepositPaise ?? 0,
+          availableCount: rt.availableCount ?? rt.count ?? 0,
         };
       });
     onSelect?.(selections);

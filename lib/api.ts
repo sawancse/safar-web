@@ -166,6 +166,49 @@ async function apiFetch<T>(path: string, options?: RequestInit): Promise<T> {
   return text ? JSON.parse(text) : (undefined as T);
 }
 
+/** Like apiFetch but for FormData uploads — does NOT set Content-Type (browser sets multipart boundary). */
+async function apiUpload<T>(path: string, formData: FormData): Promise<T> {
+  const token = typeof window !== 'undefined' ? localStorage.getItem('access_token') || '' : '';
+  const headers: Record<string, string> = {};
+  if (token) headers.Authorization = `Bearer ${token}`;
+
+  // Proactively refresh if token is about to expire
+  const freshOpts = await ensureFreshToken({ headers });
+  const finalHeaders = (freshOpts?.headers as Record<string, string>) || headers;
+
+  const res = await fetch(`${API_URL}${path}`, {
+    method: 'POST',
+    headers: finalHeaders,
+    body: formData,
+    credentials: 'include',
+  });
+
+  if (res.status === 401 && typeof window !== 'undefined') {
+    const ok = await refreshTokenOnce();
+    if (ok) {
+      const newToken = localStorage.getItem('access_token') || '';
+      const retryRes = await fetch(`${API_URL}${path}`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${newToken}` },
+        body: formData,
+        credentials: 'include',
+      });
+      if (!retryRes.ok) throw new Error(`Upload failed (${retryRes.status})`);
+      const text = await retryRes.text();
+      return text ? JSON.parse(text) : (undefined as T);
+    }
+    localStorage.removeItem('access_token');
+    localStorage.removeItem('refresh_token');
+    document.cookie = 'access_token=; path=/; max-age=0';
+    window.location.href = '/auth';
+    throw new Error('Session expired. Please sign in again.');
+  }
+
+  if (!res.ok) throw new Error(`Upload failed (${res.status})`);
+  const text = await res.text();
+  return text ? JSON.parse(text) : (undefined as T);
+}
+
 export const api = {
   /* ── Search ───────────────────────────────────────────────── */
   search: async (params: Record<string, string>): Promise<SearchResponse> => {
@@ -349,6 +392,16 @@ export const api = {
   // ── PIN-based quick login ──
   checkPinStatus: (phone?: string, email?: string) =>
     apiFetch<{ hasPin: boolean; pinLocked: boolean }>(`/api/v1/auth/pin/check?${phone ? 'phone=' + encodeURIComponent(phone) : 'email=' + encodeURIComponent(email || '')}`),
+
+  getAuthOptions: (phone?: string, email?: string) =>
+    apiFetch<{ otp: boolean; password: boolean; pin: boolean; pinLocked: boolean; exists: boolean }>(
+      `/api/v1/auth/auth-options?${phone ? 'phone=' + encodeURIComponent(phone) : ''}${email ? (phone ? '&' : '') + 'email=' + encodeURIComponent(email) : ''}`),
+
+  forgotPin: (phone: string, otp: string, newPin: string) =>
+    apiFetch<AuthResponse>('/api/v1/auth/pin/forgot', {
+      method: 'POST',
+      body: JSON.stringify({ phone, otp, newPin }),
+    }),
 
   pinSignIn: (pin: string, phone?: string, email?: string) =>
     apiFetch<AuthResponse>('/api/v1/auth/pin/signin', {
@@ -1300,12 +1353,31 @@ export const api = {
     ),
 
   /* ── Messaging ──────────────────────────────────────────── */
-  sendMessage: (data: { listingId: string; recipientId: string; bookingId?: string; content: string }, token: string) =>
+  sendMessage: (data: {
+    listingId: string; recipientId: string; bookingId?: string; content: string;
+    messageType?: string; attachmentUrl?: string; attachmentName?: string;
+    attachmentSize?: number; attachmentType?: string;
+    latitude?: number; longitude?: number; locationLabel?: string;
+  }, token: string) =>
     apiFetch<ChatMessage>('/api/v1/messages', {
       method: 'POST',
       body: JSON.stringify(data),
       headers: { Authorization: `Bearer ${token}` },
     }),
+
+  uploadChatAttachment: async (file: File): Promise<{ attachmentUrl: string; fileName: string; fileSize: number; mimeType: string }> => {
+    const contentType = file.type || 'application/octet-stream';
+    const fileName = file.name || 'file';
+    // Step 1: Get presigned URL from media-service
+    const { uploadUrl, publicUrl } = await apiFetch<{ uploadUrl: string; publicUrl: string }>(
+      `/api/v1/media/upload/chat-presign?contentType=${encodeURIComponent(contentType)}&fileName=${encodeURIComponent(fileName)}`,
+      { method: 'POST' }
+    );
+    // Step 2: Upload directly to S3
+    await fetch(uploadUrl, { method: 'PUT', headers: { 'Content-Type': contentType }, body: file });
+    // Step 3: Return metadata
+    return { attachmentUrl: publicUrl, fileName, fileSize: file.size, mimeType: contentType };
+  },
 
   getConversations: (token: string) =>
     apiFetch<Conversation[]>('/api/v1/messages/conversations', {
@@ -1558,6 +1630,11 @@ export const api = {
     }),
   tenantSignAgreement: (tenancyId: string, token: string) =>
     apiFetch<any>(`/api/v1/pg-tenancies/${tenancyId}/agreement/tenant-sign`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}` },
+    }),
+  tenantGiveNotice: (tenancyId: string, token: string) =>
+    apiFetch<any>(`/api/v1/pg-tenancies/${tenancyId}/tenant-notice`, {
       method: 'POST',
       headers: { Authorization: `Bearer ${token}` },
     }),
@@ -1876,6 +1953,22 @@ export const api = {
       headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
     }),
 
+  initiateInquiryPayment: (inquiryId: string, token: string) =>
+    apiFetch<any>(`/api/v1/inquiries/${inquiryId}/pay`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}` },
+    }),
+  confirmInquiryPayment: (inquiryId: string, razorpayPaymentId: string, razorpaySignature: string, token: string) =>
+    apiFetch<any>(`/api/v1/inquiries/${inquiryId}/confirm-payment?razorpayPaymentId=${razorpayPaymentId}&razorpaySignature=${razorpaySignature}`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}` },
+    }),
+  refundInquiryToken: (inquiryId: string, token: string) =>
+    apiFetch<any>(`/api/v1/inquiries/${inquiryId}/refund`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}` },
+    }),
+
   getBuyerInquiries: (token: string) =>
     apiFetch<any>('/api/v1/inquiries/buyer', {
       headers: { Authorization: `Bearer ${token}` },
@@ -2144,6 +2237,18 @@ export const api = {
       headers: { Authorization: `Bearer ${token}` },
     }),
 
+  confirmEvent: (eventId: string, token: string) =>
+    apiFetch<any>(`/api/v1/chef-events/${eventId}/confirm`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}` },
+    }),
+
+  cancelEvent: (eventId: string, reason: string, token: string) =>
+    apiFetch<any>(`/api/v1/chef-events/${eventId}/cancel?reason=${encodeURIComponent(reason)}`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}` },
+    }),
+
   completeEvent: (eventId: string, token: string) =>
     apiFetch<any>(`/api/v1/chef-events/${eventId}/complete`, {
       method: 'POST',
@@ -2348,6 +2453,13 @@ export const api = {
   calculateEmi: (loanAmountPaise: number, interestRate: number, tenureMonths: number) =>
     apiFetch<any>(`/api/v1/homeloan/emi/calculate?loanAmountPaise=${loanAmountPaise}&interestRate=${interestRate}&tenureMonths=${tenureMonths}`, { method: 'POST' }),
   getPartnerBanks: () => apiFetch<any[]>('/api/v1/homeloan/banks'),
+  getPartnerBank: (id: string) => apiFetch<any>(`/api/v1/homeloan/banks/${id}`),
+  createPartnerBank: (data: any, token: string) =>
+    apiFetch<any>('/api/v1/homeloan/banks', { method: 'POST', headers: { Authorization: `Bearer ${token}` }, body: JSON.stringify(data) }),
+  updatePartnerBank: (id: string, data: any, token: string) =>
+    apiFetch<any>(`/api/v1/homeloan/banks/${id}`, { method: 'PUT', headers: { Authorization: `Bearer ${token}` }, body: JSON.stringify(data) }),
+  deletePartnerBank: (id: string, token: string) =>
+    apiFetch<any>(`/api/v1/homeloan/banks/${id}`, { method: 'DELETE', headers: { Authorization: `Bearer ${token}` } }),
   compareBanks: (eligibilityId: string) => apiFetch<any[]>(`/api/v1/homeloan/banks/compare?eligibilityId=${eligibilityId}`),
   applyLoan: (data: any, token: string) =>
     apiFetch<any>('/api/v1/homeloan/apply', { method: 'POST', headers: { Authorization: `Bearer ${token}` }, body: JSON.stringify(data) }),
@@ -2359,6 +2471,19 @@ export const api = {
   // ══════ VAS: Legal Services ══════
   getLegalPackages: () => apiFetch<any[]>('/api/v1/legal/packages'),
   getAdvocates: (city?: string) => apiFetch<any[]>(`/api/v1/legal/advocates${city ? '?city=' + city : ''}`),
+  getAdvocate: (id: string) => apiFetch<any>(`/api/v1/legal/advocates/${id}`),
+  registerAdvocate: (data: any, token: string) =>
+    apiFetch<any>('/api/v1/legal/advocates/register', { method: 'POST', headers: { Authorization: `Bearer ${token}` }, body: JSON.stringify(data) }),
+  getMyAdvocateProfile: (token: string) =>
+    apiFetch<any>('/api/v1/legal/advocates/my-profile', { headers: { Authorization: `Bearer ${token}` } }),
+  updateMyAdvocateProfile: (data: any, token: string) =>
+    apiFetch<any>('/api/v1/legal/advocates/my-profile', { method: 'PUT', headers: { Authorization: `Bearer ${token}` }, body: JSON.stringify(data) }),
+  createAdvocate: (data: any, token: string) =>
+    apiFetch<any>('/api/v1/legal/advocates', { method: 'POST', headers: { Authorization: `Bearer ${token}` }, body: JSON.stringify(data) }),
+  updateAdvocate: (id: string, data: any, token: string) =>
+    apiFetch<any>(`/api/v1/legal/advocates/${id}`, { method: 'PUT', headers: { Authorization: `Bearer ${token}` }, body: JSON.stringify(data) }),
+  deleteAdvocate: (id: string, token: string) =>
+    apiFetch<any>(`/api/v1/legal/advocates/${id}`, { method: 'DELETE', headers: { Authorization: `Bearer ${token}` } }),
   createLegalCase: (data: any, token?: string) =>
     apiFetch<any>('/api/v1/legal/cases', { method: 'POST', ...(token ? { headers: { Authorization: `Bearer ${token}` } } : {}), body: JSON.stringify(data) }),
   getMyLegalCases: (token: string) =>
@@ -2383,6 +2508,19 @@ export const api = {
 
   // ══════ VAS: Home Interiors ══════
   getInteriorDesigners: (city?: string) => apiFetch<any[]>(`/api/v1/interiors/designers${city ? '?city=' + city : ''}`),
+  getInteriorDesigner: (id: string) => apiFetch<any>(`/api/v1/interiors/designers/${id}`),
+  registerDesigner: (data: any, token: string) =>
+    apiFetch<any>('/api/v1/interiors/designers/register', { method: 'POST', headers: { Authorization: `Bearer ${token}` }, body: JSON.stringify(data) }),
+  getMyDesignerProfile: (token: string) =>
+    apiFetch<any>('/api/v1/interiors/designers/my-profile', { headers: { Authorization: `Bearer ${token}` } }),
+  updateMyDesignerProfile: (data: any, token: string) =>
+    apiFetch<any>('/api/v1/interiors/designers/my-profile', { method: 'PUT', headers: { Authorization: `Bearer ${token}` }, body: JSON.stringify(data) }),
+  createInteriorDesigner: (data: any, token: string) =>
+    apiFetch<any>('/api/v1/interiors/designers', { method: 'POST', headers: { Authorization: `Bearer ${token}` }, body: JSON.stringify(data) }),
+  updateInteriorDesigner: (id: string, data: any, token: string) =>
+    apiFetch<any>(`/api/v1/interiors/designers/${id}`, { method: 'PUT', headers: { Authorization: `Bearer ${token}` }, body: JSON.stringify(data) }),
+  deleteInteriorDesigner: (id: string, token: string) =>
+    apiFetch<any>(`/api/v1/interiors/designers/${id}`, { method: 'DELETE', headers: { Authorization: `Bearer ${token}` } }),
   getMaterialCatalog: (category?: string) => apiFetch<any[]>(`/api/v1/interiors/materials/catalog${category ? '?category=' + category : ''}`),
   bookInteriorConsultation: (data: any, token: string) =>
     apiFetch<any>('/api/v1/interiors/consultation', { method: 'POST', headers: { Authorization: `Bearer ${token}` }, body: JSON.stringify(data) }),

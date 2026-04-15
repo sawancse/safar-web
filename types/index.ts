@@ -746,7 +746,16 @@ export interface ChatMessage {
   conversationId: string;
   senderId: string;
   content: string;
-  messageType: 'TEXT' | 'SYSTEM' | 'BOOKING_UPDATE';
+  messageType: 'TEXT' | 'SYSTEM' | 'BOOKING_UPDATE' | 'FILE' | 'IMAGE' | 'LOCATION';
+  // Attachment fields
+  attachmentUrl?: string;
+  attachmentName?: string;
+  attachmentSize?: number;
+  attachmentType?: string;
+  // Location fields
+  latitude?: number;
+  longitude?: number;
+  locationLabel?: string;
   readAt?: string;
   createdAt: string;
 }

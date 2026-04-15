@@ -167,6 +167,23 @@ export default function PgDashboardPage() {
     );
   }
 
+  const [givingNotice, setGivingNotice] = useState(false);
+  const [noticeConfirm, setNoticeConfirm] = useState(false);
+
+  async function handleGiveNotice() {
+    if (!data || !token) return;
+    setGivingNotice(true);
+    try {
+      await api.tenantGiveNotice(data.tenancy.id, token);
+      setNoticeConfirm(false);
+      loadDashboard(token);
+    } catch (e: any) {
+      alert(e.message || 'Failed to give notice');
+    } finally {
+      setGivingNotice(false);
+    }
+  }
+
   const { tenancy, agreement, currentInvoice, totalPaidPaise, outstandingPaise, openMaintenanceRequests, subscription } = data;
   const tenancyStatus = TENANCY_STATUS[tenancy.status] || { label: tenancy.status, color: 'bg-gray-100 text-gray-600' };
   const agreementStatus = AGREEMENT_STATUS[agreement.status] || { label: agreement.status, color: 'bg-gray-100 text-gray-600' };
@@ -174,6 +191,22 @@ export default function PgDashboardPage() {
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-5xl mx-auto px-4 py-8">
+        {/* Tab Navigation */}
+        <div className="flex gap-1 bg-white rounded-xl shadow-sm border border-gray-100 p-1 mb-6">
+          <Link href="/pg-dashboard" className="flex-1 px-4 py-2.5 text-sm font-medium text-white bg-orange-500 rounded-lg text-center">
+            Overview
+          </Link>
+          <Link href={`/pg-dashboard/invoices?tenancyId=${tenancy.id}`} className="flex-1 px-4 py-2.5 text-sm font-medium text-gray-600 hover:bg-gray-50 rounded-lg text-center transition">
+            Invoices
+          </Link>
+          <Link href={`/pg-dashboard/maintenance?tenancyId=${tenancy.id}`} className="flex-1 px-4 py-2.5 text-sm font-medium text-gray-600 hover:bg-gray-50 rounded-lg text-center transition">
+            Maintenance
+          </Link>
+          <Link href={`/pg-dashboard/utilities?tenancyId=${tenancy.id}`} className="flex-1 px-4 py-2.5 text-sm font-medium text-gray-600 hover:bg-gray-50 rounded-lg text-center transition">
+            Utilities
+          </Link>
+        </div>
+
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
           <div>
@@ -391,15 +424,68 @@ export default function PgDashboardPage() {
               icon="⚡"
               href={`/pg-dashboard/utilities?tenancyId=${tenancy.id}`}
             />
-            <QuickAction
-              title="Give Notice"
-              description="Initiate move-out"
-              icon="📤"
-              href={`/pg-dashboard/notice?tenancyId=${tenancy.id}`}
-              destructive={tenancy.status === 'ACTIVE'}
-            />
+            {tenancy.status === 'ACTIVE' ? (
+              <button
+                onClick={() => setNoticeConfirm(true)}
+                className="flex items-center gap-4 p-4 rounded-xl border border-red-200 hover:border-red-300 hover:bg-red-50 transition hover:shadow-sm text-left w-full"
+              >
+                <span className="text-2xl">📤</span>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-gray-900">Give Notice</p>
+                  <p className="text-xs text-gray-500 truncate">Initiate 1-month move-out notice</p>
+                </div>
+              </button>
+            ) : tenancy.status === 'NOTICE_PERIOD' ? (
+              <div className="flex items-center gap-4 p-4 rounded-xl border border-yellow-200 bg-yellow-50">
+                <span className="text-2xl">📋</span>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-gray-900">Notice Given</p>
+                  <p className="text-xs text-gray-500">Move-out: {tenancy.moveOutDate ? new Date(tenancy.moveOutDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : 'TBD'}</p>
+                </div>
+              </div>
+            ) : (
+              <QuickAction
+                title="Notice"
+                description="Tenancy ended"
+                icon="✓"
+                href="#"
+              />
+            )}
           </div>
         </div>
+
+        {/* Notice Confirmation Modal */}
+        {noticeConfirm && (
+          <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+            <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-xl">
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">Give 1-Month Notice?</h3>
+              <p className="text-sm text-gray-600 mb-4 leading-relaxed">
+                This will start your notice period. Your move-out date will be set to <strong>{new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}</strong>.
+                Your rental agreement will be terminated and the settlement process will begin after move-out.
+              </p>
+              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 mb-4">
+                <p className="text-xs text-yellow-800">
+                  You must clear all pending rent and utilities before move-out. Your security deposit will be settled after room inspection.
+                </p>
+              </div>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setNoticeConfirm(false)}
+                  className="flex-1 px-4 py-2.5 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition font-medium"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleGiveNotice}
+                  disabled={givingNotice}
+                  className="flex-1 px-4 py-2.5 bg-red-500 text-white rounded-lg hover:bg-red-600 transition font-medium disabled:opacity-50"
+                >
+                  {givingNotice ? 'Processing...' : 'Confirm Notice'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Subscription Status */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">

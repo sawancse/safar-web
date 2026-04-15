@@ -196,9 +196,24 @@ export default function BookingPanel({ listing, selectedRoomType, roomSelections
   }
   const totalPaise = discountedBase + gstPaise + insurancePaise + depositPaise + maintenancePaise;
 
-  const canBook = isCommercial
+  // Room type capacity gate: every selection must fit within availableCount.
+  // Prevents Reserve from routing users to /book with a fully-booked room type
+  // (backend will 409 — cheaper to block here).
+  const roomCapacityOk = (() => {
+    if (roomSelections.length > 0) {
+      return roomSelections.every(s => (s.availableCount ?? Infinity) >= (s.rooms ?? 1));
+    }
+    if (selectedRoomType) {
+      const cap = (selectedRoomType as any).availableCount ?? selectedRoomType.count ?? 0;
+      return cap >= effectiveRooms;
+    }
+    return true;
+  })();
+
+  const datesOk = isCommercial
     ? (bookingDate && hours >= minHours)
     : (checkIn && checkOut && nights > 0);
+  const canBook = datesOk && roomCapacityOk;
 
   const guestLabel = [
     `${guestCounts.adults} adult${guestCounts.adults !== 1 ? 's' : ''}`,
@@ -512,7 +527,9 @@ export default function BookingPanel({ listing, selectedRoomType, roomSelections
       <button onClick={handleBook} disabled={!canBook}
         className="w-full bg-orange-500 hover:bg-orange-600 text-white font-semibold py-3 rounded-xl disabled:opacity-50 transition">
         {!canBook
-          ? (isCommercial ? 'Select date & time' : isMonthly ? 'Select move-in date' : 'Select dates')
+          ? (!roomCapacityOk
+              ? 'Fully booked for selected room'
+              : isCommercial ? 'Select date & time' : isMonthly ? 'Select move-in date' : 'Select dates')
           : isMonthly ? `Rent Now · ${formatPaise(totalPaise)}/mo` : `Reserve · ${formatPaise(totalPaise)}`
         }
       </button>

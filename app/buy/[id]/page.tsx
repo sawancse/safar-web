@@ -72,6 +72,38 @@ interface SaleProperty {
   vastuCompliant?: boolean;
   gatedCommunity?: boolean;
   societyName?: string;
+  // Land/Plot fields
+  totalAcres?: number;
+  plotLengthFt?: number;
+  plotBreadthFt?: number;
+  boundaryWall?: boolean;
+  cornerPlot?: boolean;
+  roadWidthFt?: number;
+  roadAccess?: string;
+  zoneType?: string;
+  // Agriculture fields
+  irrigationType?: string;
+  soilType?: string;
+  waterSource?: string;
+  borewellCount?: number;
+  fencingType?: string;
+  organicCertified?: boolean;
+  currentCrop?: string;
+  // Legal fields
+  ownershipType?: string;
+  titleClear?: boolean;
+  encumbranceFree?: boolean;
+  govtApproved?: boolean;
+  // Media
+  virtualTourUrl?: string;
+  brochureUrl?: string;
+  floorPlanUrls?: string;
+  // Agent
+  agentId?: string;
+  agentName?: string;
+  agentPhone?: string;
+  // Booking
+  bookingAmountPaise?: number;
 }
 
 interface SimilarProperty {
@@ -135,6 +167,7 @@ export default function BuyPropertyDetailPage() {
         const raw = await (api as any).getSaleProperty(id);
         const prop = {
           ...raw,
+          propertyType: raw.propertyType ?? raw.salePropertyType ?? '',
           pricePaise: raw.pricePaise ?? raw.askingPricePaise,
           pricePerSqftPaise: raw.pricePerSqftPaise ?? raw.pricePerSqftPaise,
           maintenancePaise: raw.maintenancePaise ?? raw.maintenancePaise,
@@ -296,6 +329,19 @@ export default function BuyPropertyDetailPage() {
 
       <div className="max-w-6xl mx-auto px-4 py-6">
         {/* ── Photo Gallery ── */}
+        {allPhotos.length === 0 && (
+          <div className="mb-8 rounded-2xl overflow-hidden bg-gradient-to-br from-slate-100 to-slate-200 flex items-center justify-center" style={{ height: '300px' }}>
+            <div className="text-center">
+              <span className="text-6xl block mb-3">
+                {['AGRICULTURAL_LAND', 'FARMING_LAND'].includes(property.propertyType) ? '🌾' :
+                 ['PLOT', 'RESIDENTIAL_PLOT', 'COMMERCIAL_LAND', 'INDUSTRIAL_LAND'].includes(property.propertyType) ? '🗺️' :
+                 property.propertyType === 'FARM_HOUSE' ? '🏡' : '🏠'}
+              </span>
+              <p className="text-slate-400 text-sm">No photos available</p>
+              <p className="text-slate-300 text-xs mt-1">{(property.propertyType || '').replace(/_/g, ' ')}</p>
+            </div>
+          </div>
+        )}
         {allPhotos.length > 0 && (
           <div className="mb-8">
             <div className="grid grid-cols-4 gap-2 rounded-2xl overflow-hidden" style={{ maxHeight: '420px' }}>
@@ -412,65 +458,115 @@ export default function BuyPropertyDetailPage() {
             </div>
 
             {/* ── Overview Grid ── */}
-            <div className="bg-white border border-slate-200 rounded-xl p-6">
-              <h2 className="text-lg font-bold text-slate-900 mb-4">Overview</h2>
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                {property.bedrooms != null && (
-                  <div className="text-center p-3 bg-slate-50 rounded-xl">
-                    <p className="text-xs text-slate-400 mb-1">BHK</p>
-                    <p className="text-base font-bold text-slate-900">{property.bedrooms}</p>
+            {(() => {
+              const isLand = ['PLOT', 'RESIDENTIAL_PLOT', 'AGRICULTURAL_LAND', 'FARMING_LAND', 'COMMERCIAL_LAND', 'INDUSTRIAL_LAND'].includes(property.propertyType);
+              return (
+                <div className="bg-white border border-slate-200 rounded-xl p-6">
+                  <h2 className="text-lg font-bold text-slate-900 mb-4">Overview</h2>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                    {/* Land overview */}
+                    {isLand && property.totalAcres && (
+                      <div className="text-center p-3 bg-amber-50 rounded-xl">
+                        <p className="text-xs text-slate-400 mb-1">Total Area</p>
+                        <p className="text-base font-bold text-amber-700">{property.totalAcres} Acres</p>
+                      </div>
+                    )}
+                    {isLand && property.plotAreaSqft && (
+                      <div className="text-center p-3 bg-amber-50 rounded-xl">
+                        <p className="text-xs text-slate-400 mb-1">Plot Area</p>
+                        <p className="text-base font-bold text-amber-700">{property.plotAreaSqft?.toLocaleString('en-IN')} sqft</p>
+                      </div>
+                    )}
+                    {isLand && property.zoneType && (
+                      <div className="text-center p-3 bg-slate-50 rounded-xl">
+                        <p className="text-xs text-slate-400 mb-1">Zone</p>
+                        <p className="text-base font-bold text-slate-900 capitalize">{property.zoneType.replace(/_/g, ' ').toLowerCase()}</p>
+                      </div>
+                    )}
+                    {isLand && property.roadAccess && (
+                      <div className="text-center p-3 bg-slate-50 rounded-xl">
+                        <p className="text-xs text-slate-400 mb-1">Road Access</p>
+                        <p className="text-base font-bold text-slate-900 capitalize">{property.roadAccess.replace(/_/g, ' ').toLowerCase()}</p>
+                      </div>
+                    )}
+                    {isLand && property.ownershipType && (
+                      <div className="text-center p-3 bg-slate-50 rounded-xl">
+                        <p className="text-xs text-slate-400 mb-1">Ownership</p>
+                        <p className="text-base font-bold text-slate-900 capitalize">{property.ownershipType.replace(/_/g, ' ').toLowerCase()}</p>
+                      </div>
+                    )}
+                    {isLand && property.boundaryWall && (
+                      <div className="text-center p-3 bg-green-50 rounded-xl">
+                        <p className="text-xs text-slate-400 mb-1">Boundary Wall</p>
+                        <p className="text-base font-bold text-green-700">Yes</p>
+                      </div>
+                    )}
+                    {isLand && property.cornerPlot && (
+                      <div className="text-center p-3 bg-green-50 rounded-xl">
+                        <p className="text-xs text-slate-400 mb-1">Corner Plot</p>
+                        <p className="text-base font-bold text-green-700">Yes</p>
+                      </div>
+                    )}
+
+                    {/* Building overview — hide for land types */}
+                    {!isLand && property.bedrooms != null && property.bedrooms > 0 && (
+                      <div className="text-center p-3 bg-slate-50 rounded-xl">
+                        <p className="text-xs text-slate-400 mb-1">BHK</p>
+                        <p className="text-base font-bold text-slate-900">{property.bedrooms}</p>
+                      </div>
+                    )}
+                    {!isLand && property.bathrooms != null && property.bathrooms > 0 && (
+                      <div className="text-center p-3 bg-slate-50 rounded-xl">
+                        <p className="text-xs text-slate-400 mb-1">Bathrooms</p>
+                        <p className="text-base font-bold text-slate-900">{property.bathrooms}</p>
+                      </div>
+                    )}
+                    {!isLand && property.areaSqft != null && (
+                      <div className="text-center p-3 bg-slate-50 rounded-xl">
+                        <p className="text-xs text-slate-400 mb-1">Area</p>
+                        <p className="text-base font-bold text-slate-900">{property.areaSqft.toLocaleString('en-IN')} sqft</p>
+                      </div>
+                    )}
+                    {property.facing && (
+                      <div className="text-center p-3 bg-slate-50 rounded-xl">
+                        <p className="text-xs text-slate-400 mb-1">Facing</p>
+                        <p className="text-base font-bold text-slate-900 capitalize">{property.facing.replace(/_/g, ' ').toLowerCase()}</p>
+                      </div>
+                    )}
+                    {!isLand && property.floor != null && (
+                      <div className="text-center p-3 bg-slate-50 rounded-xl">
+                        <p className="text-xs text-slate-400 mb-1">Floor</p>
+                        <p className="text-base font-bold text-slate-900">{property.floor}{property.totalFloors ? ` / ${property.totalFloors}` : ''}</p>
+                      </div>
+                    )}
+                    {!isLand && property.furnishing && (
+                      <div className="text-center p-3 bg-slate-50 rounded-xl">
+                        <p className="text-xs text-slate-400 mb-1">Furnishing</p>
+                        <p className="text-base font-bold text-slate-900 capitalize">{property.furnishing.replace(/_/g, ' ').toLowerCase()}</p>
+                      </div>
+                    )}
+                    {!isLand && property.age && (
+                      <div className="text-center p-3 bg-slate-50 rounded-xl">
+                        <p className="text-xs text-slate-400 mb-1">Age</p>
+                        <p className="text-base font-bold text-slate-900">{property.age}</p>
+                      </div>
+                    )}
+                    {!isLand && property.parking && (
+                      <div className="text-center p-3 bg-slate-50 rounded-xl">
+                        <p className="text-xs text-slate-400 mb-1">Parking</p>
+                        <p className="text-base font-bold text-slate-900 capitalize">{property.parking.replace(/_/g, ' ').toLowerCase()}</p>
+                      </div>
+                    )}
+                    {!isLand && property.balconies != null && property.balconies > 0 && (
+                      <div className="text-center p-3 bg-slate-50 rounded-xl">
+                        <p className="text-xs text-slate-400 mb-1">Balconies</p>
+                        <p className="text-base font-bold text-slate-900">{property.balconies}</p>
+                      </div>
+                    )}
                   </div>
-                )}
-                {property.bathrooms != null && (
-                  <div className="text-center p-3 bg-slate-50 rounded-xl">
-                    <p className="text-xs text-slate-400 mb-1">Bathrooms</p>
-                    <p className="text-base font-bold text-slate-900">{property.bathrooms}</p>
-                  </div>
-                )}
-                {property.areaSqft != null && (
-                  <div className="text-center p-3 bg-slate-50 rounded-xl">
-                    <p className="text-xs text-slate-400 mb-1">Area</p>
-                    <p className="text-base font-bold text-slate-900">{property.areaSqft.toLocaleString('en-IN')} sqft</p>
-                  </div>
-                )}
-                {property.facing && (
-                  <div className="text-center p-3 bg-slate-50 rounded-xl">
-                    <p className="text-xs text-slate-400 mb-1">Facing</p>
-                    <p className="text-base font-bold text-slate-900 capitalize">{property.facing.replace(/_/g, ' ').toLowerCase()}</p>
-                  </div>
-                )}
-                {property.floor != null && (
-                  <div className="text-center p-3 bg-slate-50 rounded-xl">
-                    <p className="text-xs text-slate-400 mb-1">Floor</p>
-                    <p className="text-base font-bold text-slate-900">{property.floor}{property.totalFloors ? ` / ${property.totalFloors}` : ''}</p>
-                  </div>
-                )}
-                {property.furnishing && (
-                  <div className="text-center p-3 bg-slate-50 rounded-xl">
-                    <p className="text-xs text-slate-400 mb-1">Furnishing</p>
-                    <p className="text-base font-bold text-slate-900 capitalize">{property.furnishing.replace(/_/g, ' ').toLowerCase()}</p>
-                  </div>
-                )}
-                {property.age && (
-                  <div className="text-center p-3 bg-slate-50 rounded-xl">
-                    <p className="text-xs text-slate-400 mb-1">Age</p>
-                    <p className="text-base font-bold text-slate-900">{property.age}</p>
-                  </div>
-                )}
-                {property.parking && (
-                  <div className="text-center p-3 bg-slate-50 rounded-xl">
-                    <p className="text-xs text-slate-400 mb-1">Parking</p>
-                    <p className="text-base font-bold text-slate-900 capitalize">{property.parking.replace(/_/g, ' ').toLowerCase()}</p>
-                  </div>
-                )}
-                {property.balconies != null && (
-                  <div className="text-center p-3 bg-slate-50 rounded-xl">
-                    <p className="text-xs text-slate-400 mb-1">Balconies</p>
-                    <p className="text-base font-bold text-slate-900">{property.balconies}</p>
-                  </div>
-                )}
-              </div>
-            </div>
+                </div>
+              );
+            })()}
 
             {/* ── Area Details ── */}
             {(property.carpetAreaSqft || property.builtUpAreaSqft || property.superBuiltUpAreaSqft) && (
@@ -641,6 +737,165 @@ export default function BuyPropertyDetailPage() {
                     <span className="text-sm text-slate-500">Status</span>
                     <span className="text-sm font-bold text-green-700">Registered</span>
                   </div>
+                </div>
+              </div>
+            )}
+
+            {/* ── Land/Plot Details ── */}
+            {(property.totalAcres || property.plotLengthFt || property.roadAccess || property.zoneType) && (
+              <div className="bg-white border border-slate-200 rounded-xl p-6">
+                <h2 className="text-lg font-bold text-slate-900 mb-4">Land Details</h2>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {property.totalAcres && (
+                    <div className="flex justify-between items-center p-3 bg-amber-50 rounded-xl">
+                      <span className="text-sm text-slate-500">Total Area</span>
+                      <span className="text-sm font-bold text-amber-700">{property.totalAcres} Acres</span>
+                    </div>
+                  )}
+                  {property.plotLengthFt && property.plotBreadthFt && (
+                    <div className="flex justify-between items-center p-3 bg-amber-50 rounded-xl">
+                      <span className="text-sm text-slate-500">Plot Dimensions</span>
+                      <span className="text-sm font-bold text-amber-700">{property.plotLengthFt} x {property.plotBreadthFt} ft</span>
+                    </div>
+                  )}
+                  {property.roadAccess && (
+                    <div className="flex justify-between items-center p-3 bg-amber-50 rounded-xl">
+                      <span className="text-sm text-slate-500">Road Access</span>
+                      <span className="text-sm font-bold text-amber-700">{property.roadAccess.replace(/_/g, ' ')}</span>
+                    </div>
+                  )}
+                  {property.roadWidthFt && (
+                    <div className="flex justify-between items-center p-3 bg-amber-50 rounded-xl">
+                      <span className="text-sm text-slate-500">Road Width</span>
+                      <span className="text-sm font-bold text-amber-700">{property.roadWidthFt} ft</span>
+                    </div>
+                  )}
+                  {property.zoneType && (
+                    <div className="flex justify-between items-center p-3 bg-amber-50 rounded-xl">
+                      <span className="text-sm text-slate-500">Zone</span>
+                      <span className="text-sm font-bold text-amber-700">{property.zoneType.replace(/_/g, ' ')}</span>
+                    </div>
+                  )}
+                  {property.boundaryWall && (
+                    <div className="flex justify-between items-center p-3 bg-green-50 rounded-xl">
+                      <span className="text-sm text-slate-500">Boundary Wall</span>
+                      <span className="text-sm font-bold text-green-700">Yes</span>
+                    </div>
+                  )}
+                  {property.cornerPlot && (
+                    <div className="flex justify-between items-center p-3 bg-green-50 rounded-xl">
+                      <span className="text-sm text-slate-500">Corner Plot</span>
+                      <span className="text-sm font-bold text-green-700">Yes</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* ── Agriculture Details ── */}
+            {(property.irrigationType || property.soilType || property.currentCrop || property.borewellCount) && (
+              <div className="bg-white border border-slate-200 rounded-xl p-6">
+                <h2 className="text-lg font-bold text-slate-900 mb-4">Agriculture Details</h2>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {property.irrigationType && (
+                    <div className="flex justify-between items-center p-3 bg-emerald-50 rounded-xl">
+                      <span className="text-sm text-slate-500">Irrigation</span>
+                      <span className="text-sm font-bold text-emerald-700">{property.irrigationType.replace(/_/g, ' ')}</span>
+                    </div>
+                  )}
+                  {property.soilType && (
+                    <div className="flex justify-between items-center p-3 bg-emerald-50 rounded-xl">
+                      <span className="text-sm text-slate-500">Soil Type</span>
+                      <span className="text-sm font-bold text-emerald-700">{property.soilType.replace(/_/g, ' ')}</span>
+                    </div>
+                  )}
+                  {property.waterSource && (
+                    <div className="flex justify-between items-center p-3 bg-emerald-50 rounded-xl">
+                      <span className="text-sm text-slate-500">Water Source</span>
+                      <span className="text-sm font-bold text-emerald-700">{property.waterSource.replace(/_/g, ' ')}</span>
+                    </div>
+                  )}
+                  {property.borewellCount != null && property.borewellCount > 0 && (
+                    <div className="flex justify-between items-center p-3 bg-emerald-50 rounded-xl">
+                      <span className="text-sm text-slate-500">Borewells</span>
+                      <span className="text-sm font-bold text-emerald-700">{property.borewellCount}</span>
+                    </div>
+                  )}
+                  {property.currentCrop && (
+                    <div className="flex justify-between items-center p-3 bg-emerald-50 rounded-xl">
+                      <span className="text-sm text-slate-500">Current Crop</span>
+                      <span className="text-sm font-bold text-emerald-700">{property.currentCrop}</span>
+                    </div>
+                  )}
+                  {property.fencingType && (
+                    <div className="flex justify-between items-center p-3 bg-emerald-50 rounded-xl">
+                      <span className="text-sm text-slate-500">Fencing</span>
+                      <span className="text-sm font-bold text-emerald-700">{property.fencingType.replace(/_/g, ' ')}</span>
+                    </div>
+                  )}
+                  {property.organicCertified && (
+                    <div className="flex justify-between items-center p-3 bg-green-50 rounded-xl">
+                      <span className="text-sm text-slate-500">Organic Certified</span>
+                      <span className="text-sm font-bold text-green-700">Yes</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* ── Legal & Ownership ── */}
+            {(property.ownershipType || property.titleClear != null || property.govtApproved) && (
+              <div className="bg-white border border-slate-200 rounded-xl p-6">
+                <h2 className="text-lg font-bold text-slate-900 mb-4">Legal & Ownership</h2>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {property.ownershipType && (
+                    <div className="flex justify-between items-center p-3 bg-blue-50 rounded-xl">
+                      <span className="text-sm text-slate-500">Ownership</span>
+                      <span className="text-sm font-bold text-blue-700">{property.ownershipType.replace(/_/g, ' ')}</span>
+                    </div>
+                  )}
+                  {property.titleClear != null && (
+                    <div className={`flex justify-between items-center p-3 rounded-xl ${property.titleClear ? 'bg-green-50' : 'bg-red-50'}`}>
+                      <span className="text-sm text-slate-500">Title Clear</span>
+                      <span className={`text-sm font-bold ${property.titleClear ? 'text-green-700' : 'text-red-600'}`}>{property.titleClear ? 'Yes' : 'No'}</span>
+                    </div>
+                  )}
+                  {property.encumbranceFree != null && (
+                    <div className={`flex justify-between items-center p-3 rounded-xl ${property.encumbranceFree ? 'bg-green-50' : 'bg-red-50'}`}>
+                      <span className="text-sm text-slate-500">Encumbrance Free</span>
+                      <span className={`text-sm font-bold ${property.encumbranceFree ? 'text-green-700' : 'text-red-600'}`}>{property.encumbranceFree ? 'Yes' : 'No'}</span>
+                    </div>
+                  )}
+                  {property.govtApproved && (
+                    <div className="flex justify-between items-center p-3 bg-green-50 rounded-xl">
+                      <span className="text-sm text-slate-500">Govt Approved</span>
+                      <span className="text-sm font-bold text-green-700">Yes</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* ── Chat with Agent/Seller ── */}
+            {(property.agentName || property.sellerName) && (
+              <div className="bg-white border border-slate-200 rounded-xl p-6">
+                <h2 className="text-lg font-bold text-slate-900 mb-4">
+                  {property.agentName ? 'Property Agent' : 'Contact Seller'}
+                </h2>
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 rounded-full bg-orange-100 flex items-center justify-center text-orange-600 font-bold text-lg">
+                    {(property.agentName || property.sellerName || '?').charAt(0)}
+                  </div>
+                  <div className="flex-1">
+                    <p className="font-medium text-slate-900">{property.agentName || property.sellerName}</p>
+                    {property.agentPhone && <p className="text-sm text-slate-500">{property.agentPhone}</p>}
+                  </div>
+                  <Link
+                    href={`/messages?listingId=${property.id}&recipientId=${property.agentId || ''}`}
+                    className="px-4 py-2.5 bg-orange-500 text-white rounded-xl hover:bg-orange-600 transition font-medium text-sm"
+                  >
+                    Chat
+                  </Link>
                 </div>
               </div>
             )}

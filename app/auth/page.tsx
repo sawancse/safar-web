@@ -25,7 +25,7 @@ declare global {
   }
 }
 
-type Step = 'input' | 'password' | 'otp' | 'name' | 'set-password' | 'forgot-password' | 'pin' | 'set-pin';
+type Step = 'input' | 'choose-method' | 'password' | 'otp' | 'name' | 'set-password' | 'forgot-password' | 'pin' | 'set-pin' | 'forgot-pin';
 type AuthMethod = 'phone' | 'email';
 
 const COUNTRY_CODES = [
@@ -243,53 +243,68 @@ export default function AuthPage() {
     setLoading(true);
     setError('');
     try {
+      // Detect all available auth methods, then let user choose
+      let detectedPassword = false;
+      let detectedPin = false;
+      let detectedPinLocked = false;
+
       if (isEmail) {
-        // Check auth method for email users
+        setAuthMethod('email');
+        localStorage.setItem('last_login_email', inputValue);
         try {
           const check = await api.checkAuthMethod(inputValue);
-          if (check.hasPassword) {
-            // User has a password set - show password step
-            setAuthMethod('email');
-            setHasPasswordOption(true);
-            setStep('password');
-            setPassword('');
-            setPasswordError('');
-            setFailedAttempts(0);
-            localStorage.setItem('last_login_email', inputValue);
-          } else {
-            // No password - send OTP directly
-            await sendOtpForEmail();
-            setStep('otp');
-          }
-        } catch {
-          // checkAuthMethod failed (endpoint may not exist yet) - fall back to OTP
-          await sendOtpForEmail();
-          setStep('otp');
-        }
+          detectedPassword = !!check.hasPassword;
+          setHasPasswordOption(detectedPassword);
+        } catch {}
       } else {
-        // Phone: check if user has PIN set for quick login
         setAuthMethod('phone');
         const phone = `${countryCode}${inputValue}`;
+        localStorage.setItem('last_login_phone', phone);
         try {
           const pinStatus = await api.checkPinStatus(phone);
-          if (pinStatus.hasPin && !pinStatus.pinLocked) {
-            setHasPin(true);
-            setStep('pin');
-            setPin(['', '', '', '', '', '']);
-            setPinError('');
-            localStorage.setItem('last_login_phone', phone);
-            setTimeout(() => pinRefs.current[0]?.focus(), 100);
-            setLoading(false);
-            return;
-          }
-        } catch { /* PIN check failed, fall through to OTP */ }
-        // No PIN or PIN locked — send OTP
-        await api.sendOtp(phone);
+          detectedPin = !!pinStatus.hasPin;
+          detectedPinLocked = !!pinStatus.pinLocked;
+          setHasPin(detectedPin);
+        } catch {}
+        // Phone users may also have email+password set — check via auth-options if available
+        try {
+          const opts = await api.getAuthOptions(phone, undefined).catch(() => null);
+          if (opts?.password) detectedPassword = true;
+        } catch {}
+      }
+
+      // If user has multiple options, show choice screen
+      const availableOptions = [
+        'otp', // always available
+        ...(detectedPassword ? ['password'] : []),
+        ...(detectedPin && !detectedPinLocked ? ['pin'] : []),
+      ];
+
+      if (availableOptions.length > 1) {
+        // Show choice screen
+        setStep('choose-method');
+      } else if (detectedPassword) {
+        setStep('password');
+        setPassword('');
+        setPasswordError('');
+        setFailedAttempts(0);
+      } else if (detectedPin && !detectedPinLocked) {
+        setStep('pin');
+        setPin(['', '', '', '', '', '']);
+        setPinError('');
+        setTimeout(() => pinRefs.current[0]?.focus(), 100);
+      } else {
+        // Only OTP available — send it directly
+        if (isEmail) {
+          await sendOtpForEmail();
+        } else {
+          const phone = `${countryCode}${inputValue}`;
+          await api.sendOtp(phone);
+          setResendTimer(30);
+          setOtp(['', '', '', '', '', '']);
+          setTimeout(() => otpRefs.current[0]?.focus(), 100);
+        }
         setStep('otp');
-        localStorage.setItem('last_login_phone', phone);
-        setResendTimer(30);
-        setOtp(['', '', '', '', '', '']);
-        setTimeout(() => otpRefs.current[0]?.focus(), 100);
       }
     } catch (e: any) {
       setError(e.message || 'Failed to send verification code');
@@ -875,6 +890,86 @@ export default function AuthPage() {
               </div>
             )}
 
+            {/* == Step: Choose Login Method == */}
+            {step === 'choose-method' && (
+              <div className="space-y-4">
+                <div className="text-center mb-2">
+                  <p className="text-sm text-gray-600">Choose how to sign in</p>
+                  <p className="text-xs text-gray-400 mt-1">{authMethod === 'email' ? inputValue : `${countryCode}${inputValue}`}</p>
+                </div>
+
+                <button
+                  onClick={async () => {
+                    setLoading(true);
+                    try {
+                      if (authMethod === 'email') {
+                        await sendOtpForEmail();
+                      } else {
+                        await api.sendOtp(`${countryCode}${inputValue}`);
+                        setResendTimer(30);
+                      }
+                      setOtp(['', '', '', '', '', '']);
+                      setStep('otp');
+                      setTimeout(() => otpRefs.current[0]?.focus(), 100);
+                    } catch (e: any) { setError(e.message || 'Failed to send OTP'); }
+                    finally { setLoading(false); }
+                  }}
+                  className="w-full flex items-center gap-4 p-4 bg-white border-2 border-gray-200 rounded-xl hover:border-orange-400 transition text-left"
+                >
+                  <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0">
+                    <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
+                    </svg>
+                  </div>
+                  <div>
+                    <p className="font-semibold text-gray-900">Sign in with OTP</p>
+                    <p className="text-xs text-gray-500">Receive a one-time code via {authMethod === 'email' ? 'email' : 'SMS'}</p>
+                  </div>
+                </button>
+
+                {hasPasswordOption && (
+                  <button
+                    onClick={() => { setStep('password'); setPassword(''); setPasswordError(''); setFailedAttempts(0); }}
+                    className="w-full flex items-center gap-4 p-4 bg-white border-2 border-gray-200 rounded-xl hover:border-orange-400 transition text-left"
+                  >
+                    <div className="w-10 h-10 rounded-full bg-purple-100 flex items-center justify-center flex-shrink-0">
+                      <svg className="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                      </svg>
+                    </div>
+                    <div>
+                      <p className="font-semibold text-gray-900">Sign in with Password</p>
+                      <p className="text-xs text-gray-500">Use your account password</p>
+                    </div>
+                  </button>
+                )}
+
+                {hasPin && (
+                  <button
+                    onClick={() => { setStep('pin'); setPin(['', '', '', '', '', '']); setPinError(''); setTimeout(() => pinRefs.current[0]?.focus(), 100); }}
+                    className="w-full flex items-center gap-4 p-4 bg-white border-2 border-gray-200 rounded-xl hover:border-orange-400 transition text-left"
+                  >
+                    <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center flex-shrink-0">
+                      <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 20l4-16m2 16l4-16M6 9h14M4 15h14" />
+                      </svg>
+                    </div>
+                    <div>
+                      <p className="font-semibold text-gray-900">Sign in with PIN</p>
+                      <p className="text-xs text-gray-500">Quick login with your 4-6 digit PIN</p>
+                    </div>
+                  </button>
+                )}
+
+                <button
+                  onClick={() => { setStep('input'); setError(''); }}
+                  className="w-full text-center text-sm text-gray-500 hover:text-orange-500 mt-2"
+                >
+                  Use a different account
+                </button>
+              </div>
+            )}
+
             {/* == Step: Password Sign-In == */}
             {step === 'password' && (
               <div className="space-y-4">
@@ -1221,8 +1316,110 @@ export default function AuthPage() {
                   <button onClick={handleUseOtpFromPin} className="text-sm text-orange-500 hover:text-orange-600 font-medium">
                     Use OTP instead
                   </button>
-                  <p className="text-xs text-gray-400">Forgot PIN? Use OTP to sign in and reset it.</p>
+                  <button
+                    onClick={async () => {
+                      setLoading(true);
+                      try {
+                        const phone = `${countryCode}${inputValue}`;
+                        await api.sendOtp(phone);
+                        setStep('forgot-pin');
+                        setOtp(['', '', '', '', '', '']);
+                        setResendTimer(30);
+                      } catch (e: any) { setError(e.message || 'Failed to send OTP'); }
+                      finally { setLoading(false); }
+                    }}
+                    className="text-sm text-gray-500 hover:text-orange-500"
+                  >
+                    Forgot PIN?
+                  </button>
                 </div>
+              </div>
+            )}
+
+            {/* == Step: Forgot PIN (phone + OTP + new PIN) == */}
+            {step === 'forgot-pin' && (
+              <div className="space-y-4">
+                <p className="text-sm text-gray-600 text-center">
+                  Enter the OTP sent to <span className="font-semibold">{countryCode}{inputValue}</span> and set a new PIN.
+                </p>
+
+                {/* OTP input */}
+                <div>
+                  <label className="block text-xs font-medium text-gray-500 mb-2 text-center">OTP Code</label>
+                  <div className="flex justify-center gap-2">
+                    {otp.map((digit, i) => (
+                      <input
+                        key={i}
+                        ref={el => { otpRefs.current[i] = el; }}
+                        type="text"
+                        inputMode="numeric"
+                        maxLength={1}
+                        value={digit}
+                        onChange={(e) => {
+                          const val = e.target.value.replace(/\D/g, '');
+                          const newOtp = [...otp]; newOtp[i] = val; setOtp(newOtp);
+                          if (val && i < 5) otpRefs.current[i + 1]?.focus();
+                        }}
+                        onKeyDown={(e) => { if (e.key === 'Backspace' && !otp[i] && i > 0) otpRefs.current[i - 1]?.focus(); }}
+                        className="w-11 h-13 text-center text-lg font-bold border-2 rounded-xl outline-none border-gray-200 focus:border-orange-500"
+                      />
+                    ))}
+                  </div>
+                </div>
+
+                {/* New PIN input */}
+                <div>
+                  <label className="block text-xs font-medium text-gray-500 mb-2 text-center">New PIN (4-6 digits)</label>
+                  <div className="flex justify-center gap-2">
+                    {pin.map((digit, i) => (
+                      <input
+                        key={i}
+                        ref={el => { pinRefs.current[i] = el; }}
+                        type="password"
+                        inputMode="numeric"
+                        maxLength={1}
+                        value={digit}
+                        onChange={(e) => {
+                          const val = e.target.value.replace(/\D/g, '');
+                          const newArr = [...pin]; newArr[i] = val; setPin(newArr);
+                          if (val && i < 5) pinRefs.current[i + 1]?.focus();
+                        }}
+                        onKeyDown={(e) => { if (e.key === 'Backspace' && !pin[i] && i > 0) pinRefs.current[i - 1]?.focus(); }}
+                        className="w-11 h-13 text-center text-lg font-bold border-2 rounded-xl outline-none border-gray-200 focus:border-orange-500"
+                      />
+                    ))}
+                  </div>
+                </div>
+
+                {pinError && <p className="text-sm text-red-500 text-center">{pinError}</p>}
+                {error && <p className="text-sm text-red-500 text-center">{error}</p>}
+
+                <button
+                  onClick={async () => {
+                    const otpCode = otp.join('');
+                    const newPin = pin.join('');
+                    if (otpCode.length < 6) { setError('Enter complete OTP'); return; }
+                    if (newPin.length < 4) { setPinError('PIN must be 4-6 digits'); return; }
+                    setLoading(true); setError(''); setPinError('');
+                    try {
+                      const phone = `${countryCode}${inputValue}`;
+                      const auth = await api.forgotPin(phone, otpCode, newPin);
+                      saveAuthAndRedirect(auth, router, redirect);
+                    } catch (e: any) {
+                      const msg = e.message || 'Failed to reset PIN';
+                      if (msg.toLowerCase().includes('otp')) setError(msg);
+                      else setPinError(msg);
+                    } finally { setLoading(false); }
+                  }}
+                  disabled={loading || otp.join('').length < 6 || pin.join('').length < 4}
+                  className="w-full bg-gradient-to-r from-orange-500 to-rose-500 hover:from-orange-600 hover:to-rose-600 text-white font-semibold py-3.5 rounded-xl disabled:opacity-50 transition text-sm"
+                >
+                  {loading ? 'Resetting...' : 'Reset PIN & Sign In'}
+                </button>
+
+                <button onClick={() => { setStep('pin'); setPin(['', '', '', '', '', '']); }} className="w-full text-center text-sm text-gray-500 hover:text-orange-500">
+                  Back to PIN login
+                </button>
               </div>
             )}
 
