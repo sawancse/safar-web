@@ -28,7 +28,7 @@ const BADGE_STYLES: Record<string, string> = {
   VERIFIED_PRO: 'bg-gradient-to-r from-green-500 to-emerald-500 text-white',
 };
 
-type ViewState = 'loading' | 'not-logged-in' | 'not-chef' | 'error' | 'ready';
+type ViewState = 'loading' | 'not-logged-in' | 'not-chef' | 'suspended' | 'error' | 'ready';
 
 export default function ChefDashboardPage() {
   const router = useRouter();
@@ -40,9 +40,13 @@ export default function ChefDashboardPage() {
   const [subscriptions, setSubscriptions] = useState<any[]>([]);
   const [activeTab, setActiveTab] = useState('overview');
   const [bookingsError, setBookingsError] = useState('');
+  const [gallery, setGallery] = useState<any[]>([]);
+  const [galleryUploading, setGalleryUploading] = useState(false);
   const [quoteModal, setQuoteModal] = useState<string | null>(null);
   const [quoteAmount, setQuoteAmount] = useState('');
   const [editMode, setEditMode] = useState(false);
+  const [savingProfile, setSavingProfile] = useState(false);
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [editForm, setEditForm] = useState({
     name: '', cuisines: '', dailyRate: '', monthlyRate: '', eventRate: '',
     experience: '', specialties: '', bio: '',
@@ -55,7 +59,11 @@ export default function ChefDashboardPage() {
     api.getMyChefProfile(token)
       .then(async (profile) => {
         setChef(profile);
-        // Now load bookings
+        if (profile?.verificationStatus === 'SUSPENDED') {
+          setViewState('suspended');
+          return;
+        }
+        // Load bookings + gallery
         try {
           const [b, e, s] = await Promise.all([
             api.getChefIncomingBookings(token),
@@ -68,6 +76,10 @@ export default function ChefDashboardPage() {
         } catch (err: any) {
           console.error('Failed to load chef bookings:', err);
           setBookingsError(err?.message || 'Failed to load bookings');
+        }
+        // Load gallery
+        if (profile?.id) {
+          api.getChefPhotos(profile.id).then(p => setGallery(p || [])).catch(() => {});
         }
         setViewState('ready');
       })
@@ -200,6 +212,24 @@ export default function ChefDashboardPage() {
             Browse Cooks
           </Link>
         </div>
+        <div className="mt-6 pt-6 border-t border-gray-100">
+          <p className="text-xs text-gray-500 mb-3">Already registered with a different login?</p>
+          <button
+            onClick={async () => {
+              try {
+                await api.claimChefProfile(token());
+                window.location.reload();
+              } catch (err: any) {
+                const msg = err?.status === 404
+                  ? 'No existing chef profile found matching your phone or email.'
+                  : (err?.message || 'Could not claim profile');
+                alert(msg);
+              }
+            }}
+            className="text-sm text-[#003B95] font-medium hover:underline">
+            Claim my existing chef profile →
+          </button>
+        </div>
         <div className="mt-8 grid grid-cols-3 gap-4 text-center">
           <div>
             <p className="text-2xl font-bold text-orange-500">0%</p>
@@ -213,6 +243,29 @@ export default function ChefDashboardPage() {
             <p className="text-2xl font-bold text-orange-500">500+</p>
             <p className="text-xs text-gray-400">Cities across India</p>
           </div>
+        </div>
+      </div>
+    </div>
+  );
+
+  if (viewState === 'suspended') return (
+    <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+      <div className="bg-white rounded-2xl shadow-sm border p-8 max-w-lg w-full text-center">
+        <div className="w-20 h-20 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-5">
+          <span className="text-4xl">⛔</span>
+        </div>
+        <h2 className="text-2xl font-bold text-gray-900 mb-3">Account Suspended</h2>
+        <p className="text-gray-600 mb-2">Your chef account has been suspended by Safar admin.</p>
+        <p className="text-sm text-gray-400 mb-8">You cannot accept new bookings or appear in search results. If you believe this is a mistake, please reach out to our support team.</p>
+        <div className="flex flex-col sm:flex-row gap-3 justify-center">
+          <a href="mailto:support@safar.com?subject=Chef%20Account%20Suspension%20Appeal"
+            className="bg-[#003B95] hover:bg-[#00296b] text-white font-semibold px-8 py-3 rounded-xl transition text-center">
+            Contact Support
+          </a>
+          <Link href="/"
+            className="border border-gray-200 hover:bg-gray-50 text-gray-700 font-medium px-8 py-3 rounded-xl transition text-center">
+            Back to Home
+          </Link>
         </div>
       </div>
     </div>
@@ -254,6 +307,7 @@ export default function ChefDashboardPage() {
     { key: 'bookings', label: `Bookings (${bookings.length})` },
     { key: 'events', label: `Events (${events.length})` },
     { key: 'subscriptions', label: `Subscriptions (${subscriptions.length})` },
+    { key: 'gallery', label: `Gallery (${gallery.length})` },
     { key: 'profile', label: 'Profile' },
   ];
 
@@ -545,6 +599,143 @@ export default function ChefDashboardPage() {
           </div>
         )}
 
+        {/* ── Gallery Tab ───────────────────────────────────────── */}
+        {activeTab === 'gallery' && (
+          <div className="space-y-6">
+            {/* Upload Section */}
+            <div className="bg-white rounded-2xl border p-6">
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900">My Cooking Gallery</h3>
+                  <p className="text-sm text-gray-500 mt-0.5">Upload photos and videos of your dishes to attract customers ({gallery.length}/20)</p>
+                </div>
+              </div>
+              <div className="flex gap-3">
+                <label className="flex-1 border-2 border-dashed border-orange-200 rounded-xl py-6 flex flex-col items-center justify-center cursor-pointer hover:bg-orange-50 transition">
+                  <span className="text-3xl mb-1">📷</span>
+                  <span className="text-sm font-medium text-orange-600">Upload Photo</span>
+                  <span className="text-[10px] text-gray-400 mt-0.5">JPG, PNG (max 5MB)</span>
+                  <input type="file" accept="image/*" className="hidden" disabled={galleryUploading} onChange={async (e) => {
+                    const file = e.target.files?.[0];
+                    if (!file || !token) return;
+                    setGalleryUploading(true);
+                    try {
+                      const caption = prompt('Add a caption (optional):') || '';
+                      const url = await api.uploadGenericFile(file, 'chef-gallery', token());
+                      const photo = await api.addChefPhoto(url, caption, 'FOOD', token(), 'IMAGE');
+                      setGallery(prev => [...prev, photo]);
+                    } catch { alert('Failed to upload photo'); }
+                    setGalleryUploading(false);
+                    e.target.value = '';
+                  }} />
+                </label>
+                <label className="flex-1 border-2 border-dashed border-purple-200 rounded-xl py-6 flex flex-col items-center justify-center cursor-pointer hover:bg-purple-50 transition">
+                  <span className="text-3xl mb-1">🎬</span>
+                  <span className="text-sm font-medium text-purple-600">Upload Video</span>
+                  <span className="text-[10px] text-gray-400 mt-0.5">MP4, MOV (max 50MB, 5 max)</span>
+                  <input type="file" accept="video/*" className="hidden" disabled={galleryUploading} onChange={async (e) => {
+                    const file = e.target.files?.[0];
+                    if (!file || !token) return;
+                    if (file.size > 50 * 1024 * 1024) { alert('Video must be under 50MB'); return; }
+                    setGalleryUploading(true);
+                    try {
+                      const caption = prompt('Add a caption (optional):') || '';
+                      const url = await api.uploadGenericFile(file, 'chef-videos', token());
+                      const video = await api.addChefPhoto(url, caption, 'COOKING', token(), 'VIDEO');
+                      setGallery(prev => [...prev, video]);
+                    } catch { alert('Failed to upload video'); }
+                    setGalleryUploading(false);
+                    e.target.value = '';
+                  }} />
+                </label>
+              </div>
+              {galleryUploading && (
+                <div className="mt-3 flex items-center gap-2 text-sm text-orange-600">
+                  <div className="w-4 h-4 border-2 border-orange-500 border-t-transparent rounded-full animate-spin" />
+                  Uploading...
+                </div>
+              )}
+            </div>
+
+            {/* Intro Video */}
+            <div className="bg-white rounded-2xl border p-6">
+              <h3 className="text-sm font-semibold text-gray-700 mb-3">Intro Video</h3>
+              <p className="text-xs text-gray-400 mb-3">A short intro video shown prominently on your profile. Tell customers about yourself and your cooking style.</p>
+              {chef.introVideoUrl ? (
+                <div className="space-y-2">
+                  <video src={chef.introVideoUrl} controls className="w-full rounded-xl max-h-64 bg-black" />
+                  <button onClick={async () => {
+                    try {
+                      await api.updateChefProfile({ introVideoUrl: '' }, token());
+                      setChef((prev: any) => ({ ...prev, introVideoUrl: null }));
+                    } catch { alert('Failed to remove video'); }
+                  }} className="text-xs text-red-500 hover:underline">Remove intro video</button>
+                </div>
+              ) : (
+                <label className="border-2 border-dashed border-gray-200 rounded-xl py-8 flex flex-col items-center justify-center cursor-pointer hover:bg-gray-50 transition">
+                  <span className="text-4xl mb-2">🎥</span>
+                  <span className="text-sm font-medium text-gray-600">Upload Intro Video</span>
+                  <span className="text-[10px] text-gray-400 mt-0.5">MP4, MOV (max 50MB)</span>
+                  <input type="file" accept="video/*" className="hidden" onChange={async (e) => {
+                    const file = e.target.files?.[0];
+                    if (!file || !token) return;
+                    if (file.size > 50 * 1024 * 1024) { alert('Video must be under 50MB'); return; }
+                    setGalleryUploading(true);
+                    try {
+                      const url = await api.uploadGenericFile(file, 'chef-intro', token());
+                      await api.updateChefProfile({ introVideoUrl: url }, token());
+                      setChef((prev: any) => ({ ...prev, introVideoUrl: url }));
+                    } catch { alert('Failed to upload intro video'); }
+                    setGalleryUploading(false);
+                    e.target.value = '';
+                  }} />
+                </label>
+              )}
+            </div>
+
+            {/* Gallery Grid */}
+            {gallery.length === 0 ? (
+              <div className="text-center py-16 bg-white rounded-2xl border">
+                <span className="text-5xl block mb-3">📸</span>
+                <p className="text-gray-700 font-medium">No photos or videos yet</p>
+                <p className="text-sm text-gray-400 mt-1">Upload your best dishes to attract more customers.</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                {gallery.map((item: any) => (
+                  <div key={item.id} className="relative group rounded-xl overflow-hidden border bg-white">
+                    {item.mediaType === 'VIDEO' ? (
+                      <video src={item.url} controls className="w-full h-48 object-cover bg-black" />
+                    ) : (
+                      <img src={item.url} alt={item.caption || 'Cooking photo'} className="w-full h-48 object-cover" />
+                    )}
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition flex items-end p-3">
+                      <div className="flex-1">
+                        {item.caption && <p className="text-white text-xs font-medium">{item.caption}</p>}
+                        <div className="flex items-center gap-2 mt-1">
+                          <span className="text-[10px] bg-white/20 text-white px-2 py-0.5 rounded-full">{item.photoType}</span>
+                          {item.mediaType === 'VIDEO' && <span className="text-[10px] bg-purple-500/80 text-white px-2 py-0.5 rounded-full">VIDEO</span>}
+                        </div>
+                      </div>
+                      <button onClick={async () => {
+                        if (!confirm('Delete this item?')) return;
+                        try {
+                          await api.deleteChefPhoto(item.id, token());
+                          setGallery(prev => prev.filter(p => p.id !== item.id));
+                        } catch { alert('Failed to delete'); }
+                      }} className="text-white/80 hover:text-red-400 transition p-1">
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                        </svg>
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
         {/* ── Profile Tab ───────────────────────────────────────── */}
         {activeTab === 'profile' && (
           <div className="space-y-6">
@@ -552,25 +743,36 @@ export default function ChefDashboardPage() {
             <div className="bg-white border rounded-2xl p-6 space-y-6">
               <div className="flex items-center gap-5">
                 {/* Photo with upload */}
-                <div className="relative group">
+                <div className="relative">
                   {chef.profilePhotoUrl ? (
                     <img src={chef.profilePhotoUrl} alt="" className="w-24 h-24 rounded-2xl object-cover ring-2 ring-orange-100" />
                   ) : (
                     <div className="w-24 h-24 rounded-2xl bg-orange-50 flex items-center justify-center text-4xl">👨‍🍳</div>
                   )}
-                  <label className="absolute inset-0 bg-black/40 rounded-2xl flex items-center justify-center opacity-0 group-hover:opacity-100 transition cursor-pointer">
-                    <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  {uploadingPhoto && (
+                    <div className="absolute inset-0 bg-black/50 rounded-2xl flex items-center justify-center">
+                      <div className="w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                    </div>
+                  )}
+                  <label className="absolute -bottom-1 -right-1 w-9 h-9 bg-[#003B95] rounded-full flex items-center justify-center cursor-pointer shadow-lg ring-2 ring-white hover:bg-[#00296b] transition" title="Change photo">
+                    <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
                     </svg>
                     <input type="file" accept="image/*" className="hidden" onChange={async (e) => {
                       const file = e.target.files?.[0];
                       if (!file || !token) return;
+                      setUploadingPhoto(true);
                       try {
                         const url = await api.uploadGenericFile(file, 'chef-photos', token());
                         await api.updateChefProfile({ profilePhotoUrl: url }, token());
                         setChef((prev: any) => ({ ...prev, profilePhotoUrl: url }));
-                      } catch { alert('Failed to upload photo'); }
+                      } catch (err: any) {
+                        alert('Failed to upload photo: ' + (err?.message || 'unknown error'));
+                      } finally {
+                        setUploadingPhoto(false);
+                        (e.target as HTMLInputElement).value = '';
+                      }
                     }} />
                   </label>
                 </div>
@@ -687,8 +889,9 @@ export default function ChefDashboardPage() {
                   <div className="flex gap-3 pt-2">
                     <button onClick={() => setEditMode(false)}
                       className="flex-1 border border-gray-200 rounded-lg py-2.5 text-sm font-medium hover:bg-gray-50 transition">Cancel</button>
-                    <button onClick={async () => {
+                    <button disabled={savingProfile} onClick={async () => {
                       if (!token()) return;
+                      setSavingProfile(true);
                       try {
                         await api.updateChefProfile({
                           name: editForm.name || undefined,
@@ -703,10 +906,14 @@ export default function ChefDashboardPage() {
                         const updated = await api.getMyChefProfile(token());
                         setChef(updated);
                         setEditMode(false);
-                      } catch { alert('Failed to update profile'); }
+                      } catch (err: any) {
+                        alert('Failed to update profile: ' + (err?.message || 'unknown error'));
+                      } finally {
+                        setSavingProfile(false);
+                      }
                     }}
-                      className="flex-1 bg-[#003B95] text-white rounded-lg py-2.5 text-sm font-semibold hover:bg-[#00296b] transition">
-                      Save Changes
+                      className="flex-1 bg-[#003B95] text-white rounded-lg py-2.5 text-sm font-semibold hover:bg-[#00296b] transition disabled:opacity-60">
+                      {savingProfile ? 'Saving…' : 'Save Changes'}
                     </button>
                   </div>
                 </div>

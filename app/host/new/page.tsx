@@ -588,9 +588,28 @@ export default function NewListingWizard() {
         try { const err = JSON.parse(text); detail = err.detail || err.message || detail; } catch { if (text) detail = text; }
         throw new Error(detail);
       }
-      // Upgrade role in localStorage
-      const currentRole = localStorage.getItem('user_role');
-      if (currentRole === 'GUEST') localStorage.setItem('user_role', 'HOST');
+      // Force token refresh to get updated role from backend (GUEST → HOST)
+      // Backend updates role via Kafka async, so add a small delay then refresh
+      localStorage.setItem('user_role', 'HOST'); // optimistic local update
+      setTimeout(async () => {
+        try {
+          const refreshToken = localStorage.getItem('refresh_token');
+          if (refreshToken) {
+            const res = await fetch('/api/v1/auth/refresh', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ refreshToken }),
+            });
+            if (res.ok) {
+              const data = await res.json();
+              localStorage.setItem('access_token', data.accessToken);
+              if (data.refreshToken) localStorage.setItem('refresh_token', data.refreshToken);
+              if (data.user?.role) localStorage.setItem('user_role', data.user.role);
+              document.cookie = `access_token=${data.accessToken}; path=/; max-age=${30 * 24 * 60 * 60}; SameSite=Lax`;
+            }
+          }
+        } catch {}
+      }, 3000); // 3s delay for Kafka role update to propagate
       router.push('/host');
     } catch (e: any) {
       setError(e.message);

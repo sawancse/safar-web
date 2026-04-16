@@ -54,16 +54,27 @@ export default function RegisterCookPage() {
   const [existingProfile, setExistingProfile] = useState<any>(null);
   const [checkingProfile, setCheckingProfile] = useState(true);
 
-  // Check if user already has a chef profile
+  // Check if user already has a chef profile; otherwise prefill basic info from user profile
   useEffect(() => {
     const token = localStorage.getItem('access_token');
     if (!token) { setCheckingProfile(false); return; }
     api.getMyChefProfile(token)
       .then((profile: any) => {
-        if (profile && profile.id) setExistingProfile(profile);
+        if (profile && profile.id) {
+          setExistingProfile(profile);
+          return;
+        }
       })
       .catch(() => {})
       .finally(() => setCheckingProfile(false));
+
+    api.getMyProfile(token)
+      .then((user: any) => {
+        if (user?.name) setName(prev => prev || user.name);
+        if (user?.phone) setPhone(prev => prev || user.phone);
+        if (user?.email) setEmail(prev => prev || user.email);
+      })
+      .catch(() => {});
   }, []);
 
   // Fetch localities when city changes
@@ -119,7 +130,7 @@ export default function RegisterCookPage() {
         specialties, localities, dailyRatePaise, monthlyRatePaise,
         eventMinPlatePaise, languages, eventMinPax, eventMaxPax,
       }, token);
-      router.push('/cooks/my-bookings');
+      router.push('/cooks/dashboard');
     } catch (e: any) {
       setError(e.message || 'Registration failed');
     }
@@ -159,7 +170,7 @@ export default function RegisterCookPage() {
             </a>
             <a href="/cooks/my-bookings"
               className="border border-gray-300 text-gray-700 font-semibold px-6 py-2.5 rounded-xl hover:bg-gray-50 transition text-sm">
-              My Bookings
+              Cooks I Booked
             </a>
           </div>
         </div>

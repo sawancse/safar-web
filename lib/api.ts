@@ -59,6 +59,7 @@ async function doRefreshToken(): Promise<boolean> {
       console.log('[AUTH] Refresh response keys:', Object.keys(data), 'hasAccessToken:', !!data.accessToken, 'tokenLen:', data.accessToken?.length);
       localStorage.setItem('access_token', data.accessToken);
       if (data.refreshToken) localStorage.setItem('refresh_token', data.refreshToken);
+      if (data.user?.role) localStorage.setItem('user_role', data.user.role);
       document.cookie = `access_token=${data.accessToken}; path=/; max-age=${30 * 24 * 60 * 60}; SameSite=Lax`;
       return true;
     } else {
@@ -144,7 +145,9 @@ async function apiFetch<T>(path: string, options?: RequestInit): Promise<T> {
         });
         if (!retryRes.ok) {
           const text = await retryRes.text().catch(() => 'Unknown error');
-          throw new Error(text || `HTTP ${retryRes.status}`);
+          const err: any = new Error(text || `HTTP ${retryRes.status}`);
+          err.status = retryRes.status;
+          throw err;
         }
         const text = await retryRes.text();
         return text ? JSON.parse(text) : (undefined as T);
@@ -160,7 +163,9 @@ async function apiFetch<T>(path: string, options?: RequestInit): Promise<T> {
 
   if (!res.ok) {
     const text = await res.text().catch(() => 'Unknown error');
-    throw new Error(text || `HTTP ${res.status}`);
+    const err: any = new Error(text || `HTTP ${res.status}`);
+    err.status = res.status;
+    throw err;
   }
   const text = await res.text();
   return text ? JSON.parse(text) : (undefined as T);
@@ -1642,6 +1647,28 @@ export const api = {
     apiFetch<string>(`/api/v1/pg-tenancies/${tenancyId}/agreement/text`, {
       headers: { Authorization: `Bearer ${token}` },
     }),
+  viewAgreementHtml: async (tenancyId: string, token: string): Promise<void> => {
+    const res = await fetch(`${API_URL}/api/v1/pg-tenancies/${tenancyId}/agreement/view`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!res.ok) throw new Error('Failed to load agreement');
+    const html = await res.text();
+    const win = window.open('', '_blank');
+    if (win) { win.document.write(html); win.document.close(); }
+  },
+  downloadAgreementPdf: async (tenancyId: string, token: string): Promise<void> => {
+    const res = await fetch(`${API_URL}/api/v1/pg-tenancies/${tenancyId}/agreement/pdf`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!res.ok) throw new Error('Failed to download PDF');
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `Safar-Agreement-${tenancyId}.pdf`;
+    a.click();
+    URL.revokeObjectURL(url);
+  },
 
   // PG Settlement
   initiateSettlement: (tenancyId: string, data: any, token: string) =>
@@ -2213,6 +2240,12 @@ export const api = {
       body: JSON.stringify(data),
     }),
 
+  claimChefProfile: (token: string) =>
+    apiFetch<any>('/api/v1/chefs/claim', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}` },
+    }),
+
   toggleChefAvailability: (token: string) =>
     apiFetch<any>('/api/v1/chefs/me/availability', {
       method: 'PUT',
@@ -2279,8 +2312,8 @@ export const api = {
   getChefPhotos: (chefId: string) =>
     apiFetch<any[]>(`/api/v1/chefs/photos/${chefId}`),
 
-  addChefPhoto: (url: string, caption: string, photoType: string, token: string) =>
-    apiFetch<any>(`/api/v1/chefs/photos?url=${encodeURIComponent(url)}&caption=${encodeURIComponent(caption)}&photoType=${photoType}`, {
+  addChefPhoto: (url: string, caption: string, photoType: string, token: string, mediaType: string = 'IMAGE') =>
+    apiFetch<any>(`/api/v1/chefs/photos?url=${encodeURIComponent(url)}&caption=${encodeURIComponent(caption)}&photoType=${photoType}&mediaType=${mediaType}`, {
       method: 'POST', headers: { Authorization: `Bearer ${token}` },
     }),
 
@@ -2534,5 +2567,34 @@ export const api = {
     apiFetch<any[]>(`/api/v1/interiors/projects/${projectId}/milestones`, { headers: { Authorization: `Bearer ${token}` } }),
   getInteriorQuote: (projectId: string, token: string) =>
     apiFetch<any>(`/api/v1/interiors/projects/${projectId}/quote`, { headers: { Authorization: `Bearer ${token}` } }),
+
+  /* ── Flights ───────────────────────────────────────────────── */
+
+  searchFlights: (params: Record<string, string>) => {
+    const qs = Object.entries(params).filter(([,v]) => v).map(([k,v]) => `${k}=${encodeURIComponent(v)}`).join('&');
+    return apiFetch<any>(`/api/v1/flights/search?${qs}`);
+  },
+  createFlightBooking: (body: any, token: string) =>
+    apiFetch<any>('/api/v1/flights/book', {
+      method: 'POST', headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    }),
+  confirmFlightPayment: (bookingId: string, razorpayOrderId: string, razorpayPaymentId: string, token: string) =>
+    apiFetch<any>(`/api/v1/flights/${bookingId}/confirm-payment`, {
+      method: 'POST', headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ razorpayOrderId, razorpayPaymentId }),
+    }),
+  cancelFlightBooking: (bookingId: string, token: string) =>
+    apiFetch<any>(`/api/v1/flights/${bookingId}/cancel`, {
+      method: 'POST', headers: { Authorization: `Bearer ${token}` },
+    }),
+  getMyFlights: (token: string, page: number = 0) =>
+    apiFetch<any>(`/api/v1/flights/my?page=${page}&size=10&sort=createdAt,desc`, {
+      headers: { Authorization: `Bearer ${token}` },
+    }),
+  getFlightBooking: (bookingId: string, token: string) =>
+    apiFetch<any>(`/api/v1/flights/${bookingId}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    }),
 
 };

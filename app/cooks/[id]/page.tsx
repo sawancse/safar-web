@@ -532,19 +532,33 @@ export default function ChefProfilePage() {
           {/* Gallery */}
           {activeTab === 'gallery' && (
             <div className="mt-6">
-              {photos.length === 0 ? (
-                <p className="text-center text-gray-400 py-12">No photos yet</p>
-              ) : (
+              {/* Intro Video */}
+              {chef.introVideoUrl && (
+                <div className="mb-6">
+                  <h3 className="text-sm font-semibold text-gray-700 mb-2">Meet {chef.name}</h3>
+                  <video src={chef.introVideoUrl} controls poster="" className="w-full rounded-xl max-h-80 bg-black" />
+                </div>
+              )}
+              {photos.length === 0 && !chef.introVideoUrl ? (
+                <p className="text-center text-gray-400 py-12">No photos or videos yet</p>
+              ) : photos.length === 0 ? null : (
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
                   {photos.map((p: any) => (
                     <div key={p.id} className="relative group rounded-xl overflow-hidden aspect-square">
-                      <img src={p.url} alt={p.caption || 'Chef photo'} className="w-full h-full object-cover" />
+                      {p.mediaType === 'VIDEO' ? (
+                        <video src={p.url} controls className="w-full h-full object-cover bg-black" />
+                      ) : (
+                        <img src={p.url} alt={p.caption || 'Chef photo'} className="w-full h-full object-cover" />
+                      )}
                       {p.caption && (
                         <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 to-transparent p-3">
                           <p className="text-white text-xs">{p.caption}</p>
                         </div>
                       )}
-                      <span className="absolute top-2 right-2 bg-white/80 text-xs px-2 py-0.5 rounded-full">{p.photoType}</span>
+                      <div className="absolute top-2 right-2 flex gap-1">
+                        <span className="bg-white/80 text-xs px-2 py-0.5 rounded-full">{p.photoType}</span>
+                        {p.mediaType === 'VIDEO' && <span className="bg-purple-500 text-white text-xs px-2 py-0.5 rounded-full">Video</span>}
+                      </div>
                     </div>
                   ))}
                 </div>

@@ -5,6 +5,6 @@ import { useRouter } from 'next/navigation';
 
 export default function ProjectsRedirect() {
   const router = useRouter();
-  useEffect(() => { router.replace('/buy?tab=projects'); }, [router]);
+  useEffect(() => { router.replace('/builder'); }, [router]);
   return null;
 }

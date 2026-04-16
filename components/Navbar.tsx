@@ -95,9 +95,12 @@ export default function Navbar() {
     { href: '/dashboard/account', icon: '\u{1F464}', label: 'Account' },
     { href: '/messages', icon: '\u{1F4AC}', label: 'Messages', badge: unreadCount },
     { href: '/dashboard', icon: '\u{1F9F3}', label: 'Bookings & Trips' },
+    { href: '/flights', icon: '\u{2708}', label: 'Flights' },
+    { href: '/dashboard/flights', icon: '\u{1F6EB}', label: 'My Flights' },
+    { href: '/pg-dashboard', icon: '\u{1F3E0}', label: 'PG / Rent' },
     { href: '/dashboard/miles', icon: '\u{1F381}', label: 'Rewards & Wallet' },
     { href: '/dashboard/reviews', icon: '\u{2B50}', label: 'Reviews' },
-    { href: '/cooks/my-bookings', icon: '\u{1F468}\u{200D}\u{1F373}', label: 'Cook Bookings' },
+    { href: '/cooks/my-bookings', icon: '\u{1F468}\u{200D}\u{1F373}', label: 'Cooks I Booked' },
     { href: '/cooks/dashboard', icon: '\u{1F4CA}', label: 'Chef Dashboard' },
     { href: '/dashboard/saved', icon: '\u{2764}\u{FE0F}', label: 'Saved' },
   ];

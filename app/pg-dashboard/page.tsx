@@ -275,14 +275,12 @@ export default function PgDashboardPage() {
                   Your agreement is ready for signing. Please review and sign to complete onboarding.
                 </p>
                 <div className="flex gap-2">
-                  <a
-                    href={`/api/v1/pg-tenancies/${tenancy.id}/agreement/view`}
-                    target="_blank"
-                    rel="noopener noreferrer"
+                  <button
+                    onClick={() => api.viewAgreementHtml(tenancy.id, token).catch(() => alert('Failed to load agreement'))}
                     className="flex-1 px-4 py-2.5 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition text-sm font-medium text-center"
                   >
                     Review Agreement
-                  </a>
+                  </button>
                   <button
                     onClick={handleSignAgreement}
                     disabled={signing}
@@ -299,14 +297,12 @@ export default function PgDashboardPage() {
                 <p className="text-sm text-yellow-600 bg-yellow-50 p-3 rounded-lg">
                   Waiting for the host to sign the agreement.
                 </p>
-                <a
-                  href={`/api/v1/pg-tenancies/${tenancy.id}/agreement/view`}
-                  target="_blank"
-                  rel="noopener noreferrer"
+                <button
+                  onClick={() => api.viewAgreementHtml(tenancy.id, token).catch(() => alert('Failed to load agreement'))}
                   className="inline-flex items-center gap-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition text-sm font-medium"
                 >
                   Preview Agreement
-                </a>
+                </button>
               </div>
             )}
 
@@ -318,10 +314,8 @@ export default function PgDashboardPage() {
 
             {agreement.status === 'ACTIVE' && (
               <div className="flex flex-wrap gap-2">
-                <a
-                  href={`/api/v1/pg-tenancies/${tenancy.id}/agreement/view`}
-                  target="_blank"
-                  rel="noopener noreferrer"
+                <button
+                  onClick={() => api.viewAgreementHtml(tenancy.id, token).catch(() => alert('Failed to load agreement'))}
                   className="inline-flex items-center gap-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition text-sm font-medium"
                 >
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -329,18 +323,18 @@ export default function PgDashboardPage() {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
                   </svg>
                   View Agreement
-                </a>
-                <a
-                  href={`/api/v1/pg-tenancies/${tenancy.id}/agreement/pdf`}
+                </button>
+                <button
+                  onClick={() => api.downloadAgreementPdf(tenancy.id, token).catch(() => alert('Failed to download PDF'))}
                   className="inline-flex items-center gap-2 px-4 py-2 bg-orange-100 text-orange-700 rounded-lg hover:bg-orange-200 transition text-sm font-medium"
                 >
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                   </svg>
                   Download PDF
-                </a>
+                </button>
                 <button
-                  onClick={() => window.open(`/api/v1/pg-tenancies/${tenancy.id}/agreement/view`, '_blank')?.print()}
+                  onClick={() => api.viewAgreementHtml(tenancy.id, token).then(() => { setTimeout(() => window.print(), 500); }).catch(() => alert('Failed to load'))}
                   className="inline-flex items-center gap-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition text-sm font-medium"
                 >
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">

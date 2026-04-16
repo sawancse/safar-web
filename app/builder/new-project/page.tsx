@@ -7,6 +7,16 @@ import CityAutocomplete from '@/components/CityAutocomplete';
 import LocalityAutocomplete from '@/components/LocalityAutocomplete';
 import MapLocationPicker from '@/components/MapLocationPicker';
 
+const INDIAN_STATES = [
+  'Andhra Pradesh', 'Arunachal Pradesh', 'Assam', 'Bihar', 'Chhattisgarh',
+  'Goa', 'Gujarat', 'Haryana', 'Himachal Pradesh', 'Jharkhand', 'Karnataka',
+  'Kerala', 'Madhya Pradesh', 'Maharashtra', 'Manipur', 'Meghalaya', 'Mizoram',
+  'Nagaland', 'Odisha', 'Punjab', 'Rajasthan', 'Sikkim', 'Tamil Nadu',
+  'Telangana', 'Tripura', 'Uttar Pradesh', 'Uttarakhand', 'West Bengal',
+  'Delhi', 'Chandigarh', 'Puducherry', 'Jammu and Kashmir', 'Ladakh',
+  'Andaman and Nicobar Islands', 'Dadra and Nagar Haveli and Daman and Diu', 'Lakshadweep',
+];
+
 const ALL_AMENITIES = [
   'Swimming Pool', 'Gym', 'Club House', 'Children\'s Play Area', 'Landscaped Gardens',
   'Jogging Track', 'Indoor Games', 'Party Hall', 'Yoga Room', 'Amphitheatre',
@@ -623,13 +633,14 @@ export default function BuilderNewProjectPage() {
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">State</label>
-                <input
-                  type="text"
+                <select
                   value={state}
                   onChange={e => setState(e.target.value)}
-                  placeholder="e.g. Telangana"
-                  className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400"
-                />
+                  className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400 bg-white"
+                >
+                  <option value="">Select State</option>
+                  {INDIAN_STATES.map(s => <option key={s} value={s}>{s}</option>)}
+                </select>
               </div>
             </div>
 
