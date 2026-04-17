@@ -1,7 +1,9 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
+import DatePicker from 'react-datepicker';
+import 'react-datepicker/dist/react-datepicker.css';
 import { formatDate } from '@/lib/utils';
 
 const INDIAN_AIRPORTS = [
@@ -128,13 +130,39 @@ export default function FlightsPage() {
   const [destination, setDestination] = useState('');
   const [departureDate, setDepartureDate] = useState('');
   const [returnDate, setReturnDate] = useState('');
-  const [passengers, setPassengers] = useState(1);
+  const [adults, setAdults] = useState(1);
+  const [children, setChildren] = useState(0);
+  const [infants, setInfants] = useState(0);
   const [cabinClass, setCabinClass] = useState('economy');
   const [roundTrip, setRoundTrip] = useState(false);
   const [originSearch, setOriginSearch] = useState('');
   const [destSearch, setDestSearch] = useState('');
   const [showOriginPicker, setShowOriginPicker] = useState(false);
   const [showDestPicker, setShowDestPicker] = useState(false);
+  const [showDepCal, setShowDepCal] = useState(false);
+  const [showRetCal, setShowRetCal] = useState(false);
+  const [showTravellers, setShowTravellers] = useState(false);
+
+  const passengers = adults + children + infants;
+  const depTileRef = useRef<HTMLDivElement>(null);
+  const retTileRef = useRef<HTMLDivElement>(null);
+  const travTileRef = useRef<HTMLDivElement>(null);
+
+  // Close popovers on outside click / Escape
+  useEffect(() => {
+    function onDocClick(ev: MouseEvent) {
+      const t = ev.target as Node;
+      if (showDepCal && depTileRef.current && !depTileRef.current.contains(t)) setShowDepCal(false);
+      if (showRetCal && retTileRef.current && !retTileRef.current.contains(t)) setShowRetCal(false);
+      if (showTravellers && travTileRef.current && !travTileRef.current.contains(t)) setShowTravellers(false);
+    }
+    function onKey(ev: KeyboardEvent) {
+      if (ev.key === 'Escape') { setShowDepCal(false); setShowRetCal(false); setShowTravellers(false); }
+    }
+    document.addEventListener('mousedown', onDocClick);
+    document.addEventListener('keydown', onKey);
+    return () => { document.removeEventListener('mousedown', onDocClick); document.removeEventListener('keydown', onKey); };
+  }, [showDepCal, showRetCal, showTravellers]);
 
   const filteredOrigins = ALL_AIRPORTS.filter(
     a =>
@@ -166,6 +194,9 @@ export default function FlightsPage() {
       destination,
       departureDate,
       passengers: String(passengers),
+      adults: String(adults),
+      children: String(children),
+      infants: String(infants),
       cabinClass,
       international: String(isInternational),
     });
@@ -288,76 +319,118 @@ export default function FlightsPage() {
                 )}
               </div>
 
-              {/* Departure Date */}
-              <div>
-                <label className="block text-sm font-medium text-gray-600 mb-1">Departure</label>
-                <input
-                  type="date"
-                  min={today}
-                  value={departureDate}
-                  onChange={(e) => setDepartureDate(e.target.value)}
-                  className="w-full border border-gray-300 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#003B95] focus:border-transparent"
-                  required
+              {/* Departure Date — MMT-style tile */}
+              <div className="relative" ref={depTileRef}>
+                <DateTile
+                  caption="DEPARTURE"
+                  iso={departureDate}
+                  placeholder="Select date"
+                  onClick={() => { setShowDepCal(v => !v); setShowRetCal(false); setShowTravellers(false); }}
+                  active={showDepCal}
                 />
-                <p className="text-[11px] text-gray-500 mt-1 min-h-[14px]">
-                  {departureDate ? formatDate(departureDate) : 'Pick a date'}
-                </p>
+                {showDepCal && (
+                  <div className="absolute z-30 mt-2 left-0 bg-white rounded-2xl shadow-2xl border border-gray-100 p-2">
+                    <DatePicker
+                      selected={departureDate ? new Date(departureDate) : null}
+                      onChange={(d) => {
+                        if (!d) return;
+                        const iso = new Date(d.getTime() - d.getTimezoneOffset() * 60_000).toISOString().split('T')[0];
+                        setDepartureDate(iso);
+                        if (returnDate && returnDate < iso) setReturnDate('');
+                        setShowDepCal(false);
+                      }}
+                      minDate={new Date()}
+                      monthsShown={2}
+                      inline
+                      calendarClassName="safar-cal"
+                    />
+                  </div>
+                )}
               </div>
 
-              {/* Return Date */}
-              <div>
-                <label className="block text-sm font-medium text-gray-600 mb-1">
-                  Return {!roundTrip && <span className="text-gray-400">(optional)</span>}
-                </label>
-                <input
-                  type="date"
-                  min={departureDate || today}
-                  value={returnDate}
-                  onChange={(e) => setReturnDate(e.target.value)}
-                  disabled={!roundTrip}
-                  className="w-full border border-gray-300 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#003B95] focus:border-transparent disabled:bg-gray-100 disabled:text-gray-400"
+              {/* Return Date — MMT-style tile */}
+              <div className="relative" ref={retTileRef}>
+                <DateTile
+                  caption={`RETURN${!roundTrip ? ' (optional)' : ''}`}
+                  iso={returnDate}
+                  placeholder={roundTrip ? 'Select date' : 'Tap to add'}
+                  onClick={() => {
+                    if (!roundTrip) setRoundTrip(true);
+                    setShowRetCal(v => !v); setShowDepCal(false); setShowTravellers(false);
+                  }}
+                  active={showRetCal}
                 />
-                <p className="text-[11px] text-gray-500 mt-1 min-h-[14px]">
-                  {roundTrip ? (returnDate ? formatDate(returnDate) : 'Pick a return date') : ''}
-                </p>
+                {showRetCal && (
+                  <div className="absolute z-30 mt-2 left-0 bg-white rounded-2xl shadow-2xl border border-gray-100 p-2">
+                    <DatePicker
+                      selected={returnDate ? new Date(returnDate) : null}
+                      onChange={(d) => {
+                        if (!d) return;
+                        const iso = new Date(d.getTime() - d.getTimezoneOffset() * 60_000).toISOString().split('T')[0];
+                        setReturnDate(iso);
+                        setShowRetCal(false);
+                      }}
+                      minDate={departureDate ? new Date(departureDate) : new Date()}
+                      monthsShown={2}
+                      inline
+                      calendarClassName="safar-cal"
+                    />
+                  </div>
+                )}
               </div>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-              {/* Passengers */}
-              <div>
-                <label className="block text-sm font-medium text-gray-600 mb-1">Passengers</label>
-                <div className="flex items-center border border-gray-300 rounded-xl overflow-hidden">
-                  <button
-                    type="button"
-                    onClick={() => setPassengers(Math.max(1, passengers - 1))}
-                    className="px-4 py-3 text-lg font-bold text-[#003B95] hover:bg-gray-50 transition"
-                  >
-                    -
-                  </button>
-                  <span className="flex-1 text-center text-sm font-semibold">{passengers}</span>
-                  <button
-                    type="button"
-                    onClick={() => setPassengers(Math.min(9, passengers + 1))}
-                    className="px-4 py-3 text-lg font-bold text-[#003B95] hover:bg-gray-50 transition"
-                  >
-                    +
-                  </button>
-                </div>
-              </div>
-
-              {/* Cabin Class */}
-              <div>
-                <label className="block text-sm font-medium text-gray-600 mb-1">Cabin Class</label>
-                <select
-                  value={cabinClass}
-                  onChange={(e) => setCabinClass(e.target.value)}
-                  className="w-full border border-gray-300 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#003B95] focus:border-transparent bg-white"
+              {/* Travellers & Class — MMT-style tile */}
+              <div className="relative md:col-span-2" ref={travTileRef}>
+                <button
+                  type="button"
+                  onClick={() => { setShowTravellers(v => !v); setShowDepCal(false); setShowRetCal(false); }}
+                  className={`w-full text-left border rounded-xl px-4 py-3 transition bg-white ${
+                    showTravellers ? 'border-[#003B95] ring-2 ring-[#003B95]/20' : 'border-gray-300 hover:border-[#003B95]/60'
+                  }`}
                 >
-                  {CABIN_CLASSES.map((c) => (
-                    <option key={c.value} value={c.value}>{c.label}</option>
-                  ))}
-                </select>
+                  <p className="text-[11px] font-semibold tracking-wider text-gray-500 uppercase">Travellers & Class</p>
+                  <p className="text-xl font-bold text-gray-900 mt-0.5">{passengers} <span className="text-sm font-medium text-gray-600">Traveller{passengers !== 1 ? 's' : ''}</span></p>
+                  <p className="text-xs text-gray-500">
+                    {adults} Adult{adults !== 1 ? 's' : ''}{children ? `, ${children} Child${children !== 1 ? 'ren' : ''}` : ''}{infants ? `, ${infants} Infant${infants !== 1 ? 's' : ''}` : ''} · {CABIN_CLASSES.find(c => c.value === cabinClass)?.label}
+                  </p>
+                </button>
+                {showTravellers && (
+                  <div className="absolute z-30 mt-2 left-0 right-0 md:right-auto md:w-[380px] bg-white rounded-2xl shadow-2xl border border-gray-100 p-5">
+                    <PaxRow label="Adults" hint="12 yrs +" value={adults}
+                            min={1} max={9 - children - infants}
+                            onChange={v => setAdults(v)} />
+                    <PaxRow label="Children" hint="2 – 11 yrs" value={children}
+                            min={0} max={Math.max(0, 9 - adults - infants)}
+                            onChange={v => setChildren(v)} />
+                    <PaxRow label="Infants" hint="below 2 yrs · on lap" value={infants}
+                            min={0} max={Math.min(adults, 9 - adults - children)}
+                            onChange={v => setInfants(v)} />
+
+                    <p className="text-[11px] font-semibold tracking-wider text-gray-500 uppercase mt-4 mb-2">Travel Class</p>
+                    <div className="flex flex-wrap gap-2">
+                      {CABIN_CLASSES.map((c) => (
+                        <button key={c.value} type="button"
+                                onClick={() => setCabinClass(c.value)}
+                                className={`px-3 py-1.5 rounded-full text-xs font-medium border transition ${
+                                  cabinClass === c.value
+                                    ? 'bg-[#003B95] border-[#003B95] text-white'
+                                    : 'border-gray-300 text-gray-700 hover:border-[#003B95]/60'
+                                }`}>
+                          {c.label}
+                        </button>
+                      ))}
+                    </div>
+
+                    <div className="flex justify-end mt-5">
+                      <button type="button" onClick={() => setShowTravellers(false)}
+                              className="px-5 py-2 rounded-lg bg-[#003B95] hover:bg-[#002d73] text-white text-sm font-semibold transition">
+                        Done
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Search button */}
@@ -365,7 +438,7 @@ export default function FlightsPage() {
                 <button
                   type="submit"
                   disabled={!origin || !destination || !departureDate}
-                  className="w-full bg-orange-500 hover:bg-orange-600 disabled:bg-gray-300 text-white font-semibold py-3 rounded-xl transition text-sm"
+                  className="w-full bg-orange-500 hover:bg-orange-600 disabled:bg-gray-300 text-white font-semibold py-3 rounded-xl transition text-sm h-[72px]"
                 >
                   Search Flights
                 </button>
@@ -398,6 +471,74 @@ export default function FlightsPage() {
             </p>
           </div>
         </div>
+      </div>
+    </div>
+  );
+}
+
+// ── MMT/Yatra-style date tile ──────────────────────────────────
+function DateTile({ caption, iso, placeholder, onClick, active }: {
+  caption: string;
+  iso: string;
+  placeholder: string;
+  onClick: () => void;
+  active: boolean;
+}) {
+  const d = iso ? new Date(iso + 'T00:00:00') : null;
+  const day = d ? d.getDate() : null;
+  const monthYear = d ? d.toLocaleDateString('en-IN', { month: 'short', year: '2-digit' }) : '';
+  const weekday = d ? d.toLocaleDateString('en-IN', { weekday: 'long' }) : '';
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`w-full text-left border rounded-xl px-4 py-3 transition bg-white ${
+        active ? 'border-[#003B95] ring-2 ring-[#003B95]/20' : 'border-gray-300 hover:border-[#003B95]/60'
+      }`}
+    >
+      <p className="text-[11px] font-semibold tracking-wider text-gray-500 uppercase">{caption}</p>
+      {d ? (
+        <>
+          <p className="mt-0.5">
+            <span className="text-3xl font-bold text-gray-900 leading-none">{day}</span>
+            <span className="ml-1 text-sm font-medium text-gray-700">{monthYear.replace(' ', " '")}</span>
+          </p>
+          <p className="text-xs text-gray-500 mt-0.5">{weekday}</p>
+        </>
+      ) : (
+        <p className="text-sm text-gray-400 mt-2">{placeholder}</p>
+      )}
+    </button>
+  );
+}
+
+// ── Passenger row with - / + steppers ──────────────────────────
+function PaxRow({ label, hint, value, min, max, onChange }: {
+  label: string;
+  hint: string;
+  value: number;
+  min: number;
+  max: number;
+  onChange: (v: number) => void;
+}) {
+  const dec = () => value > min && onChange(value - 1);
+  const inc = () => value < max && onChange(value + 1);
+  return (
+    <div className="flex items-center justify-between py-2">
+      <div>
+        <p className="text-sm font-semibold text-gray-800">{label}</p>
+        <p className="text-[11px] text-gray-500">{hint}</p>
+      </div>
+      <div className="flex items-center gap-2">
+        <button type="button" onClick={dec} disabled={value <= min}
+                className="w-8 h-8 rounded-full border border-gray-300 text-gray-700 hover:border-[#003B95] hover:text-[#003B95] disabled:opacity-30 disabled:cursor-not-allowed text-lg font-semibold flex items-center justify-center transition">
+          −
+        </button>
+        <span className="w-6 text-center text-sm font-semibold text-gray-900 tabular-nums">{value}</span>
+        <button type="button" onClick={inc} disabled={value >= max}
+                className="w-8 h-8 rounded-full border border-gray-300 text-gray-700 hover:border-[#003B95] hover:text-[#003B95] disabled:opacity-30 disabled:cursor-not-allowed text-lg font-semibold flex items-center justify-center transition">
+          +
+        </button>
       </div>
     </div>
   );
