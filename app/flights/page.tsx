@@ -144,6 +144,8 @@ export default function FlightsPage() {
   const [showTravellers, setShowTravellers] = useState(false);
 
   const passengers = adults + children + infants;
+  const fromTileRef = useRef<HTMLDivElement>(null);
+  const toTileRef = useRef<HTMLDivElement>(null);
   const depTileRef = useRef<HTMLDivElement>(null);
   const retTileRef = useRef<HTMLDivElement>(null);
   const travTileRef = useRef<HTMLDivElement>(null);
@@ -152,17 +154,24 @@ export default function FlightsPage() {
   useEffect(() => {
     function onDocClick(ev: MouseEvent) {
       const t = ev.target as Node;
+      if (showOriginPicker && fromTileRef.current && !fromTileRef.current.contains(t)) setShowOriginPicker(false);
+      if (showDestPicker && toTileRef.current && !toTileRef.current.contains(t)) setShowDestPicker(false);
       if (showDepCal && depTileRef.current && !depTileRef.current.contains(t)) setShowDepCal(false);
       if (showRetCal && retTileRef.current && !retTileRef.current.contains(t)) setShowRetCal(false);
       if (showTravellers && travTileRef.current && !travTileRef.current.contains(t)) setShowTravellers(false);
     }
     function onKey(ev: KeyboardEvent) {
-      if (ev.key === 'Escape') { setShowDepCal(false); setShowRetCal(false); setShowTravellers(false); }
+      if (ev.key === 'Escape') { setShowOriginPicker(false); setShowDestPicker(false); setShowDepCal(false); setShowRetCal(false); setShowTravellers(false); }
     }
     document.addEventListener('mousedown', onDocClick);
     document.addEventListener('keydown', onKey);
     return () => { document.removeEventListener('mousedown', onDocClick); document.removeEventListener('keydown', onKey); };
-  }, [showDepCal, showRetCal, showTravellers]);
+  }, [showOriginPicker, showDestPicker, showDepCal, showRetCal, showTravellers]);
+
+  function closeAllPopovers() {
+    setShowOriginPicker(false); setShowDestPicker(false);
+    setShowDepCal(false); setShowRetCal(false); setShowTravellers(false);
+  }
 
   const filteredOrigins = ALL_AIRPORTS.filter(
     a =>
@@ -239,82 +248,80 @@ export default function FlightsPage() {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
-              {/* Origin */}
-              <div className="relative">
-                <label className="block text-sm font-medium text-gray-600 mb-1">From</label>
-                <input
-                  type="text"
-                  placeholder="City or airport code"
-                  value={origin ? getAirportLabel(origin) : originSearch}
-                  onChange={(e) => {
-                    setOriginSearch(e.target.value);
-                    setOrigin('');
-                    setShowOriginPicker(true);
-                  }}
-                  onFocus={() => setShowOriginPicker(true)}
-                  className="w-full border border-gray-300 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#003B95] focus:border-transparent"
+              {/* From — MMT-style tile */}
+              <div className="relative" ref={fromTileRef}>
+                <AirportTile
+                  caption="FROM"
+                  code={origin}
+                  placeholder="Select origin"
+                  onClick={() => { closeAllPopovers(); setShowOriginPicker(true); setOriginSearch(''); }}
+                  active={showOriginPicker}
                 />
                 {showOriginPicker && (
-                  <div className="absolute z-50 top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-xl shadow-lg max-h-60 overflow-y-auto">
-                    {filteredOrigins.map((a) => (
-                      <button
-                        key={a.code}
-                        type="button"
-                        onClick={() => {
-                          setOrigin(a.code);
-                          setOriginSearch('');
-                          setShowOriginPicker(false);
-                        }}
-                        className="w-full text-left px-4 py-2.5 hover:bg-blue-50 flex items-center gap-3 text-sm"
-                      >
-                        <span className="font-bold text-[#003B95] w-10">{a.code}</span>
-                        <span className="text-gray-700">{a.city}</span>
-                        <span className="text-gray-400 text-xs ml-auto truncate">{a.name}</span>
-                      </button>
-                    ))}
-                    {filteredOrigins.length === 0 && (
-                      <p className="text-sm text-gray-400 px-4 py-3">No airports found</p>
-                    )}
+                  <div className="absolute z-40 top-full left-0 right-0 md:w-[380px] mt-2 bg-white border border-gray-100 rounded-2xl shadow-2xl overflow-hidden">
+                    <div className="p-3 border-b border-gray-100">
+                      <input
+                        type="text"
+                        autoFocus
+                        placeholder="Search by city or airport code"
+                        value={originSearch}
+                        onChange={(e) => setOriginSearch(e.target.value)}
+                        className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#003B95]/30 focus:border-[#003B95]"
+                      />
+                    </div>
+                    <div className="max-h-72 overflow-y-auto">
+                      {filteredOrigins.slice(0, 30).map((a) => (
+                        <button key={a.code} type="button"
+                                onClick={() => { setOrigin(a.code); setOriginSearch(''); setShowOriginPicker(false); }}
+                                className="w-full text-left px-4 py-2.5 hover:bg-blue-50 flex items-center gap-3 text-sm">
+                          <span className="font-bold text-[#003B95] w-10">{a.code}</span>
+                          <span className="text-gray-700">{a.city}</span>
+                          <span className="text-gray-400 text-xs ml-auto truncate">{a.name}</span>
+                        </button>
+                      ))}
+                      {filteredOrigins.length === 0 && (
+                        <p className="text-sm text-gray-400 px-4 py-3">No airports found</p>
+                      )}
+                    </div>
                   </div>
                 )}
               </div>
 
-              {/* Destination */}
-              <div className="relative">
-                <label className="block text-sm font-medium text-gray-600 mb-1">To</label>
-                <input
-                  type="text"
-                  placeholder="City or airport code"
-                  value={destination ? getAirportLabel(destination) : destSearch}
-                  onChange={(e) => {
-                    setDestSearch(e.target.value);
-                    setDestination('');
-                    setShowDestPicker(true);
-                  }}
-                  onFocus={() => setShowDestPicker(true)}
-                  className="w-full border border-gray-300 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#003B95] focus:border-transparent"
+              {/* To — MMT-style tile */}
+              <div className="relative" ref={toTileRef}>
+                <AirportTile
+                  caption="TO"
+                  code={destination}
+                  placeholder="Select destination"
+                  onClick={() => { closeAllPopovers(); setShowDestPicker(true); setDestSearch(''); }}
+                  active={showDestPicker}
                 />
                 {showDestPicker && (
-                  <div className="absolute z-50 top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-xl shadow-lg max-h-60 overflow-y-auto">
-                    {filteredDests.map((a) => (
-                      <button
-                        key={a.code}
-                        type="button"
-                        onClick={() => {
-                          setDestination(a.code);
-                          setDestSearch('');
-                          setShowDestPicker(false);
-                        }}
-                        className="w-full text-left px-4 py-2.5 hover:bg-blue-50 flex items-center gap-3 text-sm"
-                      >
-                        <span className="font-bold text-[#003B95] w-10">{a.code}</span>
-                        <span className="text-gray-700">{a.city}</span>
-                        <span className="text-gray-400 text-xs ml-auto truncate">{a.name}</span>
-                      </button>
-                    ))}
-                    {filteredDests.length === 0 && (
-                      <p className="text-sm text-gray-400 px-4 py-3">No airports found</p>
-                    )}
+                  <div className="absolute z-40 top-full left-0 right-0 md:w-[380px] mt-2 bg-white border border-gray-100 rounded-2xl shadow-2xl overflow-hidden">
+                    <div className="p-3 border-b border-gray-100">
+                      <input
+                        type="text"
+                        autoFocus
+                        placeholder="Search by city or airport code"
+                        value={destSearch}
+                        onChange={(e) => setDestSearch(e.target.value)}
+                        className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#003B95]/30 focus:border-[#003B95]"
+                      />
+                    </div>
+                    <div className="max-h-72 overflow-y-auto">
+                      {filteredDests.slice(0, 30).map((a) => (
+                        <button key={a.code} type="button"
+                                onClick={() => { setDestination(a.code); setDestSearch(''); setShowDestPicker(false); }}
+                                className="w-full text-left px-4 py-2.5 hover:bg-blue-50 flex items-center gap-3 text-sm">
+                          <span className="font-bold text-[#003B95] w-10">{a.code}</span>
+                          <span className="text-gray-700">{a.city}</span>
+                          <span className="text-gray-400 text-xs ml-auto truncate">{a.name}</span>
+                        </button>
+                      ))}
+                      {filteredDests.length === 0 && (
+                        <p className="text-sm text-gray-400 px-4 py-3">No airports found</p>
+                      )}
+                    </div>
                   </div>
                 )}
               </div>
@@ -325,7 +332,7 @@ export default function FlightsPage() {
                   caption="DEPARTURE"
                   iso={departureDate}
                   placeholder="Select date"
-                  onClick={() => { setShowDepCal(v => !v); setShowRetCal(false); setShowTravellers(false); }}
+                  onClick={() => { const next = !showDepCal; closeAllPopovers(); setShowDepCal(next); }}
                   active={showDepCal}
                 />
                 {showDepCal && (
@@ -356,7 +363,9 @@ export default function FlightsPage() {
                   placeholder={roundTrip ? 'Select date' : 'Tap to add'}
                   onClick={() => {
                     if (!roundTrip) setRoundTrip(true);
-                    setShowRetCal(v => !v); setShowDepCal(false); setShowTravellers(false);
+                    const next = !showRetCal;
+                    closeAllPopovers();
+                    setShowRetCal(next);
                   }}
                   active={showRetCal}
                 />
@@ -385,7 +394,7 @@ export default function FlightsPage() {
               <div className="relative md:col-span-2" ref={travTileRef}>
                 <button
                   type="button"
-                  onClick={() => { setShowTravellers(v => !v); setShowDepCal(false); setShowRetCal(false); }}
+                  onClick={() => { const next = !showTravellers; closeAllPopovers(); setShowTravellers(next); }}
                   className={`w-full text-left border rounded-xl px-4 py-3 transition bg-white ${
                     showTravellers ? 'border-[#003B95] ring-2 ring-[#003B95]/20' : 'border-gray-300 hover:border-[#003B95]/60'
                   }`}
@@ -473,6 +482,38 @@ export default function FlightsPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+// ── MMT/Yatra-style airport tile ──────────────────────────────
+function AirportTile({ caption, code, placeholder, onClick, active }: {
+  caption: string;
+  code: string;
+  placeholder: string;
+  onClick: () => void;
+  active: boolean;
+}) {
+  const airport = ALL_AIRPORTS.find(a => a.code === code);
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`w-full text-left border rounded-xl px-4 py-3 transition bg-white ${
+        active ? 'border-[#003B95] ring-2 ring-[#003B95]/20' : 'border-gray-300 hover:border-[#003B95]/60'
+      }`}
+    >
+      <p className="text-[11px] font-semibold tracking-wider text-gray-500 uppercase">{caption}</p>
+      {airport ? (
+        <>
+          <p className="mt-0.5 text-xl font-bold text-gray-900 leading-tight truncate">
+            {airport.city} <span className="text-sm font-semibold text-gray-500">({airport.code})</span>
+          </p>
+          <p className="text-xs text-gray-500 truncate">{airport.name}</p>
+        </>
+      ) : (
+        <p className="text-sm text-gray-400 mt-2">{placeholder}</p>
+      )}
+    </button>
   );
 }
 
