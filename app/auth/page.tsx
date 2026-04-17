@@ -117,6 +117,8 @@ export default function AuthPage() {
   const [showCountryPicker, setShowCountryPicker] = useState(false);
   const [otp, setOtp] = useState(['', '', '', '', '', '']);
   const [name, setName] = useState('');
+  const [secondIdentifier, setSecondIdentifier] = useState('');
+  const [secondIdentifierError, setSecondIdentifierError] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [isNewUser, setIsNewUser] = useState(false);
@@ -482,18 +484,63 @@ export default function AuthPage() {
     }
   }
 
-  // -- Complete registration (new user name) --
+  // -- Complete registration (new user name + second identifier) --
   async function handleCompleteName() {
     if (!name.trim()) {
       setError('Please enter your name');
       return;
     }
+    const secondTrim = secondIdentifier.trim();
+    if (!secondTrim) {
+      setError(authMethod === 'phone' ? 'Please enter your email' : 'Please enter your phone');
+      return;
+    }
+
+    // Validate & pre-check the second identifier so duplicate accounts are caught before OTP consumption.
+    let emailForApi: string | undefined;
+    let phoneForApi: string | undefined;
+    if (authMethod === 'phone') {
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(secondTrim)) {
+        setError('Please enter a valid email address');
+        return;
+      }
+      emailForApi = secondTrim.toLowerCase();
+    } else {
+      const digits = secondTrim.replace(/\D+/g, '');
+      if (digits.length < 10) {
+        setError('Please enter a valid phone number');
+        return;
+      }
+      phoneForApi = digits.length === 10 ? `+91${digits}` : (secondTrim.startsWith('+') ? secondTrim : `+${digits}`);
+      if (!/^\+91[6-9]\d{9}$/.test(phoneForApi)) {
+        setError('Please enter a valid Indian mobile number');
+        return;
+      }
+    }
+
+    try {
+      const exists = await api.checkIdentifierExists(
+        authMethod === 'phone' ? { email: emailForApi } : { phone: phoneForApi }
+      );
+      if ((authMethod === 'phone' && exists.email) || (authMethod === 'email' && exists.phone)) {
+        setSecondIdentifierError(
+          authMethod === 'phone'
+            ? 'This email is already registered. Please sign in with email instead.'
+            : 'This phone number is already registered. Please sign in with phone instead.'
+        );
+        return;
+      }
+    } catch {
+      // Non-fatal — backend will still reject dupes on verify.
+    }
+
     setLoading(true);
     setError('');
+    setSecondIdentifierError('');
     try {
       const auth = authMethod === 'phone'
-        ? await api.verifyOtp(`${countryCode}${inputValue}`, otp.join(''), name)
-        : await api.verifyEmailOtp(inputValue, otp.join(''), name);
+        ? await api.verifyOtp(`${countryCode}${inputValue}`, otp.join(''), name, emailForApi)
+        : await api.verifyEmailOtp(inputValue, otp.join(''), name, phoneForApi);
 
       // New email user - offer to set password
       if (authMethod === 'email') {
@@ -1159,7 +1206,7 @@ export default function AuthPage() {
               <div className="space-y-5">
                 <div>
                   <p className="text-sm text-gray-600 mb-1">Welcome! Let&apos;s set up your account.</p>
-                  <p className="text-xs text-gray-400">This is how your name will appear on Safar.</p>
+                  <p className="text-xs text-gray-400">We need both your phone and email so you always land in the same account next time.</p>
                 </div>
 
                 <div>
@@ -1168,16 +1215,38 @@ export default function AuthPage() {
                     type="text"
                     value={name}
                     onChange={(e) => setName(e.target.value)}
-                    onKeyDown={(e) => e.key === 'Enter' && name.trim() && handleCompleteName()}
                     placeholder="e.g. Ravi Kumar"
                     className="w-full border-2 rounded-xl px-4 py-3 text-sm outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-200 transition"
                     autoFocus
                   />
                 </div>
 
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                    {authMethod === 'phone' ? 'Email address' : 'Mobile number'}
+                  </label>
+                  <input
+                    type={authMethod === 'phone' ? 'email' : 'tel'}
+                    value={secondIdentifier}
+                    onChange={(e) => { setSecondIdentifier(e.target.value); setSecondIdentifierError(''); }}
+                    onKeyDown={(e) => e.key === 'Enter' && name.trim() && secondIdentifier.trim() && handleCompleteName()}
+                    placeholder={authMethod === 'phone' ? 'you@example.com' : '+91 98765 43210'}
+                    className={`w-full border-2 rounded-xl px-4 py-3 text-sm outline-none transition
+                      ${secondIdentifierError
+                        ? 'border-red-400 focus:border-red-500 focus:ring-2 focus:ring-red-200'
+                        : 'focus:border-orange-500 focus:ring-2 focus:ring-orange-200'}`}
+                  />
+                  {secondIdentifierError && (
+                    <p className="text-xs text-red-600 mt-1.5">{secondIdentifierError}</p>
+                  )}
+                  <p className="text-xs text-gray-400 mt-1.5">
+                    Used for account recovery and notifications.
+                  </p>
+                </div>
+
                 <button
                   onClick={handleCompleteName}
-                  disabled={loading || !name.trim()}
+                  disabled={loading || !name.trim() || !secondIdentifier.trim()}
                   className="w-full bg-gradient-to-r from-orange-500 to-rose-500 hover:from-orange-600 hover:to-rose-600 text-white font-semibold py-3.5 rounded-xl disabled:opacity-50 transition text-sm"
                 >
                   {loading ? 'Creating account...' : 'Agree and continue'}

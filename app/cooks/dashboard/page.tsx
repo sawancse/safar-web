@@ -544,7 +544,65 @@ export default function ChefDashboardPage() {
                     <p className="text-xs text-gray-500">{e.bookingRef} | {e.eventDate} at {e.eventTime} | {e.durationHours}h</p>
                     <p className="text-xs text-gray-500">{e.guestCount} guests | {e.venueAddress}, {e.city}</p>
                     {e.cuisinePreferences && <p className="text-xs text-gray-500">Cuisine: {e.cuisinePreferences}</p>}
-                    {e.menuDescription && <p className="text-xs text-orange-600 mt-1 italic">Menu: "{e.menuDescription}"</p>}
+                    {e.menuDescription && (() => {
+                      let md: any = null;
+                      try { md = JSON.parse(e.menuDescription); } catch { /* not JSON */ }
+                      if (!md || typeof md !== 'object') {
+                        return <p className="text-xs text-orange-600 mt-1 italic">Menu: "{e.menuDescription}"</p>;
+                      }
+                      const VEG_LABEL: Record<string, string> = { VEG: 'Veg', NON_VEG: 'Non-Veg', BOTH: 'Veg + Non-Veg' };
+                      const CAT_LABEL: Record<string, string> = {
+                        SOUPS_BEVERAGES: 'Soups/Beverages', APPETIZERS: 'Appetizers',
+                        MAIN_COURSE: 'Main Course', BREADS: 'Breads', RICE: 'Rice',
+                        RAITA: 'Raita', DESSERTS: 'Desserts',
+                      };
+                      const COUNTER_LABEL: Record<string, string> = {
+                        dosa: 'Dosa', pasta: 'Pasta', bbq: 'BBQ', chaat: 'Chaat', tandoor: 'Tandoor',
+                      };
+                      const chips: { label: string; tone: 'green' | 'red' | 'orange' | 'blue' | 'gray' }[] = [];
+                      if (md.vegNonVeg) chips.push({
+                        label: VEG_LABEL[md.vegNonVeg] || md.vegNonVeg,
+                        tone: md.vegNonVeg === 'VEG' ? 'green' : md.vegNonVeg === 'NON_VEG' ? 'red' : 'orange',
+                      });
+                      if (md.decoration) chips.push({ label: 'Decoration', tone: 'orange' });
+                      if (md.cake) chips.push({ label: 'Cake', tone: 'orange' });
+                      if (md.crockery) chips.push({ label: 'Crockery', tone: 'gray' });
+                      if (md.appliances) chips.push({ label: 'Appliances', tone: 'gray' });
+                      if (md.tableSetup) chips.push({ label: 'Table Setup', tone: 'gray' });
+                      if (md.extraStaff) chips.push({ label: `${md.staffCount || 2} staff`, tone: 'blue' });
+                      (md.liveCounters || []).forEach((c: string) =>
+                        chips.push({ label: `${COUNTER_LABEL[c] || c} counter`, tone: 'blue' })
+                      );
+                      const counts = md.categoryCounts || {};
+                      const dishLines = Object.keys(counts)
+                        .filter(k => counts[k] > 0)
+                        .map(k => `${counts[k]} ${CAT_LABEL[k] || k}`);
+                      const selCount = (md.selectedDishIds || []).length;
+                      const TONE: Record<string, string> = {
+                        green: 'bg-green-50 text-green-700',
+                        red: 'bg-red-50 text-red-700',
+                        orange: 'bg-orange-50 text-orange-700',
+                        blue: 'bg-blue-50 text-blue-700',
+                        gray: 'bg-gray-100 text-gray-600',
+                      };
+                      return (
+                        <div className="mt-1">
+                          {chips.length > 0 && (
+                            <div className="flex flex-wrap gap-1">
+                              {chips.map((c, i) => (
+                                <span key={i} className={`text-[10px] px-2 py-0.5 rounded-full ${TONE[c.tone]}`}>{c.label}</span>
+                              ))}
+                            </div>
+                          )}
+                          {dishLines.length > 0 && (
+                            <p className="text-xs text-gray-600 mt-1">
+                              Menu: {dishLines.join(' · ')}
+                              {selCount > 0 && <span className="text-gray-400"> ({selCount} dish{selCount === 1 ? '' : 'es'} picked)</span>}
+                            </p>
+                          )}
+                        </div>
+                      );
+                    })()}
                     {e.specialRequests && <p className="text-xs text-orange-600 italic">Note: "{e.specialRequests}"</p>}
                     {e.customerPhone && <p className="text-xs text-blue-600 mt-1">Contact: {e.customerPhone} {e.customerEmail ? `| ${e.customerEmail}` : ''}</p>}
                   </div>

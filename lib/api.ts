@@ -307,10 +307,10 @@ export const api = {
       body: JSON.stringify({ phone }),
     }),
 
-  verifyOtp: (phone: string, otp: string, name?: string) =>
+  verifyOtp: (phone: string, otp: string, name?: string, email?: string) =>
     apiFetch<AuthResponse>('/api/v1/auth/otp/verify', {
       method: 'POST',
-      body: JSON.stringify({ phone, otp, name }),
+      body: JSON.stringify({ phone, otp, name, email }),
     }),
 
   googleSignIn: (idToken: string) =>
@@ -357,11 +357,20 @@ export const api = {
       body: JSON.stringify({ email }),
     }),
 
-  verifyEmailOtp: (email: string, otp: string, name?: string) =>
+  verifyEmailOtp: (email: string, otp: string, name?: string, phone?: string) =>
     apiFetch<AuthResponse>('/api/v1/auth/otp/email/verify', {
       method: 'POST',
-      body: JSON.stringify({ email, otp, name }),
+      body: JSON.stringify({ email, otp, name, phone }),
     }),
+
+  checkIdentifierExists: (params: { phone?: string; email?: string }) => {
+    const qs = new URLSearchParams();
+    if (params.phone) qs.set('phone', params.phone);
+    if (params.email) qs.set('email', params.email);
+    return apiFetch<{ phone?: boolean; email?: boolean }>(
+      `/api/v1/auth/identifier/exists?${qs.toString()}`
+    );
+  },
 
   checkAuthMethod: (email: string) =>
     apiFetch<{ exists: boolean; hasPassword: boolean; methods: string[] }>(
