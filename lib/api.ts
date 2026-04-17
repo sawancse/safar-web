@@ -144,8 +144,15 @@ async function apiFetch<T>(path: string, options?: RequestInit): Promise<T> {
           credentials: 'include',
         });
         if (!retryRes.ok) {
-          const text = await retryRes.text().catch(() => 'Unknown error');
-          const err: any = new Error(text || `HTTP ${retryRes.status}`);
+          const text = await retryRes.text().catch(() => '');
+          let message = text || `HTTP ${retryRes.status}`;
+          if (text) {
+            try {
+              const j = JSON.parse(text);
+              message = j.detail || j.message || j.title || text;
+            } catch { /* not JSON */ }
+          }
+          const err: any = new Error(message);
           err.status = retryRes.status;
           throw err;
         }
@@ -162,8 +169,17 @@ async function apiFetch<T>(path: string, options?: RequestInit): Promise<T> {
   }
 
   if (!res.ok) {
-    const text = await res.text().catch(() => 'Unknown error');
-    const err: any = new Error(text || `HTTP ${res.status}`);
+    const text = await res.text().catch(() => '');
+    // Unwrap Spring ProblemDetail so callers (and alert()) see the human message,
+    // not the raw {"type":"about:blank","detail":"..."} JSON.
+    let message = text || `HTTP ${res.status}`;
+    if (text) {
+      try {
+        const j = JSON.parse(text);
+        message = j.detail || j.message || j.title || text;
+      } catch { /* not JSON — keep raw text */ }
+    }
+    const err: any = new Error(message);
     err.status = res.status;
     throw err;
   }
