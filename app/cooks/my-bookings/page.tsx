@@ -290,7 +290,14 @@ export default function MyChefBookingsPage() {
                     )}
                     {b.ratingGiven && <span className="text-xs text-gray-500">{'★'.repeat(b.ratingGiven)} Rated</span>}
                     {b.status === 'COMPLETED' && (
-                      <button onClick={async () => { const inv = await api.getBookingInvoice(b.id); window.open(`data:text/html,${encodeURIComponent(renderInvoiceHtml(inv))}`, '_blank'); }}
+                      <button onClick={async () => {
+                        try {
+                          const inv = await api.getBookingInvoice(b.id);
+                          openInvoice(inv);
+                        } catch (err: any) {
+                          alert(err.message || 'Could not load invoice');
+                        }
+                      }}
                         className="text-xs text-gray-600 border border-gray-200 px-3 py-1 rounded-lg hover:bg-gray-50">Invoice</button>
                     )}
                     {b.status === 'COMPLETED' && (
@@ -445,7 +452,14 @@ export default function MyChefBookingsPage() {
                         className="text-xs text-red-600 border border-red-200 px-3 py-1 rounded-lg hover:bg-red-50">Cancel</button>
                     )}
                     {(e.status === 'COMPLETED' || e.status === 'CONFIRMED' || e.status === 'ADVANCE_PAID') && (
-                      <button onClick={async () => { const inv = await api.getEventInvoice(e.id); window.open(`data:text/html,${encodeURIComponent(renderInvoiceHtml(inv))}`, '_blank'); }}
+                      <button onClick={async () => {
+                        try {
+                          const inv = await api.getEventInvoice(e.id);
+                          openInvoice(inv);
+                        } catch (err: any) {
+                          alert(err.message || 'Could not load invoice');
+                        }
+                      }}
                         className="text-xs text-gray-600 border border-gray-200 px-3 py-1 rounded-lg hover:bg-gray-50">Invoice</button>
                     )}
                     {e.status === 'COMPLETED' && !e.ratingGiven && (
@@ -769,6 +783,28 @@ export default function MyChefBookingsPage() {
       )}
     </div>
   );
+}
+
+// Opens an invoice in a new tab using a Blob URL. Chrome/Firefox block
+// data:text/html popups as anti-phishing, so window.open('data:...') silently
+// does nothing — that's why the Invoice button appeared broken.
+function openInvoice(inv: any) {
+  if (!inv) { alert('Invoice not available for this booking yet.'); return; }
+  const html = renderInvoiceHtml(inv);
+  const blob = new Blob([html], { type: 'text/html' });
+  const url = URL.createObjectURL(blob);
+  const win = window.open(url, '_blank');
+  if (!win || win.closed) {
+    // Popup blocker — fall back to a download so the user still gets the file.
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `invoice-${inv.invoiceNumber || inv.bookingRef || 'safar'}.html`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+  }
+  // Release the blob after the new tab has had a chance to load it.
+  setTimeout(() => URL.revokeObjectURL(url), 60_000);
 }
 
 function renderInvoiceHtml(inv: any): string {
