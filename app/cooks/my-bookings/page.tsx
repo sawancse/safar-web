@@ -50,6 +50,8 @@ export default function MyChefBookingsPage() {
   const [saving, setSaving] = useState(false);
   const [trackingData, setTrackingData] = useState<any>(null);
   const [trackingBooking, setTrackingBooking] = useState<any>(null);
+  const [payAdvanceEvent, setPayAdvanceEvent] = useState<any>(null);
+  const [payingAdvance, setPayingAdvance] = useState(false);
 
   useEffect(() => {
     const token = localStorage.getItem('access_token');
@@ -147,9 +149,14 @@ export default function MyChefBookingsPage() {
   return (
     <div className="max-w-4xl mx-auto px-4 py-8">
       <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Cooks I've Booked</h1>
-          <p className="text-sm text-gray-500 mt-1">Bookings you placed as a customer</p>
+        <div className="flex items-center gap-3">
+          <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-orange-100 to-amber-100 flex items-center justify-center shrink-0">
+            <span className="text-xl">🍳</span>
+          </div>
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900 tracking-tight">Cooks I've Booked</h1>
+            <p className="text-sm text-gray-500">Bookings you placed as a customer</p>
+          </div>
         </div>
         <Link href="/cooks/dashboard"
           className="text-sm bg-orange-500 text-white px-4 py-2 rounded-xl hover:bg-orange-600 transition font-semibold shadow-sm">
@@ -418,17 +425,12 @@ export default function MyChefBookingsPage() {
                       </button>
                     )}
                     {e.status === 'CONFIRMED' && e.advanceAmountPaise > 0 && (
-                      <button onClick={async () => {
-                        if (!confirm(`Pay 50% advance of ${formatPaise(e.advanceAmountPaise)} now to lock in your event?`)) return;
-                        try {
-                          const token = localStorage.getItem('access_token')!;
-                          const updated = await api.markEventAdvancePaid(e.id, token);
-                          setEvents(prev => prev.map(ev => ev.id === e.id ? updated : ev));
-                          alert(`Advance of ${formatPaise(e.advanceAmountPaise)} received. Your event is locked in.`);
-                        } catch (err: any) { alert(err.message || 'Failed to pay advance'); }
-                      }}
-                        className="text-xs bg-green-500 hover:bg-green-600 text-white px-4 py-1 rounded-lg font-medium transition">
-                        Pay 50% Advance ({formatPaise(e.advanceAmountPaise)})
+                      <button onClick={() => setPayAdvanceEvent(e)}
+                        className="text-xs bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white px-4 py-1.5 rounded-lg font-semibold shadow-sm hover:shadow transition inline-flex items-center gap-1.5">
+                        <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M3 10h18M7 15h2m4 0h3M5 5h14a2 2 0 012 2v10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2z" />
+                        </svg>
+                        Pay 50% Advance — {formatPaise(e.advanceAmountPaise)}
                       </button>
                     )}
                     {['INQUIRY', 'QUOTED', 'CONFIRMED'].includes(e.status) && (
@@ -647,6 +649,120 @@ export default function MyChefBookingsPage() {
                   Close
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Pay 50% Advance Modal ──────────────────────────────────── */}
+      {payAdvanceEvent && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+             onClick={() => !payingAdvance && setPayAdvanceEvent(null)}>
+          <div className="bg-white rounded-3xl w-full max-w-md overflow-hidden shadow-2xl animate-[fadeIn_.15s_ease-out]"
+               onClick={e => e.stopPropagation()}>
+            {/* Hero */}
+            <div className="relative bg-gradient-to-br from-emerald-500 via-green-500 to-teal-500 px-6 pt-8 pb-16 text-white">
+              <div className="absolute top-4 right-4">
+                <button onClick={() => !payingAdvance && setPayAdvanceEvent(null)}
+                        className="w-8 h-8 rounded-full bg-white/20 hover:bg-white/30 flex items-center justify-center transition">
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+              <div className="w-14 h-14 rounded-2xl bg-white/20 backdrop-blur flex items-center justify-center mb-4">
+                <svg className="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                </svg>
+              </div>
+              <h3 className="text-xl font-bold tracking-tight">Lock in your event</h3>
+              <p className="text-white/80 text-sm mt-1">Pay 50% now · balance on event day</p>
+            </div>
+
+            {/* Amount card (overlap) */}
+            <div className="px-6 -mt-10 relative">
+              <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-5">
+                <p className="text-[11px] uppercase tracking-wider text-gray-400 font-semibold">Advance due now</p>
+                <p className="text-4xl font-bold text-gray-900 mt-1">{formatPaise(payAdvanceEvent.advanceAmountPaise)}</p>
+                <div className="mt-4 pt-4 border-t border-dashed border-gray-200 space-y-2 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-gray-500">Event total</span>
+                    <span className="font-semibold text-gray-800">{formatPaise(payAdvanceEvent.totalAmountPaise)}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-500">Balance on event day</span>
+                    <span className="font-semibold text-gray-800">{formatPaise(payAdvanceEvent.balanceAmountPaise)}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Event summary */}
+            <div className="px-6 pt-5 pb-2">
+              <div className="bg-orange-50 rounded-xl p-3 flex items-start gap-3">
+                <div className="w-9 h-9 rounded-lg bg-white flex items-center justify-center shrink-0 shadow-sm text-lg">🎉</div>
+                <div className="flex-1 min-w-0">
+                  <p className="font-semibold text-gray-900 text-sm truncate">{payAdvanceEvent.chefName || 'Cook'} · {payAdvanceEvent.eventType}</p>
+                  <p className="text-xs text-gray-500 mt-0.5">
+                    Ref {payAdvanceEvent.bookingRef} · {payAdvanceEvent.eventDate} at {payAdvanceEvent.eventTime}
+                  </p>
+                  <p className="text-xs text-gray-500">{payAdvanceEvent.guestCount} guests · {payAdvanceEvent.venueAddress}</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Trust row */}
+            <div className="px-6 pt-3 pb-5">
+              <div className="flex items-center gap-4 text-[11px] text-gray-500">
+                <div className="flex items-center gap-1">
+                  <svg className="w-3.5 h-3.5 text-green-500" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M2.166 4.999A11.954 11.954 0 0010 1.944 11.954 11.954 0 0017.834 5c.11.65.166 1.32.166 2.001 0 5.225-3.34 9.67-8 11.317C5.34 16.67 2 12.225 2 7c0-.682.057-1.35.166-2.001zm11.541 3.708a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" /></svg>
+                  Secure payment
+                </div>
+                <div className="flex items-center gap-1">
+                  <svg className="w-3.5 h-3.5 text-blue-500" fill="currentColor" viewBox="0 0 20 20"><path d="M4 4a2 2 0 00-2 2v4a2 2 0 002 2V6h10a2 2 0 00-2-2H4zm2 6a2 2 0 012-2h8a2 2 0 012 2v4a2 2 0 01-2 2H8a2 2 0 01-2-2v-4zm6 4a2 2 0 100-4 2 2 0 000 4z" /></svg>
+                  Razorpay
+                </div>
+                <div className="flex items-center gap-1">
+                  <svg className="w-3.5 h-3.5 text-orange-500" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" /></svg>
+                  Full refund if chef cancels
+                </div>
+              </div>
+            </div>
+
+            {/* Actions */}
+            <div className="px-6 pb-6 flex gap-3">
+              <button onClick={() => !payingAdvance && setPayAdvanceEvent(null)}
+                      disabled={payingAdvance}
+                      className="flex-1 border border-gray-200 rounded-xl py-3 text-sm font-semibold text-gray-700 hover:bg-gray-50 disabled:opacity-50 transition">
+                Not now
+              </button>
+              <button disabled={payingAdvance}
+                      onClick={async () => {
+                        setPayingAdvance(true);
+                        try {
+                          const token = localStorage.getItem('access_token')!;
+                          const updated = await api.markEventAdvancePaid(payAdvanceEvent.id, token);
+                          setEvents(prev => prev.map(ev => ev.id === payAdvanceEvent.id ? updated : ev));
+                          setPayAdvanceEvent(null);
+                        } catch (err: any) {
+                          alert(err.message || 'Failed to pay advance');
+                        } finally {
+                          setPayingAdvance(false);
+                        }
+                      }}
+                      className="flex-[1.4] bg-gradient-to-r from-emerald-500 to-green-500 hover:from-emerald-600 hover:to-green-600 text-white rounded-xl py-3 text-sm font-bold shadow-md shadow-green-500/30 disabled:opacity-60 transition inline-flex items-center justify-center gap-2">
+                {payingAdvance ? (
+                  <>
+                    <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                      <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" className="opacity-25" />
+                      <path fill="currentColor" className="opacity-75" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
+                    </svg>
+                    Processing…
+                  </>
+                ) : (
+                  <>Pay {formatPaise(payAdvanceEvent.advanceAmountPaise)} →</>
+                )}
+              </button>
             </div>
           </div>
         </div>
