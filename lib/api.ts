@@ -2285,6 +2285,12 @@ export const api = {
       headers: { Authorization: `Bearer ${token}` },
     }),
 
+  markEventAdvancePaid: (eventId: string, token: string) =>
+    apiFetch<any>(`/api/v1/chef-events/${eventId}/advance-paid`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}` },
+    }),
+
   cancelEvent: (eventId: string, reason: string, token: string) =>
     apiFetch<any>(`/api/v1/chef-events/${eventId}/cancel?reason=${encodeURIComponent(reason)}`, {
       method: 'POST',

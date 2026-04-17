@@ -417,6 +417,20 @@ export default function MyChefBookingsPage() {
                         Accept Quote
                       </button>
                     )}
+                    {e.status === 'CONFIRMED' && e.advanceAmountPaise > 0 && (
+                      <button onClick={async () => {
+                        if (!confirm(`Pay 50% advance of ${formatPaise(e.advanceAmountPaise)} now to lock in your event?`)) return;
+                        try {
+                          const token = localStorage.getItem('access_token')!;
+                          const updated = await api.markEventAdvancePaid(e.id, token);
+                          setEvents(prev => prev.map(ev => ev.id === e.id ? updated : ev));
+                          alert(`Advance of ${formatPaise(e.advanceAmountPaise)} received. Your event is locked in.`);
+                        } catch (err: any) { alert(err.message || 'Failed to pay advance'); }
+                      }}
+                        className="text-xs bg-green-500 hover:bg-green-600 text-white px-4 py-1 rounded-lg font-medium transition">
+                        Pay 50% Advance ({formatPaise(e.advanceAmountPaise)})
+                      </button>
+                    )}
                     {['INQUIRY', 'QUOTED', 'CONFIRMED'].includes(e.status) && (
                       <button onClick={async () => {
                         const reason = prompt('Reason for cancellation (optional):') ?? 'Customer cancelled';
