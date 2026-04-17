@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { api } from '@/lib/api';
-import { formatPaise } from '@/lib/utils';
+import { formatPaise, formatDate, formatDateTime } from '@/lib/utils';
 
 const STATUS_COLORS: Record<string, string> = {
   PENDING_PAYMENT: 'bg-amber-100 text-amber-700',
@@ -395,7 +395,7 @@ export default function ChefDashboardPage() {
                 {pendingBookings.map(b => (
                   <ActionCard key={b.id} type="booking"
                     title={`${b.customerName || 'Customer'} — ${b.mealType || 'Meal'}`}
-                    subtitle={`${b.serviceDate} at ${b.serviceTime} | ${b.guestsCount} guests | ${b.city}`}
+                    subtitle={`${formatDateTime(b.serviceDate, b.serviceTime)} · ${b.guestsCount} guests · ${b.city}`}
                     amount={b.chefEarningsPaise}
                     status={b.status}
                     actions={
@@ -415,7 +415,7 @@ export default function ChefDashboardPage() {
                 {inquiryEvents.map(e => (
                   <ActionCard key={e.id} type="event"
                     title={`${e.customerName || 'Customer'} — ${e.eventType}`}
-                    subtitle={`${e.eventDate} | ${e.guestCount} guests | ${e.city}${e.customerPhone ? ' | ' + e.customerPhone : ''}`}
+                    subtitle={`${formatDate(e.eventDate)} · ${e.guestCount} guests · ${e.city}${e.customerPhone ? ' · ' + e.customerPhone : ''}`}
                     note={e.menuDescription || e.cuisinePreferences}
                     amount={e.totalAmountPaise}
                     status={e.status}
@@ -491,7 +491,7 @@ export default function ChefDashboardPage() {
                         {b.status === 'PENDING_PAYMENT' ? 'Awaiting Payment' : b.status?.replace(/_/g, ' ')}
                       </span>
                     </div>
-                    <p className="text-xs text-gray-500">{b.bookingRef} | {b.serviceDate} at {b.serviceTime} | {b.mealType}</p>
+                    <p className="text-xs text-gray-500">{b.bookingRef} · {formatDateTime(b.serviceDate, b.serviceTime)} · {b.mealType}</p>
                     <p className="text-xs text-gray-500">{b.guestsCount} guests | {b.address}, {b.city}</p>
                     {b.specialRequests && <p className="text-xs text-orange-600 mt-1 italic">"{b.specialRequests}"</p>}
                   </div>
@@ -541,7 +541,7 @@ export default function ChefDashboardPage() {
                         {e.status?.replace(/_/g, ' ')}
                       </span>
                     </div>
-                    <p className="text-xs text-gray-500">{e.bookingRef} | {e.eventDate} at {e.eventTime} | {e.durationHours}h</p>
+                    <p className="text-xs text-gray-500">{e.bookingRef} · {formatDateTime(e.eventDate, e.eventTime)} · {e.durationHours}h</p>
                     <p className="text-xs text-gray-500">{e.guestCount} guests | {e.venueAddress}, {e.city}</p>
                     {e.cuisinePreferences && <p className="text-xs text-gray-500">Cuisine: {e.cuisinePreferences}</p>}
                     {e.menuDescription && (() => {

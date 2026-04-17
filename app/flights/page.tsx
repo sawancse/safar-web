@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { formatDate } from '@/lib/utils';
 
 const INDIAN_AIRPORTS = [
   // Metro
@@ -298,6 +299,9 @@ export default function FlightsPage() {
                   className="w-full border border-gray-300 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#003B95] focus:border-transparent"
                   required
                 />
+                <p className="text-[11px] text-gray-500 mt-1 min-h-[14px]">
+                  {departureDate ? formatDate(departureDate) : 'Pick a date'}
+                </p>
               </div>
 
               {/* Return Date */}
@@ -313,6 +317,9 @@ export default function FlightsPage() {
                   disabled={!roundTrip}
                   className="w-full border border-gray-300 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#003B95] focus:border-transparent disabled:bg-gray-100 disabled:text-gray-400"
                 />
+                <p className="text-[11px] text-gray-500 mt-1 min-h-[14px]">
+                  {roundTrip ? (returnDate ? formatDate(returnDate) : 'Pick a return date') : ''}
+                </p>
               </div>
             </div>
 

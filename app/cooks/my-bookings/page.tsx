@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { api } from '@/lib/api';
-import { formatPaise } from '@/lib/utils';
+import { formatPaise, formatDate, formatDateTime } from '@/lib/utils';
 import CityAutocomplete from '@/components/CityAutocomplete';
 import LocalityAutocomplete from '@/components/LocalityAutocomplete';
 
@@ -201,7 +201,7 @@ export default function MyChefBookingsPage() {
                   <div className="flex items-start justify-between">
                     <div>
                       <p className="font-semibold text-gray-900">{b.chefName || 'Cook'}</p>
-                      <p className="text-xs text-gray-500">Ref: {b.bookingRef} | {b.serviceDate} at {b.serviceTime}</p>
+                      <p className="text-xs text-gray-500">Ref: {b.bookingRef} · {formatDateTime(b.serviceDate, b.serviceTime)}</p>
                       <p className="text-xs text-gray-500">{b.mealType} | {b.guestsCount} guests | {b.address}</p>
                     </div>
                     <div className="text-right">
@@ -364,7 +364,7 @@ export default function MyChefBookingsPage() {
                   <div className="flex items-start justify-between">
                     <div>
                       <p className="font-semibold text-gray-900">{e.chefName || 'Cook'} — {e.eventType}</p>
-                      <p className="text-xs text-gray-500">Ref: {e.bookingRef} | {e.eventDate} at {e.eventTime}</p>
+                      <p className="text-xs text-gray-500">Ref: {e.bookingRef} · {formatDateTime(e.eventDate, e.eventTime)}</p>
                       <p className="text-xs text-gray-500">{e.guestCount} guests | {e.venueAddress}</p>
                       {e.menuDescription && (() => {
                         try {
@@ -398,7 +398,7 @@ export default function MyChefBookingsPage() {
                       </div>
                       <div className="text-xs text-blue-600 mt-1 space-y-0.5">
                         <p>Advance (50%): <strong>{formatPaise(e.advanceAmountPaise)}</strong> | Balance: {formatPaise(e.balanceAmountPaise)}</p>
-                        {e.quotedAt && <p className="text-blue-400">Quoted {new Date(e.quotedAt).toLocaleDateString('en-IN')}</p>}
+                        {e.quotedAt && <p className="text-blue-400">Quoted {formatDate(e.quotedAt)}</p>}
                       </div>
                     </div>
                   )}
@@ -718,7 +718,7 @@ export default function MyChefBookingsPage() {
                 <div className="flex-1 min-w-0">
                   <p className="font-semibold text-gray-900 text-sm truncate">{payAdvanceEvent.chefName || 'Cook'} · {payAdvanceEvent.eventType}</p>
                   <p className="text-xs text-gray-500 mt-0.5">
-                    Ref {payAdvanceEvent.bookingRef} · {payAdvanceEvent.eventDate} at {payAdvanceEvent.eventTime}
+                    Ref {payAdvanceEvent.bookingRef} · {formatDateTime(payAdvanceEvent.eventDate, payAdvanceEvent.eventTime)}
                   </p>
                   <p className="text-xs text-gray-500">{payAdvanceEvent.guestCount} guests · {payAdvanceEvent.venueAddress}</p>
                 </div>
