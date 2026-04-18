@@ -275,26 +275,21 @@ export default function AuthPage() {
         } catch {}
       }
 
-      // If user has multiple options, show choice screen
-      const availableOptions = [
-        'otp', // always available
-        ...(detectedPassword ? ['password'] : []),
-        ...(detectedPin && !detectedPinLocked ? ['pin'] : []),
-      ];
-
-      if (availableOptions.length > 1) {
-        // Show choice screen
-        setStep('choose-method');
+      // Priority:
+      //   1. PIN set and not locked → jump straight to PIN (fastest path, still has
+      //      "Use OTP instead" / "Forgot PIN" escape hatches on the PIN screen).
+      //   2. Password set → jump straight to password.
+      //   3. Otherwise → send OTP.
+      if (detectedPin && !detectedPinLocked) {
+        setStep('pin');
+        setPin(['', '', '', '', '', '']);
+        setPinError('');
+        setTimeout(() => pinRefs.current[0]?.focus(), 100);
       } else if (detectedPassword) {
         setStep('password');
         setPassword('');
         setPasswordError('');
         setFailedAttempts(0);
-      } else if (detectedPin && !detectedPinLocked) {
-        setStep('pin');
-        setPin(['', '', '', '', '', '']);
-        setPinError('');
-        setTimeout(() => pinRefs.current[0]?.focus(), 100);
       } else {
         // Only OTP available — send it directly
         if (isEmail) {
