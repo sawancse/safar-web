@@ -34,38 +34,28 @@ export default function HostTransactionsTab({ token }: { token: string }) {
     ]).then(([bookings, gstInvoices, subInvoices]) => {
       const txs: Transaction[] = [];
 
-      // Booking transactions
+      // Booking transactions — show the host's P&L: gross room revenue (base +
+      // cleaning) minus the platform commission. GST and insurance aren't host
+      // revenue (they pass through to government / insurer), so they're excluded.
       (Array.isArray(bookings) ? bookings : []).forEach((b: any) => {
         if (['CONFIRMED', 'CHECKED_IN', 'COMPLETED'].includes(b.status)) {
+          const grossHostRevenue = (b.baseAmountPaise ?? 0) + (b.cleaningFeePaise ?? 0);
           txs.push({
             id: `bk-${b.id}`,
             date: b.createdAt,
             type: 'BOOKING',
             description: `Booking #${b.bookingRef} — ${b.guestFirstName} ${b.guestLastName}`,
-            amountPaise: b.totalAmountPaise,
+            amountPaise: grossHostRevenue,
             isCredit: true,
           });
-          // Commission
-          const commission = b.totalAmountPaise - (b.hostPayoutPaise ?? b.totalAmountPaise);
-          if (commission > 0) {
+          if (b.platformFeePaise && b.platformFeePaise > 0) {
             txs.push({
               id: `cm-${b.id}`,
               date: b.createdAt,
               type: 'COMMISSION',
               description: `Platform fee for #${b.bookingRef}`,
-              amountPaise: commission,
+              amountPaise: b.platformFeePaise,
               isCredit: false,
-            });
-          }
-          // Payout
-          if (b.hostPayoutPaise) {
-            txs.push({
-              id: `po-${b.id}`,
-              date: b.updatedAt || b.createdAt,
-              type: 'PAYOUT',
-              description: `Payout for #${b.bookingRef}`,
-              amountPaise: b.hostPayoutPaise,
-              isCredit: true,
             });
           }
         }
@@ -223,7 +213,9 @@ export default function HostTransactionsTab({ token }: { token: string }) {
                   <td className={`px-4 py-3 text-right font-semibold whitespace-nowrap ${tx.isCredit ? 'text-green-700' : 'text-red-600'}`}>
                     {tx.isCredit ? '+' : '-'}{formatPaise(tx.amountPaise)}
                   </td>
-                  <td className="px-4 py-3 text-right text-gray-500 whitespace-nowrap">{formatPaise(tx.balance)}</td>
+                  <td className={`px-4 py-3 text-right whitespace-nowrap ${tx.balance < 0 ? 'text-red-600' : 'text-gray-500'}`}>
+                    {tx.balance < 0 ? `-${formatPaise(-tx.balance)}` : formatPaise(tx.balance)}
+                  </td>
                 </tr>
               ))}
             </tbody>

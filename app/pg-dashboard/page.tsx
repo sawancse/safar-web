@@ -14,6 +14,7 @@ interface Tenancy {
   moveOutDate: string | null;
   monthlyRentPaise: number;
   securityDepositPaise: number;
+  noticePeriodDays?: number;
 }
 
 interface Agreement {
@@ -76,6 +77,8 @@ export default function PgDashboardPage() {
   const [error, setError] = useState('');
   const [token, setToken] = useState('');
   const [signing, setSigning] = useState(false);
+  const [givingNotice, setGivingNotice] = useState(false);
+  const [noticeConfirm, setNoticeConfirm] = useState(false);
 
   useEffect(() => {
     const t = localStorage.getItem('access_token') ?? '';
@@ -166,9 +169,6 @@ export default function PgDashboardPage() {
       </div>
     );
   }
-
-  const [givingNotice, setGivingNotice] = useState(false);
-  const [noticeConfirm, setNoticeConfirm] = useState(false);
 
   async function handleGiveNotice() {
     if (!data || !token) return;
@@ -454,7 +454,13 @@ export default function PgDashboardPage() {
             <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-xl">
               <h3 className="text-lg font-semibold text-gray-900 mb-2">Give 1-Month Notice?</h3>
               <p className="text-sm text-gray-600 mb-4 leading-relaxed">
-                This will start your notice period. Your move-out date will be set to <strong>{new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}</strong>.
+                This will start your notice period. Your move-out date will be set to <strong>{(() => {
+                  const today = new Date();
+                  const moveIn = tenancy.moveInDate ? new Date(tenancy.moveInDate) : today;
+                  const basis = moveIn > today ? moveIn : today;
+                  const moveOut = new Date(basis.getTime() + (tenancy.noticePeriodDays ?? 30) * 24 * 60 * 60 * 1000);
+                  return moveOut.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+                })()}</strong>.
                 Your rental agreement will be terminated and the settlement process will begin after move-out.
               </p>
               <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 mb-4">
@@ -514,15 +520,30 @@ export default function PgDashboardPage() {
               </div>
             </div>
           ) : (
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center">
+            <div className="flex items-start gap-3">
+              <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center shrink-0">
                 <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
                 </svg>
               </div>
-              <div>
+              <div className="flex-1">
                 <p className="text-sm font-medium text-gray-900">Auto-debit not set up</p>
-                <p className="text-xs text-gray-500">You will need to pay invoices manually each month.</p>
+                <p className="text-xs text-gray-500 mb-3">Enable auto-debit to have rent deducted monthly, or keep paying invoices manually — your choice.</p>
+                <button
+                  onClick={async () => {
+                    try {
+                      const res = await api.createTenancySubscription(tenancy.id, tenancy.monthlyRentPaise, tenancy.tenancyRef, token);
+                      if (res?.shortUrl) window.open(res.shortUrl, '_blank', 'noopener');
+                      else alert('Subscription created. Please check your email for the setup link.');
+                      loadDashboard(token);
+                    } catch (e: any) {
+                      alert(e?.message || 'Could not set up auto-debit');
+                    }
+                  }}
+                  className="px-4 py-2 bg-orange-500 text-white text-sm font-medium rounded-lg hover:bg-orange-600 transition"
+                >
+                  Set Up Auto-Debit
+                </button>
               </div>
             </div>
           )}

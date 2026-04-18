@@ -31,6 +31,7 @@ interface BookingLite {
   checkIn: string;
   checkOut: string;
   status: string;
+  guestId?: string;
   guestFirstName?: string;
   guestLastName?: string;
   roomSelections?: { roomTypeId: string; count: number }[];
@@ -191,15 +192,25 @@ export default function HostRoomOccupancyTab({ token, listings }: { token: strin
                 const rtTenancies = tenancyByRoom.get(rt.id) || [];
                 const rtTotal = rt.count * bedsPerRoom;
 
-                // Build booking occupancy for this room type (legacy single + multi-select)
+                // Build booking occupancy for this room type (legacy single + multi-select).
+                // Subtract beds already represented by a live tenancy for the same
+                // tenant — otherwise a booked-then-checked-in guest shows BOTH a
+                // booking cell AND a tenancy cell, inflating the count.
                 const rtBookings: { booking: BookingLite; rooms: number }[] = [];
                 bookings.forEach(b => {
+                  const tenancyBedsForThisGuest = rtTenancies.filter(
+                    t => t.tenantId && b.guestId && t.tenantId === b.guestId
+                  ).length;
                   if (b.roomSelections && b.roomSelections.length > 0) {
                     b.roomSelections
                       .filter(s => s.roomTypeId === rt.id)
-                      .forEach(s => rtBookings.push({ booking: b, rooms: s.count }));
+                      .forEach(s => {
+                        const rooms = Math.max(0, s.count - tenancyBedsForThisGuest);
+                        if (rooms > 0) rtBookings.push({ booking: b, rooms });
+                      });
                   } else if (b.roomTypeId === rt.id) {
-                    rtBookings.push({ booking: b, rooms: b.roomsCount || 1 });
+                    const rooms = Math.max(0, (b.roomsCount || 1) - tenancyBedsForThisGuest);
+                    if (rooms > 0) rtBookings.push({ booking: b, rooms });
                   }
                 });
 

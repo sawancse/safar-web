@@ -62,7 +62,8 @@ export default function UtilitiesPage() {
 
     try {
       const dashboard = await api.getTenantDashboard(token);
-      const tid = dashboard.tenancyId || dashboard.id;
+      const tid = dashboard?.tenancy?.id;
+      if (!tid) { setReadings([]); setUnbilled(null); setLoading(false); return; }
       setTenancyId(tid);
 
       const [readingsData, unbilledData] = await Promise.all([

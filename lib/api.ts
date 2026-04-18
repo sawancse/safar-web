@@ -1866,6 +1866,20 @@ export const api = {
       headers: { Authorization: `Bearer ${token}` },
     }),
 
+  createTenancySubscription: (tenancyId: string, amountPaise: number, tenancyRef: string, token: string) => {
+    // Decode JWT to pull tenantId (sub); payment-service endpoint needs it alongside the tenancyId.
+    let tenantId = '';
+    try { tenantId = JSON.parse(atob(token.split('.')[1] || '')).sub || ''; } catch { /* noop */ }
+    return apiFetch<{ shortUrl?: string; razorpaySubscriptionId?: string; status?: string }>(
+      `/api/v1/payments/tenancy/${tenancyId}/subscription`,
+      {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tenantId, amountPaise, tenancyRef }),
+      }
+    );
+  },
+
   // Host Payouts
   getHostPayouts: (hostId: string, token: string) =>
     apiFetch<any>(`/api/v1/payments/host-payouts?hostId=${hostId}`, {
@@ -2214,6 +2228,15 @@ export const api = {
       method: 'POST',
       headers: { Authorization: `Bearer ${token}` },
     }),
+
+  rateEventBooking: (id: string, rating: number, comment: string, token: string) =>
+    apiFetch<any>(`/api/v1/chef-events/${id}/rate?rating=${rating}&comment=${encodeURIComponent(comment)}`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}` },
+    }),
+
+  getChefReviews: (chefId: string) =>
+    apiFetch<any[]>(`/api/v1/chefs/${chefId}/reviews`),
 
   confirmChefBookingPayment: (id: string, razorpayOrderId: string, razorpayPaymentId: string, token: string) =>
     apiFetch<any>(`/api/v1/chef-bookings/${id}/confirm-payment?razorpayOrderId=${encodeURIComponent(razorpayOrderId)}&razorpayPaymentId=${encodeURIComponent(razorpayPaymentId)}`, {

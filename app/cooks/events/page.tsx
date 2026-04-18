@@ -231,7 +231,18 @@ export default function EventBookingPage() {
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const t = localStorage.getItem('access_token');
-      if (t) setToken(t);
+      if (t) {
+        setToken(t);
+        // Pre-fill Your Details from the logged-in user's profile so they don't retype
+        // name/phone on every booking. Silent-fail: if the call blows up (expired token,
+        // network), the fields just stay empty and the user fills them manually.
+        api.getMyProfile(t)
+          .then(p => {
+            if (p?.name) setCustomerName(prev => prev || p.name);
+            if (p?.phone) setCustomerPhone(prev => prev || p.phone);
+          })
+          .catch(() => { /* noop */ });
+      }
     }
   }, []);
 

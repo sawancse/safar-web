@@ -239,7 +239,7 @@ export default function HostTicketsTab({ token: initialToken, listings }: Props)
           { label: 'Open', value: stats?.openCount ?? '-', color: 'text-yellow-600', bg: 'bg-yellow-50' },
           { label: 'In Progress', value: stats?.inProgressCount ?? '-', color: 'text-blue-600', bg: 'bg-blue-50' },
           { label: 'SLA Breached', value: stats?.slaBreachedCount ?? '-', color: 'text-red-600', bg: 'bg-red-50' },
-          { label: 'Avg Resolution', value: stats ? `${stats.avgResolutionHours.toFixed(1)}h` : '-', color: 'text-green-600', bg: 'bg-green-50' },
+          { label: 'Avg Resolution', value: stats?.avgResolutionHours != null ? `${stats.avgResolutionHours.toFixed(1)}h` : '-', color: 'text-green-600', bg: 'bg-green-50' },
         ].map(s => (
           <div key={s.label} className={`${s.bg} rounded-2xl p-4 border`}>
             {statsLoading ? (

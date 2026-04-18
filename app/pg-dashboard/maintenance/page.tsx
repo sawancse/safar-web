@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { api } from '@/lib/api';
 
 type TicketComment = {
@@ -106,6 +106,7 @@ function isWithin48Hours(dateStr: string): boolean {
 
 export default function MaintenancePage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [requests, setRequests] = useState<MaintenanceRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<string>('ALL');
@@ -154,8 +155,19 @@ export default function MaintenancePage() {
       return;
     }
     try {
-      const dashboard = await api.getTenantDashboard(token);
-      const tid = dashboard.tenancyId || dashboard.id;
+      // Prefer tenancyId from URL (admins / hosts linking directly). Fall back
+      // to the logged-in user's own tenancy via the dashboard endpoint.
+      let tid = searchParams?.get('tenancyId') || '';
+      if (!tid) {
+        try {
+          const dashboard = await api.getTenantDashboard(token);
+          tid = dashboard?.tenancy?.id || '';
+        } catch { /* no tenancy for this user */ }
+      }
+      if (!tid) {
+        setRequests([]);
+        return;
+      }
       setTenancyId(tid);
       const data = await api.getMaintenanceRequests(tid, token);
       setRequests(Array.isArray(data) ? data : data?.content ?? []);

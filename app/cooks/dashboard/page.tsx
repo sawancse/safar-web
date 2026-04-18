@@ -416,7 +416,7 @@ export default function ChefDashboardPage() {
                   <ActionCard key={e.id} type="event"
                     title={`${e.customerName || 'Customer'} — ${e.eventType}`}
                     subtitle={`${formatDate(e.eventDate)} · ${e.guestCount} guests · ${e.city}${e.customerPhone ? ' · ' + e.customerPhone : ''}`}
-                    note={e.menuDescription || e.cuisinePreferences}
+                    note={formatEventMenu(e.menuDescription) || e.cuisinePreferences}
                     amount={e.totalAmountPaise}
                     status={e.status}
                     actions={
@@ -1036,6 +1036,42 @@ function StatCard({ icon, label, value, sub, accent }: { icon: string; label: st
       <p className="text-[11px] text-gray-400 mt-0.5">{sub}</p>
     </div>
   );
+}
+
+/**
+ * Events are booked with a JSON blob that packs veg choice, add-ons, live
+ * counters, extra staff and per-category dish counts. Printing the raw JSON
+ * on the chef's "Needs Your Attention" card is ugly and unreadable, so we
+ * parse it here and emit a terse human sentence. Falls through to the raw
+ * string on malformed input so nothing disappears silently.
+ */
+function formatEventMenu(raw?: string): string | undefined {
+  if (!raw) return undefined;
+  let md: any;
+  try { md = JSON.parse(raw); }
+  catch { return raw; }
+  if (!md || typeof md !== 'object') return raw;
+
+  const parts: string[] = [];
+  if (md.vegNonVeg) parts.push(md.vegNonVeg === 'BOTH' ? 'Veg + Non-Veg' : md.vegNonVeg === 'VEG' ? 'Veg only' : 'Non-Veg only');
+  const addons = ['decoration', 'cake', 'crockery', 'appliances', 'tableSetup']
+    .filter(k => md[k])
+    .map(k => k === 'tableSetup' ? 'Table setup' : k[0].toUpperCase() + k.slice(1));
+  if (addons.length) parts.push(addons.join(', '));
+  if (md.extraStaff && md.staffCount > 0) parts.push(`${md.staffCount} extra staff`);
+  if (Array.isArray(md.liveCounters) && md.liveCounters.length) parts.push(`Live: ${md.liveCounters.join(', ')}`);
+
+  const cats = md.categoryCounts && typeof md.categoryCounts === 'object' ? md.categoryCounts : {};
+  const dishCount = Object.values(cats).reduce((sum: number, n: any) => sum + (Number(n) || 0), 0);
+  if (dishCount > 0) {
+    const top = Object.entries(cats)
+      .filter(([, v]) => Number(v) > 0)
+      .map(([k, v]) => `${v} ${k.replace(/_/g, ' ').toLowerCase()}`)
+      .slice(0, 3)
+      .join(' · ');
+    parts.push(`Menu (${dishCount} dishes): ${top}`);
+  }
+  return parts.length ? parts.join(' · ') : undefined;
 }
 
 function ActionCard({ type, title, subtitle, note, amount, status, actions }: {

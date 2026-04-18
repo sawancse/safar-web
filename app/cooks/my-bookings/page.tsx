@@ -52,10 +52,16 @@ export default function MyChefBookingsPage() {
   const [trackingBooking, setTrackingBooking] = useState<any>(null);
   const [payAdvanceEvent, setPayAdvanceEvent] = useState<any>(null);
   const [payingAdvance, setPayingAdvance] = useState(false);
+  // Gate the "Are you a cook?" banner + "Chef Dashboard →" header CTA behind an
+  // actual chef profile lookup. Non-chef customers shouldn't see either — it
+  // only confuses them.
+  const [isChef, setIsChef] = useState(false);
 
   useEffect(() => {
     const token = localStorage.getItem('access_token');
     if (!token) { router.push('/auth'); return; }
+
+    api.getMyChefProfile(token).then(p => setIsChef(!!p?.id)).catch(() => setIsChef(false));
 
     Promise.all([
       api.getMyChefBookings(token).catch(() => []),
@@ -65,6 +71,23 @@ export default function MyChefBookingsPage() {
       setBookings(b || []);
       setSubscriptions(s || []);
       setEvents(e || []);
+      // Deep-link from the "Rate Your Experience" email:
+      //   /cooks/my-bookings?rateEvent=<eventId>
+      //   /cooks/my-bookings?rateBooking=<bookingId>
+      // auto-opens the rating modal on the relevant item so users don't have
+      // to hunt for a button inside the list.
+      if (typeof window !== 'undefined') {
+        const params = new URLSearchParams(window.location.search);
+        const rateEvent = params.get('rateEvent');
+        const rateBooking = params.get('rateBooking');
+        if (rateEvent && (e || []).some((ev: any) => ev.id === rateEvent)) {
+          setActiveTab('events');
+          setRatingModal({ id: rateEvent, type: 'event' });
+        } else if (rateBooking && (b || []).some((bk: any) => bk.id === rateBooking)) {
+          setActiveTab('bookings');
+          setRatingModal({ id: rateBooking, type: 'booking' });
+        }
+      }
     }).finally(() => setLoading(false));
   }, []);
 
@@ -78,11 +101,20 @@ export default function MyChefBookingsPage() {
   async function handleRate() {
     if (!ratingModal) return;
     const token = localStorage.getItem('access_token')!;
-    await api.rateChefBooking(ratingModal.id, rating, reviewComment, token);
-    setBookings(prev => prev.map(b => b.id === ratingModal.id ? { ...b, ratingGiven: rating, reviewComment } : b));
-    setRatingModal(null);
-    setRating(5);
-    setReviewComment('');
+    try {
+      if (ratingModal.type === 'event') {
+        await api.rateEventBooking(ratingModal.id, rating, reviewComment, token);
+        setEvents(prev => prev.map(e => e.id === ratingModal.id ? { ...e, ratingGiven: rating, reviewComment } : e));
+      } else {
+        await api.rateChefBooking(ratingModal.id, rating, reviewComment, token);
+        setBookings(prev => prev.map(b => b.id === ratingModal.id ? { ...b, ratingGiven: rating, reviewComment } : b));
+      }
+      setRatingModal(null);
+      setRating(5);
+      setReviewComment('');
+    } catch (err: any) {
+      alert(err?.message || 'Failed to submit rating');
+    }
   }
 
   function openEdit(item: any, type: 'booking' | 'event' | 'subscription') {
@@ -158,21 +190,25 @@ export default function MyChefBookingsPage() {
             <p className="text-sm text-gray-500">Bookings you placed as a customer</p>
           </div>
         </div>
-        <Link href="/cooks/dashboard"
-          className="text-sm bg-orange-500 text-white px-4 py-2 rounded-xl hover:bg-orange-600 transition font-semibold shadow-sm">
-          Chef Dashboard →
-        </Link>
+        {isChef && (
+          <Link href="/cooks/dashboard"
+            className="text-sm bg-orange-500 text-white px-4 py-2 rounded-xl hover:bg-orange-600 transition font-semibold shadow-sm">
+            Chef Dashboard →
+          </Link>
+        )}
       </div>
 
-      {/* Banner for chefs */}
-      <div className="mb-4 bg-gradient-to-r from-orange-50 to-amber-50 border border-orange-200 rounded-xl px-4 py-3 flex items-center justify-between">
-        <p className="text-sm text-orange-700">
-          <strong>Are you a cook?</strong> This page shows bookings you placed as a customer. To view your <strong>incoming orders</strong>, go to the Chef Dashboard.
-        </p>
-        <Link href="/cooks/dashboard" className="text-xs bg-orange-500 text-white px-3 py-1.5 rounded-lg font-medium hover:bg-orange-600 transition shrink-0 ml-3">
-          My Incoming Orders
-        </Link>
-      </div>
+      {/* Banner — chefs only */}
+      {isChef && (
+        <div className="mb-4 bg-gradient-to-r from-orange-50 to-amber-50 border border-orange-200 rounded-xl px-4 py-3 flex items-center justify-between">
+          <p className="text-sm text-orange-700">
+            <strong>Are you a cook?</strong> This page shows bookings you placed as a customer. To view your <strong>incoming orders</strong>, go to the Chef Dashboard.
+          </p>
+          <Link href="/cooks/dashboard" className="text-xs bg-orange-500 text-white px-3 py-1.5 rounded-lg font-medium hover:bg-orange-600 transition shrink-0 ml-3">
+            My Incoming Orders
+          </Link>
+        </div>
+      )}
 
       {/* Tabs */}
       <div className="flex gap-2 mb-6 border-b">
@@ -755,12 +791,50 @@ export default function MyChefBookingsPage() {
                         setPayingAdvance(true);
                         try {
                           const token = localStorage.getItem('access_token')!;
-                          const updated = await api.markEventAdvancePaid(payAdvanceEvent.id, token);
-                          setEvents(prev => prev.map(ev => ev.id === payAdvanceEvent.id ? updated : ev));
-                          setPayAdvanceEvent(null);
+                          // Open Razorpay checkout for the advance amount. The
+                          // /payments/order endpoint is bookingId-generic, so we
+                          // pass the event ID — payment-service only uses it as
+                          // a notes reference, it doesn't look up a booking row.
+                          const order = await api.createPaymentOrder(payAdvanceEvent.id, payAdvanceEvent.advanceAmountPaise, token);
+                          if (!(window as any).Razorpay) {
+                            await new Promise<void>((resolve, reject) => {
+                              const s = document.createElement('script');
+                              s.src = 'https://checkout.razorpay.com/v1/checkout.js';
+                              s.onload = () => resolve();
+                              s.onerror = () => reject(new Error('Failed to load Razorpay'));
+                              document.body.appendChild(s);
+                            });
+                          }
+                          const rzp = new (window as any).Razorpay({
+                            key: order.razorpayKeyId,
+                            amount: order.amountPaise,
+                            currency: 'INR',
+                            name: 'Safar Cooks',
+                            description: `Event advance — ${payAdvanceEvent.bookingRef}`,
+                            order_id: order.razorpayOrderId,
+                            handler: async function () {
+                              try {
+                                const freshToken = localStorage.getItem('access_token') || token;
+                                const updated = await api.markEventAdvancePaid(payAdvanceEvent.id, freshToken);
+                                setEvents(prev => prev.map(ev => ev.id === payAdvanceEvent.id ? updated : ev));
+                                setPayAdvanceEvent(null);
+                              } catch (err: any) {
+                                alert(err.message || 'Payment succeeded but status update failed — contact support.');
+                              } finally {
+                                setPayingAdvance(false);
+                              }
+                            },
+                            prefill: { name: payAdvanceEvent.customerName, contact: payAdvanceEvent.customerPhone, email: payAdvanceEvent.customerEmail },
+                            theme: { color: '#f97316' },
+                            modal: { ondismiss: () => setPayingAdvance(false) },
+                          });
+                          rzp.on('payment.failed', (r: any) => {
+                            alert(r.error?.description || 'Payment failed');
+                            setPayingAdvance(false);
+                          });
+                          rzp.open();
                         } catch (err: any) {
-                          alert(err.message || 'Failed to pay advance');
-                        } finally {
+                          alert(err.message || 'Failed to start payment');
                           setPayingAdvance(false);
                         }
                       }}
@@ -791,7 +865,7 @@ export default function MyChefBookingsPage() {
 function openInvoice(inv: any) {
   if (!inv) { alert('Invoice not available for this booking yet.'); return; }
   const html = renderInvoiceHtml(inv);
-  const blob = new Blob([html], { type: 'text/html' });
+  const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
   const url = URL.createObjectURL(blob);
   const win = window.open(url, '_blank');
   if (!win || win.closed) {
@@ -809,7 +883,15 @@ function openInvoice(inv: any) {
 
 function renderInvoiceHtml(inv: any): string {
   const fmt = (p: number) => '\u20B9' + (p / 100).toLocaleString('en-IN', { minimumFractionDigits: 2 });
-  return `<!DOCTYPE html><html><head><title>Invoice ${inv.invoiceNumber}</title>
+  // Reconcile: the Food line should equal totalPaise minus all add-ons so the
+  // invoice adds up. The backend stores foodPaise as guestCount × perPlate, but
+  // the chef may have quoted a different total (discount, packaging, etc.),
+  // which previously produced "Food 6,250 vs Total 6,000".
+  const addOns = (Number(inv.decorationPaise) || 0)
+               + (Number(inv.cakePaise) || 0)
+               + (Number(inv.staffPaise) || 0);
+  const foodForDisplay = Math.max(0, (Number(inv.totalPaise) || 0) - addOns);
+  return `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Invoice ${inv.invoiceNumber}</title>
 <style>body{font-family:system-ui;max-width:700px;margin:40px auto;padding:20px;color:#333}
 h1{color:#f97316;margin:0}table{width:100%;border-collapse:collapse;margin:16px 0}
 td,th{padding:8px 12px;text-align:left;border-bottom:1px solid #eee}th{background:#f9fafb}
@@ -824,7 +906,7 @@ td,th{padding:8px 12px;text-align:left;border-bottom:1px solid #eee}th{backgroun
 <tr><td><strong>Address:</strong> ${inv.address || inv.venueAddress || '-'}, ${inv.city || '-'}</td>
 <td><strong>${inv.type === 'EVENT_BOOKING' ? 'Guests' : 'Guests'}:</strong> ${inv.guestsCount || inv.guestCount || '-'}</td></tr></table>
 <table><tr><th>Item</th><th class="right">Amount</th></tr>
-${inv.foodPaise ? `<tr><td>Food (${inv.guestCount} guests)</td><td class="right">${fmt(inv.foodPaise)}</td></tr>` : ''}
+${foodForDisplay > 0 ? `<tr><td>Food (${inv.guestCount} guests)</td><td class="right">${fmt(foodForDisplay)}</td></tr>` : ''}
 ${inv.decorationPaise > 0 ? `<tr><td>Decoration</td><td class="right">${fmt(inv.decorationPaise)}</td></tr>` : ''}
 ${inv.cakePaise > 0 ? `<tr><td>Cake</td><td class="right">${fmt(inv.cakePaise)}</td></tr>` : ''}
 ${inv.staffPaise > 0 ? `<tr><td>Staff</td><td class="right">${fmt(inv.staffPaise)}</td></tr>` : ''}

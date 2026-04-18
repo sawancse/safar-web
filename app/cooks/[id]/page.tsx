@@ -26,6 +26,7 @@ export default function ChefProfilePage() {
   const [expandedMenu, setExpandedMenu] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'about' | 'menus' | 'reviews' | 'gallery' | 'calendar'>('about');
   const [photos, setPhotos] = useState<any[]>([]);
+  const [reviews, setReviews] = useState<any[]>([]);
   const [calendar, setCalendar] = useState<any>(null);
   const [cuisinePricing, setCuisinePricing] = useState<any[]>([]);
   const [itemIngredients, setItemIngredients] = useState<Record<string, any[]>>({});
@@ -41,11 +42,13 @@ export default function ChefProfilePage() {
       api.getChefMenus(id as string),
       api.getChefPhotos(id as string).catch(() => []),
       api.getChefCuisinePricing(id as string).catch(() => []),
-    ]).then(([c, m, p, cp]) => {
+      api.getChefReviews(id as string).catch(() => []),
+    ]).then(([c, m, p, cp, r]) => {
       setChef(c);
       setMenus(m || []);
       setPhotos(p || []);
       setCuisinePricing(cp || []);
+      setReviews(Array.isArray(r) ? r : []);
     }).catch(() => {})
       .finally(() => setLoading(false));
   }, [id]);
@@ -520,12 +523,39 @@ export default function ChefProfilePage() {
 
           {/* Reviews Tab */}
           {activeTab === 'reviews' && (
-            <div className="mt-6">
-              <div className="text-center py-12 bg-white rounded-xl border">
+            <div className="mt-6 space-y-4">
+              <div className="text-center py-8 bg-white rounded-xl border">
                 <p className="text-3xl mb-2">⭐</p>
                 <p className="text-lg font-semibold text-gray-700">{chef.rating > 0 ? `${chef.rating.toFixed(1)} out of 5` : 'No reviews yet'}</p>
-                <p className="text-sm text-gray-500 mt-1">{chef.reviewCount || 0} verified reviews</p>
+                <p className="text-sm text-gray-500 mt-1">{reviews.length || chef.reviewCount || 0} verified reviews</p>
               </div>
+              {reviews.length === 0 ? (
+                <div className="text-center py-8 text-gray-400 text-sm">
+                  No written reviews yet — be the first to share your experience!
+                </div>
+              ) : (
+                reviews.map(r => (
+                  <div key={r.id} className="bg-white rounded-xl border p-4">
+                    <div className="flex items-start justify-between mb-2">
+                      <div>
+                        <p className="font-semibold text-gray-900 text-sm">{r.customerName || 'Customer'}</p>
+                        <p className="text-[11px] text-gray-400">
+                          {r.type === 'EVENT' ? 'Event' : 'Booking'}
+                          {r.serviceDate ? ` · ${new Date(r.serviceDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}` : ''}
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-0.5 text-amber-500 text-sm">
+                        {Array.from({ length: 5 }).map((_, i) => (
+                          <span key={i}>{i < (r.rating || 0) ? '★' : '☆'}</span>
+                        ))}
+                      </div>
+                    </div>
+                    {r.comment && (
+                      <p className="text-sm text-gray-700 leading-relaxed">{r.comment}</p>
+                    )}
+                  </div>
+                ))
+              )}
             </div>
           )}
 
