@@ -238,8 +238,12 @@ export default function EventBookingPage() {
         // network), the fields just stay empty and the user fills them manually.
         api.getMyProfile(t)
           .then(p => {
-            if (p?.name) setCustomerName(prev => prev || p.name);
-            if (p?.phone) setCustomerPhone(prev => prev || p.phone);
+            // Local consts narrow `string | undefined` to `string` inside the closure,
+            // keeping TS happy about the setState callback return type.
+            const name = p?.name;
+            const phone = p?.phone;
+            if (name) setCustomerName(prev => prev || name);
+            if (phone) setCustomerPhone(prev => prev || phone);
           })
           .catch(() => { /* noop */ });
       }
