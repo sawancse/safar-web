@@ -465,7 +465,14 @@ export default function AuthPage() {
       saveAuthAndRedirect(auth, router, redirect);
     } catch (e: any) {
       const msg = e.message || 'Invalid code';
-      if (msg.toLowerCase().includes('name is required')) {
+      const lower = msg.toLowerCase();
+      // Both errors are thrown by auth-service during the first OTP verify when
+      // the user turns out to be new: "name is required" (if no name) or
+      // "email is required"/"phone is required" (if second identifier missing).
+      // In either case we need to route the user to the name step which collects both.
+      if (lower.includes('name is required')
+          || lower.includes('email is required')
+          || lower.includes('phone number is required to create a new account')) {
         setIsNewUser(true);
         setStep('name');
         setError('');
