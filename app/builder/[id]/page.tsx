@@ -106,8 +106,8 @@ export default function BuilderProjectDetailPage() {
         api.getConstructionUpdates(id).catch(() => []),
       ]);
       setProject(proj);
-      setUnits(Array.isArray(unitList) ? unitList : unitList?.content ?? []);
-      setUpdates(Array.isArray(updateList) ? updateList : updateList?.content ?? []);
+      setUnits(Array.isArray(unitList) ? unitList : []);
+      setUpdates(Array.isArray(updateList) ? updateList : []);
     } catch {
       setProject(null);
     } finally {
