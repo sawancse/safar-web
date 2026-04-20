@@ -471,10 +471,10 @@ export default function BuyPropertyDetailPage() {
                         <p className="text-base font-bold text-amber-700">{property.totalAcres} Acres</p>
                       </div>
                     )}
-                    {isLand && property.plotAreaSqft && (
+                    {isLand && property.areaSqft && (
                       <div className="text-center p-3 bg-amber-50 rounded-xl">
                         <p className="text-xs text-slate-400 mb-1">Plot Area</p>
-                        <p className="text-base font-bold text-amber-700">{property.plotAreaSqft?.toLocaleString('en-IN')} sqft</p>
+                        <p className="text-base font-bold text-amber-700">{property.areaSqft?.toLocaleString('en-IN')} sqft</p>
                       </div>
                     )}
                     {isLand && property.zoneType && (

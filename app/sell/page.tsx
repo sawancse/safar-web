@@ -289,7 +289,8 @@ function SellPropertyWizardInner() {
 
     if (editId) {
       api.getSaleProperty(editId).then((prop: any) => {
-        setData({
+        setData(prev => ({
+          ...prev,
           propertyType: prop.salePropertyType || prop.propertyType || '',
           state: prop.state || '', city: prop.city || '', locality: prop.locality || '',
           pincode: prop.pincode || '', address: prop.addressLine1 || '', lat: prop.lat?.toString() || '', lng: prop.lng?.toString() || '',
@@ -311,7 +312,7 @@ function SellPropertyWizardInner() {
           cornerProperty: prop.cornerProperty || false, vastuCompliant: prop.vastuCompliant || false,
           petAllowed: prop.petAllowed || false, overlooking: prop.overlooking || [],
           photos: [], floorPlan: null, videoTourUrl: prop.videoTourUrl || '', brochureUrl: prop.brochureUrl || '',
-        });
+        }));
         if (prop.photoUrls?.length) setPhotoPreviews(prop.photoUrls);
         if (prop.floorPlanUrl) setFloorPlanPreview(prop.floorPlanUrl);
         setEditLoading(false);
