@@ -214,6 +214,7 @@ export default function ChefBookingDetailPage() {
                 addonsJson={booking.addonsJson}
                 appliancesJson={booking.appliancesJson}
                 crockeryJson={booking.crockeryJson}
+                servicesJson={booking.servicesJson}
               />
             )}
             {tab === 'chef'        && <ChefTab chef={chef} booking={booking} />}
@@ -319,10 +320,12 @@ export default function ChefBookingDetailPage() {
 }
 
 /* ────── Tab: Ingredients ────── */
-function IngredientsTab({ menuItems, shoppingList, guests, menuName, menuDescription, addonsJson, appliancesJson, crockeryJson }: {
+function IngredientsTab({ menuItems, shoppingList, guests, menuName, menuDescription, addonsJson, appliancesJson, crockeryJson, servicesJson }: {
   menuItems: any[]; shoppingList: any; guests: number; menuName?: string; menuDescription?: string;
-  addonsJson?: string; appliancesJson?: string; crockeryJson?: string;
+  addonsJson?: string; appliancesJson?: string; crockeryJson?: string; servicesJson?: string;
 }) {
+  let services: Array<{ key: string; label: string; range?: string; notes?: string }> = [];
+  try { if (servicesJson) services = JSON.parse(servicesJson); } catch {}
   const categories = shoppingList?.categories ?? [];
 
   // Chef bookings store appliances_json / crockery_json as JSON arrays of strings.
@@ -389,6 +392,22 @@ function IngredientsTab({ menuItems, shoppingList, guests, menuName, menuDescrip
           <p className="text-sm text-gray-400">Crockery list not specified.</p>
         )}
       </Section>
+
+      {services.length > 0 && (
+        <Section title="Additional Services" icon="✨">
+          <ul className="space-y-2">
+            {services.map((s, i) => (
+              <li key={i} className="flex items-start justify-between border rounded-lg px-3 py-2">
+                <div>
+                  <p className="text-sm font-semibold text-gray-800">{s.label}</p>
+                  {s.notes && <p className="text-xs text-gray-500 mt-0.5">{s.notes}</p>}
+                </div>
+                {s.range && <span className="text-[11px] text-gray-500 font-semibold whitespace-nowrap">{s.range}</span>}
+              </li>
+            ))}
+          </ul>
+        </Section>
+      )}
 
       <Section title="Ingredients" icon="🛒">
         {categories.length === 0 ? (

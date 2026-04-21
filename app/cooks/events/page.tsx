@@ -66,6 +66,25 @@ const FALLBACK_ADDONS = [
   { key: 'table_setup', label: 'Fine Dine Table Setup', desc: 'Premium tablecloth, candles, flowers', icon: '🕯️', paise: 80000 },
 ];
 
+// Extra non-cooking services — especially for anniversaries, birthdays, housewarming.
+// These are *requests* (not chef-provided); chef factors them into the quote and
+// arranges a partner vendor where needed. Price ranges are indicative only.
+const EVENT_SERVICES: { key: string; label: string; icon: string; range: string; desc: string }[] = [
+  { key: 'photography',   label: 'Photographer',        icon: '📷', range: '₹5k–₹25k',  desc: 'Candid + posed photos for the event' },
+  { key: 'videography',   label: 'Videographer',        icon: '🎥', range: '₹8k–₹40k',  desc: 'Highlight reel / full event video' },
+  { key: 'decoration_pro',label: 'Premium Decor',       icon: '🌸', range: '₹10k–₹60k', desc: 'Flowers, stage, backdrop, lighting' },
+  { key: 'dj',            label: 'DJ',                  icon: '🎧', range: '₹8k–₹30k',  desc: 'Music + sound system + lights' },
+  { key: 'live_music',    label: 'Live music / band',   icon: '🎺', range: '₹10k–₹60k', desc: 'Sitar, flute, ghazal, or small band' },
+  { key: 'mc',            label: 'MC / Host',           icon: '🎤', range: '₹5k–₹20k',  desc: 'Anchor for the evening' },
+  { key: 'makeup',        label: 'Makeup artist',       icon: '💄', range: '₹3k–₹15k',  desc: 'For the couple / guest of honour' },
+  { key: 'mehndi',        label: 'Mehndi artist',       icon: '🎨', range: '₹2k–₹10k',  desc: 'Especially for anniversaries, birthdays' },
+  { key: 'pandit',        label: 'Pandit / Puja',       icon: '🪔', range: '₹3k–₹12k',  desc: 'Silver/gold/diamond jubilee puja' },
+  { key: 'bouquet',       label: 'Bouquet / gifts',     icon: '💐', range: '₹1k–₹5k',   desc: 'Anniversary flowers, curated gift' },
+  { key: 'cake_designer', label: 'Designer cake+',      icon: '🎂', range: '₹2k–₹10k',  desc: 'Tiered / photo-print / sugar-free' },
+  { key: 'entertainer',   label: 'Magician / Games',    icon: '🎩', range: '₹5k–₹20k',  desc: 'For kids-friendly anniversaries' },
+  { key: 'valet',         label: 'Valet / Parking',     icon: '🚗', range: '₹3k–₹10k',  desc: 'Valet + marshals for guests' },
+];
+
 interface PricingItem {
   category: string;
   itemKey: string;
@@ -111,6 +130,10 @@ export default function EventBookingPage() {
   const [selectedCounters, setSelectedCounters] = useState<Set<string>>(new Set());
   const [extraStaff, setExtraStaff] = useState(false);
   const [staffCount, setStaffCount] = useState(2);
+
+  // Extra non-cooking services (photography, DJ, puja, etc.)
+  const [selectedServices, setSelectedServices] = useState<Set<string>>(new Set());
+  const [serviceNotes, setServiceNotes] = useState<Record<string, string>>({});
 
   // Dynamic pricing from API
   const [pricingItems, setPricingItems] = useState<PricingItem[]>([]);
@@ -290,6 +313,12 @@ export default function EventBookingPage() {
         selectedDishIds: allSelectedDishIds.length > 0 ? allSelectedDishIds : undefined,
         categoryCounts: totalDishCount() > 0 ? categoryCounts : undefined,
       });
+      const servicesJson = selectedServices.size > 0
+        ? JSON.stringify([...selectedServices].map(key => {
+            const svc = EVENT_SERVICES.find(s => s.key === key);
+            return { key, label: svc?.label ?? key, range: svc?.range ?? '', notes: serviceNotes[key] || '' };
+          }))
+        : undefined;
       await api.createEventBooking({
         chefId: chefId || undefined,
         eventType,
@@ -309,6 +338,7 @@ export default function EventBookingPage() {
         customerName,
         customerPhone,
         menuDescription: addOnsJson,
+        servicesJson,
       }, token || undefined);
       router.push('/cooks/my-bookings');
     } catch (err: any) {
@@ -758,6 +788,60 @@ export default function EventBookingPage() {
                         )}
                       </div>
                     </div>
+                  </div>
+
+                  {/* Non-cooking services (photographer, DJ, puja, etc.) */}
+                  <div className="bg-white rounded-xl shadow-sm border p-6">
+                    <h3 className="font-semibold text-gray-900 mb-1">Additional Services</h3>
+                    <p className="text-xs text-gray-500 mb-4">
+                      Non-cooking services we can arrange through trusted partners. Tell us what you need — our chef will coordinate and send a combined quote.
+                    </p>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      {EVENT_SERVICES.map(svc => {
+                        const on = selectedServices.has(svc.key);
+                        return (
+                          <div key={svc.key}
+                               className={`rounded-lg border transition ${on ? 'border-orange-500 bg-orange-50' : 'hover:bg-gray-50'}`}>
+                            <label className="flex items-start gap-3 p-3 cursor-pointer">
+                              <input
+                                type="checkbox"
+                                checked={on}
+                                onChange={() => setSelectedServices(prev => {
+                                  const n = new Set(prev);
+                                  if (n.has(svc.key)) { n.delete(svc.key); } else { n.add(svc.key); }
+                                  return n;
+                                })}
+                                className="mt-0.5 w-4 h-4 text-orange-500 rounded border-gray-300 focus:ring-orange-500"
+                              />
+                              <span className="text-xl">{svc.icon}</span>
+                              <div className="flex-1">
+                                <div className="flex items-center justify-between">
+                                  <span className="text-sm font-medium text-gray-900">{svc.label}</span>
+                                  <span className="text-[11px] text-gray-500 font-semibold">{svc.range}</span>
+                                </div>
+                                <p className="text-[11px] text-gray-500 leading-snug">{svc.desc}</p>
+                              </div>
+                            </label>
+                            {on && (
+                              <div className="px-3 pb-3 pl-12">
+                                <input
+                                  type="text"
+                                  placeholder="Any specifics? (e.g. candid only · 4 hrs · bridal look)"
+                                  value={serviceNotes[svc.key] || ''}
+                                  onChange={e => setServiceNotes(prev => ({ ...prev, [svc.key]: e.target.value }))}
+                                  className="w-full border rounded px-2 py-1 text-xs focus:ring-1 focus:ring-orange-300 outline-none"
+                                />
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                    {selectedServices.size > 0 && (
+                      <p className="text-[11px] text-gray-500 mt-3">
+                        We'll share a quote covering food + these services. You can accept, adjust, or skip any of them before paying the advance.
+                      </p>
+                    )}
                   </div>
 
                   <div className="flex gap-3">
