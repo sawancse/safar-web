@@ -130,11 +130,33 @@ export default function EventBookingPage() {
   const [dishSearch, setDishSearch] = useState('');
 
   // Load dish catalog
+  const [dishLoadError, setDishLoadError] = useState<string | null>(null);
   useEffect(() => {
     setDishLoading(true);
+    setDishLoadError(null);
     api.getDishCatalog()
-      .then((data: any) => setDishCatalog(data || {}))
-      .catch(() => setDishCatalog({}))
+      .then((data: any) => {
+        // Backend returns Map<DishCategory, List<DishCatalogResponse>> — may arrive as an object
+        // keyed by enum name. Some older servers returned a flat List<DishCatalogResponse>, so
+        // group it by category if that happens.
+        if (Array.isArray(data)) {
+          const grouped: Record<string, Dish[]> = {};
+          for (const d of data) {
+            const cat = d.category || 'UNCATEGORIZED';
+            (grouped[cat] = grouped[cat] || []).push(d);
+          }
+          setDishCatalog(grouped);
+        } else {
+          setDishCatalog(data || {});
+        }
+        const total = Object.values(data || {}).reduce((n: number, arr: any) => n + (Array.isArray(arr) ? arr.length : 0), 0);
+        console.log('[dishCatalog] loaded', total, 'dishes across', Object.keys(data || {}).length, 'categories');
+      })
+      .catch((e: any) => {
+        console.error('[dishCatalog] load failed:', e);
+        setDishCatalog({});
+        setDishLoadError(e?.message || 'Failed to load dish catalog');
+      })
       .finally(() => setDishLoading(false));
   }, []);
 
@@ -590,7 +612,17 @@ export default function EventBookingPage() {
                             {isExpanded && (
                               <div className="mt-2 space-y-1 max-h-72 overflow-y-auto">
                                 {filtered.length === 0 ? (
-                                  <p className="text-sm text-gray-400 py-3 text-center">No dishes match your filters</p>
+                                  (dishCatalog[cat] || []).length === 0 ? (
+                                    dishLoadError ? (
+                                      <p className="text-sm text-red-500 py-3 text-center">Couldn't load dishes — {dishLoadError}</p>
+                                    ) : dishLoading ? (
+                                      <p className="text-sm text-gray-400 py-3 text-center">Loading dishes...</p>
+                                    ) : (
+                                      <p className="text-sm text-gray-400 py-3 text-center">No dishes in this category yet.</p>
+                                    )
+                                  ) : (
+                                    <p className="text-sm text-gray-400 py-3 text-center">No dishes match your filters</p>
+                                  )
                                 ) : filtered.map(dish => {
                                   const isSelected = selected.includes(dish.id);
                                   const canSelect = selected.length < maxCount;
