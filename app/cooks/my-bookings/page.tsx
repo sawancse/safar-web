@@ -35,6 +35,57 @@ const MODIFIABLE_BOOKING = ['PENDING_PAYMENT', 'PENDING'];
 const MODIFIABLE_EVENT = ['INQUIRY', 'QUOTED'];
 const MODIFIABLE_SUB = ['ACTIVE'];
 
+const APPLIANCE_OPTIONS = [
+  'Gas stove', 'Oven', 'Microwave', 'Tandoor', 'OTG',
+  'Mixer-grinder', 'Hand blender', 'Pressure cooker',
+  'Kadhai', 'Tawa', 'Dosa tawa', 'Rice cooker',
+  'Chopping board', 'Knife set', 'Ladles & spatulas',
+  'Refrigerator', 'Gas cylinder (full)',
+];
+
+function crockeryOptionsFor(guests: number) {
+  const n = Math.max(guests || 1, 1);
+  return [
+    `${n} × dinner plates`, `${n} × side plates`, `${n} × tumblers / glasses`,
+    `${n} × cutlery sets`, `${n} × bowls`,
+    'Serving bowls', 'Serving spoons', 'Water jug', 'Tea/coffee cups', 'Casseroles',
+  ];
+}
+
+function safeParseArray(raw: any): string[] {
+  if (!raw) return [];
+  if (Array.isArray(raw)) return raw;
+  try { const v = JSON.parse(raw); return Array.isArray(v) ? v : []; } catch { return []; }
+}
+
+function Chips({ label, options, selected, onChange, hint }: {
+  label: string; options: string[]; selected: string[]; onChange: (v: string[]) => void; hint?: string;
+}) {
+  return (
+    <div>
+      <p className="text-xs font-medium text-gray-600 mb-1">{label}</p>
+      {hint && <p className="text-[11px] text-gray-400 mb-2">{hint}</p>}
+      <div className="flex flex-wrap gap-1.5">
+        {options.map(opt => {
+          const on = selected.includes(opt);
+          return (
+            <button
+              type="button"
+              key={opt}
+              onClick={() => onChange(on ? selected.filter(x => x !== opt) : [...selected, opt])}
+              className={`text-xs px-2.5 py-1 rounded-full border transition ${
+                on ? 'bg-orange-500 text-white border-orange-500' : 'bg-white text-gray-700 border-gray-300 hover:border-orange-300'
+              }`}
+            >
+              {on ? '✓ ' : ''}{opt}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 export default function MyChefBookingsPage() {
   const router = useRouter();
   const [bookings, setBookings] = useState<any[]>([]);
@@ -47,6 +98,7 @@ export default function MyChefBookingsPage() {
   const [reviewComment, setReviewComment] = useState('');
   const [editModal, setEditModal] = useState<{ item: any; type: 'booking' | 'event' | 'subscription' } | null>(null);
   const [editForm, setEditForm] = useState<any>({});
+  const [editMenus, setEditMenus] = useState<any[]>([]);
   const [saving, setSaving] = useState(false);
   const [trackingData, setTrackingData] = useState<any>(null);
   const [trackingBooking, setTrackingBooking] = useState<any>(null);
@@ -118,11 +170,18 @@ export default function MyChefBookingsPage() {
   }
 
   function openEdit(item: any, type: 'booking' | 'event' | 'subscription') {
+    setEditMenus([]);
+    if (type === 'booking' && item.chefId) {
+      api.getChefMenus(item.chefId).then(m => setEditMenus(Array.isArray(m) ? m : [])).catch(() => {});
+    }
     setEditForm(
       type === 'booking' ? {
         serviceDate: item.serviceDate || '', serviceTime: item.serviceTime || '',
         guestsCount: item.guestsCount || '', specialRequests: item.specialRequests || '',
         address: item.address || '', city: item.city || '', pincode: item.pincode || '',
+        menuId: item.menuId || '',
+        appliances: safeParseArray(item.appliancesJson),
+        crockery:   safeParseArray(item.crockeryJson),
       } : type === 'event' ? {
         eventDate: item.eventDate || '', eventTime: item.eventTime || '',
         guestCount: item.guestCount || '', durationHours: item.durationHours || '',
@@ -147,9 +206,10 @@ export default function MyChefBookingsPage() {
     // Build payload with only changed fields
     const payload: any = {};
     Object.entries(editForm).forEach(([k, v]) => {
-      if (v !== '' && v !== null && v !== undefined) {
-        payload[k] = ['guestsCount', 'guestCount', 'durationHours', 'mealsPerDay'].includes(k) ? Number(v) : v;
-      }
+      if (v === '' || v === null || v === undefined) return;
+      if (k === 'appliances') { payload.appliancesJson = JSON.stringify(v); return; }
+      if (k === 'crockery')   { payload.crockeryJson   = JSON.stringify(v); return; }
+      payload[k] = ['guestsCount', 'guestCount', 'durationHours', 'mealsPerDay'].includes(k) ? Number(v) : v;
     });
 
     try {
@@ -563,6 +623,37 @@ export default function MyChefBookingsPage() {
                   <Field label="Service Date" type="date" value={editForm.serviceDate} onChange={(v: string) => setEditForm({...editForm, serviceDate: v})} />
                   <Field label="Service Time" value={editForm.serviceTime} onChange={(v: string) => setEditForm({...editForm, serviceTime: v})} placeholder="e.g. 12:00 PM" />
                   <Field label="Guests" type="number" value={editForm.guestsCount} onChange={(v: string) => setEditForm({...editForm, guestsCount: v})} />
+                  {editMenus.length > 0 && (
+                    <div>
+                      <label className="block text-xs font-medium text-gray-600 mb-1">Menu</label>
+                      <select
+                        value={editForm.menuId || ''}
+                        onChange={e => setEditForm({...editForm, menuId: e.target.value})}
+                        className="w-full border rounded-lg px-3 py-2 text-sm"
+                      >
+                        <option value="">No specific menu</option>
+                        {editMenus.map((m: any) => (
+                          <option key={m.id} value={m.id}>
+                            {m.name} — {formatPaise(m.pricePerPlatePaise)}/plate
+                          </option>
+                        ))}
+                      </select>
+                      <p className="text-[11px] text-gray-400 mt-1">Changing the menu will recalculate your total.</p>
+                    </div>
+                  )}
+                  <Chips
+                    label="Appliances available in your kitchen"
+                    options={APPLIANCE_OPTIONS}
+                    selected={editForm.appliances || []}
+                    onChange={(v) => setEditForm({...editForm, appliances: v})}
+                    hint="Helps the chef know what's ready to use."
+                  />
+                  <Chips
+                    label="Crockery available for serving"
+                    options={crockeryOptionsFor(Number(editForm.guestsCount) || 0)}
+                    selected={editForm.crockery || []}
+                    onChange={(v) => setEditForm({...editForm, crockery: v})}
+                  />
                   <Field label="Special Requests" value={editForm.specialRequests} onChange={(v: string) => setEditForm({...editForm, specialRequests: v})} textarea />
                   <Field label="Address" value={editForm.address} onChange={(v: string) => setEditForm({...editForm, address: v})} />
                   <div className="grid grid-cols-2 gap-3">
