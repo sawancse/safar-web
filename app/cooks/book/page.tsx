@@ -8,6 +8,61 @@ import RazorpayButton from '@/components/RazorpayButton';
 import CityAutocomplete from '@/components/CityAutocomplete';
 import LocalityAutocomplete from '@/components/LocalityAutocomplete';
 
+const APPLIANCE_OPTIONS = [
+  'Gas stove', 'Oven', 'Microwave', 'Tandoor', 'OTG',
+  'Mixer-grinder', 'Hand blender', 'Pressure cooker',
+  'Kadhai', 'Tawa', 'Dosa tawa', 'Rice cooker',
+  'Chopping board', 'Knife set', 'Ladles & spatulas',
+  'Refrigerator', 'Gas cylinder (full)',
+];
+
+function crockeryOptionsFor(guests: number) {
+  const n = Math.max(guests || 1, 1);
+  return [
+    `${n} × dinner plates`,
+    `${n} × side plates`,
+    `${n} × tumblers / glasses`,
+    `${n} × cutlery sets`,
+    `${n} × bowls`,
+    'Serving bowls',
+    'Serving spoons',
+    'Water jug',
+    'Tea/coffee cups',
+    'Casseroles',
+  ];
+}
+
+function ChipPicker({ title, options, selected, onChange, hint }: {
+  title: string; options: string[]; selected: string[]; onChange: (v: string[]) => void; hint?: string;
+}) {
+  function toggle(opt: string) {
+    onChange(selected.includes(opt) ? selected.filter(x => x !== opt) : [...selected, opt]);
+  }
+  return (
+    <div>
+      <label className="block text-xs font-medium text-gray-600 mb-1">{title}</label>
+      {hint && <p className="text-[11px] text-gray-400 mb-2">{hint}</p>}
+      <div className="flex flex-wrap gap-2">
+        {options.map(opt => {
+          const on = selected.includes(opt);
+          return (
+            <button
+              type="button"
+              key={opt}
+              onClick={() => toggle(opt)}
+              className={`text-xs px-3 py-1.5 rounded-full border transition ${
+                on ? 'bg-orange-500 text-white border-orange-500' : 'bg-white text-gray-700 border-gray-300 hover:border-orange-300'
+              }`}
+            >
+              {on ? '✓ ' : ''}{opt}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 export default function BookCookPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -36,6 +91,9 @@ export default function BookCookPage() {
   const [pincode, setPincode] = useState('');
   const [customerName, setCustomerName] = useState('');
   const [customerPhone, setCustomerPhone] = useState('');
+  // Kitchen inventory (what the customer's home already has)
+  const [appliances, setAppliances] = useState<string[]>([]);
+  const [crockery, setCrockery]     = useState<string[]>([]);
   // Subscription fields
   const [plan, setPlan] = useState('Full Day');
   const [mealsPerDay, setMealsPerDay] = useState(2);
@@ -88,6 +146,8 @@ export default function BookCookPage() {
           chefId, serviceType: 'DAILY', mealType, serviceDate, serviceTime,
           guestsCount, numberOfMeals, menuId: menuId || null,
           specialRequests, address, city, locality, pincode, customerName, customerPhone,
+          appliancesJson: appliances.length ? JSON.stringify(appliances) : null,
+          crockeryJson:   crockery.length   ? JSON.stringify(crockery)   : null,
         }, t);
         // Show payment step
         setBooking(result);
@@ -404,6 +464,26 @@ export default function BookCookPage() {
           <textarea value={specialRequests} onChange={e => setSpecialRequests(e.target.value)}
             className="w-full border rounded-lg px-3 py-2 text-sm" rows={2} placeholder="Allergies, dietary needs, preferences..." />
         </div>
+
+        {/* Kitchen inventory (DAILY bookings only) */}
+        {serviceType === 'DAILY' && (
+          <ChipPicker
+            title="Appliances available in your kitchen"
+            options={APPLIANCE_OPTIONS}
+            selected={appliances}
+            onChange={setAppliances}
+            hint="Helps the chef know what's ready to use."
+          />
+        )}
+        {serviceType === 'DAILY' && (
+          <ChipPicker
+            title="Crockery available for serving"
+            options={crockeryOptionsFor(guestsCount)}
+            selected={crockery}
+            onChange={setCrockery}
+            hint="We'll pre-fill plate/tumbler counts from your guest count."
+          />
+        )}
 
         {/* Price Preview (for DAILY bookings) */}
         {serviceType === 'DAILY' && estimatedTotal > 0 && (

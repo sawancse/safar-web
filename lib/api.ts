@@ -2244,6 +2244,24 @@ export const api = {
       headers: { Authorization: `Bearer ${token}` },
     }),
 
+  payChefBookingBalance: (id: string, token: string) =>
+    apiFetch<any>(`/api/v1/chef-bookings/${id}/pay-balance`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}` },
+    }),
+
+  payEventBookingBalance: (id: string, token: string) =>
+    apiFetch<any>(`/api/v1/chef-events/${id}/pay-balance`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}` },
+    }),
+
+  getChefBookingById: (id: string) =>
+    apiFetch<any>(`/api/v1/chef-bookings/${id}`),
+
+  getEventBookingById: (id: string) =>
+    apiFetch<any>(`/api/v1/chef-events/${id}`),
+
   modifyChefBooking: (id: string, data: any, token: string) =>
     apiFetch<any>(`/api/v1/chef-bookings/${id}`, {
       method: 'PUT',
