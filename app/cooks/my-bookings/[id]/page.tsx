@@ -184,6 +184,16 @@ export default function ChefBookingDetailPage() {
           <span className={`text-xs font-medium px-3 py-1 rounded-full ${status.color}`}>{status.label}</span>
         </div>
 
+        {/* Swiggy-style tracking — visible while the booking is active */}
+        {['CONFIRMED', 'ADVANCE_PAID', 'IN_PROGRESS', 'COMPLETED'].includes(booking.status) && (
+          <TrackingPanel
+            bookingId={bookingId}
+            booking={booking}
+            chef={chef}
+            onBookingUpdated={(bk) => setBooking((prev: any) => ({ ...prev, ...bk }))}
+          />
+        )}
+
         {/* Tabs */}
         <div className="bg-white rounded-xl border overflow-hidden mb-6">
           <div className="flex overflow-x-auto border-b">
@@ -237,79 +247,51 @@ export default function ChefBookingDetailPage() {
           </div>
         </div>
 
-        {/* Collapsible secondary panel (live location + chat) */}
+        {/* Collapsible chat panel (map now lives in the TrackingPanel above) */}
         <div className="bg-white rounded-xl border">
           <button
             onClick={() => setShowSecondary(s => !s)}
             className="w-full px-5 py-4 flex items-center justify-between text-left hover:bg-gray-50"
           >
-            <span className="text-sm font-bold text-gray-900">📍 Live Location &amp; Chat</span>
+            <span className="text-sm font-bold text-gray-900">💬 Chat with chef</span>
             <span className="text-gray-400 text-xs">{showSecondary ? 'Hide' : 'Show'}</span>
           </button>
           {showSecondary && (
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-0 border-t">
-              <div className="border-r">
-                <div className="px-4 py-2 border-b flex items-center justify-between">
-                  <h3 className="text-sm font-semibold text-gray-900">Chef location</h3>
-                  {booking.etaMinutes != null && booking.etaMinutes > 0 && (
-                    <span className="text-sm font-semibold text-orange-600">ETA: {booking.etaMinutes} min</span>
-                  )}
-                </div>
-                {booking.chefLat && booking.chefLng ? (
-                  <iframe
-                    src={`https://www.google.com/maps?q=${booking.chefLat},${booking.chefLng}&z=15&output=embed`}
-                    width="100%"
-                    height="280"
-                    style={{ border: 0 }}
-                    loading="lazy"
-                    referrerPolicy="no-referrer-when-downgrade"
-                  />
-                ) : (
-                  <div className="h-64 flex items-center justify-center text-gray-400 text-sm">
-                    Waiting for chef to share location
-                  </div>
-                )}
-              </div>
-
-              <div className="flex flex-col" style={{ height: '340px' }}>
-                <div className="px-4 py-2 border-b">
-                  <h3 className="text-sm font-semibold text-gray-900">Chat with chef</h3>
-                </div>
-                <div className="flex-1 overflow-y-auto px-4 py-3 space-y-2">
-                  {messages.length === 0 ? (
-                    <p className="text-center text-gray-400 text-sm py-8">No messages yet. Say hello!</p>
-                  ) : messages.map(msg => {
-                    const isMine = msg.senderId === userId;
-                    return (
-                      <div key={msg.id} className={`flex ${isMine ? 'justify-end' : 'justify-start'}`}>
-                        <div className={`max-w-[80%] rounded-2xl px-3 py-2 ${
-                          isMine ? 'bg-orange-500 text-white rounded-br-sm' : 'bg-gray-100 text-gray-800 rounded-bl-sm'
-                        }`}>
-                          <p className="text-sm">{msg.content}</p>
-                          <p className={`text-[10px] mt-0.5 ${isMine ? 'text-orange-200' : 'text-gray-400'}`}>{formatTime(msg.createdAt)}</p>
-                        </div>
+            <div className="border-t flex flex-col" style={{ height: '340px' }}>
+              <div className="flex-1 overflow-y-auto px-4 py-3 space-y-2">
+                {messages.length === 0 ? (
+                  <p className="text-center text-gray-400 text-sm py-8">No messages yet. Say hello!</p>
+                ) : messages.map(msg => {
+                  const isMine = msg.senderId === userId;
+                  return (
+                    <div key={msg.id} className={`flex ${isMine ? 'justify-end' : 'justify-start'}`}>
+                      <div className={`max-w-[80%] rounded-2xl px-3 py-2 ${
+                        isMine ? 'bg-orange-500 text-white rounded-br-sm' : 'bg-gray-100 text-gray-800 rounded-bl-sm'
+                      }`}>
+                        <p className="text-sm">{msg.content}</p>
+                        <p className={`text-[10px] mt-0.5 ${isMine ? 'text-orange-200' : 'text-gray-400'}`}>{formatTime(msg.createdAt)}</p>
                       </div>
-                    );
-                  })}
-                  <div ref={messagesEndRef} />
-                </div>
-                <div className="px-3 py-2 border-t flex gap-2">
-                  <input
-                    type="text"
-                    value={newMessage}
-                    onChange={e => setNewMessage(e.target.value)}
-                    onKeyDown={e => e.key === 'Enter' && !e.shiftKey && handleSend()}
-                    placeholder="Type a message..."
-                    className="flex-1 border rounded-xl px-3 py-2 text-sm outline-none focus:border-orange-400"
-                  />
-                  <button
-                    onClick={handleSend}
-                    disabled={!newMessage.trim() || sending}
-                    className="bg-orange-500 text-white rounded-xl px-4 py-2 hover:bg-orange-600 transition disabled:opacity-50 text-sm font-semibold"
-                  >
-                    Send
-                  </button>
-                </div>
+                    </div>
+                  );
+                })}
+                <div ref={messagesEndRef} />
+              </div>
+              <div className="px-3 py-2 border-t flex gap-2">
+                <input
+                  type="text"
+                  value={newMessage}
+                  onChange={e => setNewMessage(e.target.value)}
+                  onKeyDown={e => e.key === 'Enter' && !e.shiftKey && handleSend()}
+                  placeholder="Type a message..."
+                  className="flex-1 border rounded-xl px-3 py-2 text-sm outline-none focus:border-orange-400"
+                />
+                <button
+                  onClick={handleSend}
+                  disabled={!newMessage.trim() || sending}
+                  className="bg-orange-500 text-white rounded-xl px-4 py-2 hover:bg-orange-600 transition disabled:opacity-50 text-sm font-semibold"
+                >
+                  Send
+                </button>
               </div>
             </div>
           )}
@@ -662,6 +644,166 @@ function RatingTab({ booking, bookingKind, token, onRefresh }: {
       >
         {submitting ? 'Submitting...' : 'Submit rating'}
       </button>
+    </div>
+  );
+}
+
+/* ────── Swiggy-style Tracking panel ────── */
+
+type TrackingStage = 'confirmed' | 'enroute' | 'arrived' | 'started' | 'done';
+
+function TrackingPanel({ bookingId, booking, chef, onBookingUpdated }: {
+  bookingId: string; booking: any; chef: any; onBookingUpdated: (bk: any) => void;
+}) {
+  const [tracking, setTracking] = useState<any>(booking);
+  const [tick, setTick] = useState(0);
+
+  // Refresh freshness pill each minute
+  useEffect(() => {
+    const t = setInterval(() => setTick(x => x + 1), 30_000);
+    return () => clearInterval(t);
+  }, []);
+
+  // Active polling while the booking is en route / in progress
+  useEffect(() => {
+    const isLive = booking.status === 'CONFIRMED' || booking.status === 'ADVANCE_PAID' || booking.status === 'IN_PROGRESS';
+    if (!isLive) return;
+    let cancelled = false;
+    const poll = async () => {
+      try {
+        const t = await api.getBookingTracking(bookingId);
+        if (!cancelled && t) { setTracking((prev: any) => ({ ...prev, ...t })); onBookingUpdated(t); }
+      } catch {}
+    };
+    poll();
+    const id = setInterval(poll, 15_000);
+    return () => { cancelled = true; clearInterval(id); };
+  }, [bookingId, booking.status]);
+
+  const chefLat = tracking.chefLat;
+  const chefLng = tracking.chefLng;
+  const hasLoc = chefLat && chefLng;
+  const eta = tracking.etaMinutes;
+  const updatedAt = tracking.locationUpdatedAt;
+  const ageSec = updatedAt ? Math.max(0, Math.round((Date.now() - new Date(updatedAt).getTime()) / 1000)) : null;
+
+  const current: TrackingStage =
+    booking.status === 'COMPLETED' ? 'done' :
+    booking.status === 'IN_PROGRESS' ? 'started' :
+    (hasLoc && (eta != null && eta <= 2)) ? 'arrived' :
+    hasLoc ? 'enroute' : 'confirmed';
+
+  const stages: { key: TrackingStage; label: string; icon: string }[] = [
+    { key: 'confirmed', label: 'Confirmed',   icon: '✓' },
+    { key: 'enroute',   label: 'On the way',  icon: '🛵' },
+    { key: 'arrived',   label: 'Arrived',     icon: '📍' },
+    { key: 'started',   label: 'Cooking',     icon: '🔥' },
+    { key: 'done',      label: 'Completed',   icon: '🎉' },
+  ];
+  const currentIdx = stages.findIndex(s => s.key === current);
+
+  const chefPhone = chef?.phone || booking.chefPhone;
+  const directionsHref = hasLoc ? `https://www.google.com/maps/dir/?api=1&destination=${chefLat},${chefLng}` : null;
+
+  const subtitle =
+    current === 'done'     ? 'Thank you for booking with Safar Cooks.' :
+    current === 'started'  ? `${chef?.name || 'Your chef'} has started the job.` :
+    current === 'arrived'  ? `${chef?.name || 'Your chef'} has arrived. Share the start-job OTP from the OTP tab.` :
+    current === 'enroute'  ? `${chef?.name || 'Your chef'} is on the way${eta ? ` · ETA ${eta} min` : ''}.` :
+                             `${chef?.name || 'Your chef'} will share location shortly.`;
+
+  return (
+    <div className="bg-white border rounded-2xl overflow-hidden mb-5 shadow-sm">
+      {/* Heading */}
+      <div className="px-5 pt-5 pb-3">
+        <div className="flex items-center justify-between flex-wrap gap-2">
+          <h2 className="text-sm font-bold text-gray-900">Live tracking</h2>
+          {ageSec != null && current !== 'done' && (
+            <span className={`text-[11px] px-2 py-0.5 rounded-full font-semibold ${
+              ageSec < 60 ? 'bg-green-50 text-green-700' : ageSec < 300 ? 'bg-amber-50 text-amber-700' : 'bg-gray-100 text-gray-500'
+            }`}>
+              <span className={`inline-block w-1.5 h-1.5 rounded-full mr-1.5 align-middle ${ageSec < 60 ? 'bg-green-500 animate-pulse' : 'bg-gray-400'}`} />
+              Updated {ageSec < 60 ? 'just now' : ageSec < 300 ? `${Math.round(ageSec/60)} min ago` : `${Math.round(ageSec/60)} min ago`}
+            </span>
+          )}
+        </div>
+        <p className="text-sm text-gray-600 mt-1">{subtitle}</p>
+      </div>
+
+      {/* Stage stepper */}
+      <div className="px-5 pb-3">
+        <div className="flex items-center">
+          {stages.map((s, i) => {
+            const done = i < currentIdx;
+            const active = i === currentIdx;
+            return (
+              <div key={s.key} className="flex-1 flex items-center">
+                <div className="flex flex-col items-center flex-1">
+                  <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold transition-all ${
+                    done ? 'bg-green-500 text-white' :
+                    active ? 'bg-orange-500 text-white ring-4 ring-orange-100 animate-pulse' :
+                    'bg-gray-100 text-gray-400'
+                  }`}>
+                    {done ? '✓' : s.icon}
+                  </div>
+                  <span className={`text-[10px] mt-1 text-center whitespace-nowrap font-medium ${
+                    active ? 'text-orange-600' : done ? 'text-gray-700' : 'text-gray-400'
+                  }`}>{s.label}</span>
+                </div>
+                {i < stages.length - 1 && (
+                  <div className={`h-0.5 flex-1 -mt-4 transition-colors ${i < currentIdx ? 'bg-green-500' : 'bg-gray-200'}`} />
+                )}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Map + ETA */}
+      {current !== 'done' && (
+        <div className="border-t grid grid-cols-1 md:grid-cols-3 gap-0">
+          <div className="md:col-span-2">
+            {hasLoc ? (
+              <iframe
+                key={`${chefLat}-${chefLng}`}
+                src={`https://www.google.com/maps?q=${chefLat},${chefLng}&z=15&output=embed`}
+                width="100%"
+                height="280"
+                style={{ border: 0, display: 'block' }}
+                loading="lazy"
+                referrerPolicy="no-referrer-when-downgrade"
+              />
+            ) : (
+              <div className="h-64 flex items-center justify-center text-gray-400 text-sm bg-gray-50">
+                Waiting for chef to share location
+              </div>
+            )}
+          </div>
+          <div className="p-4 flex flex-col gap-3 border-l bg-gray-50/50">
+            <div>
+              <p className="text-[11px] uppercase tracking-wider text-gray-500 font-bold mb-1">ETA</p>
+              <p className="text-3xl font-black text-gray-900">{eta != null && eta > 0 ? `${eta}` : '—'}<span className="text-sm font-semibold text-gray-500 ml-1">min</span></p>
+            </div>
+            <div>
+              <p className="text-[11px] uppercase tracking-wider text-gray-500 font-bold mb-1">Booking ref</p>
+              <p className="text-sm font-mono text-gray-800">{booking.bookingRef || booking.id?.slice(0, 8)}</p>
+            </div>
+            <div className="flex flex-col gap-2 mt-auto">
+              {chefPhone && (
+                <a href={`tel:${chefPhone}`} className="bg-green-500 text-white text-sm font-semibold px-3 py-2 rounded-lg text-center hover:bg-green-600 transition">
+                  📞 Call chef
+                </a>
+              )}
+              {directionsHref && (
+                <a href={directionsHref} target="_blank" rel="noopener noreferrer"
+                   className="bg-white border border-gray-300 text-gray-800 text-sm font-semibold px-3 py-2 rounded-lg text-center hover:bg-gray-50 transition">
+                  🗺️ Directions
+                </a>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { api } from '@/lib/api';
@@ -141,6 +141,52 @@ export default function ChefDashboardPage() {
       setChef(updated);
     } catch (e: any) { alert(e.message || 'Failed to toggle'); }
   }
+
+  // Active watchPosition per booking so the chef can auto-share location
+  // (like Swiggy's delivery partner tracking) instead of pressing "Share" every few min.
+  const liveWatchRef = useRef<Record<string, { watchId: number; lastPostMs: number; eta: number }>>({});
+  const [liveSharing, setLiveSharing] = useState<Set<string>>(new Set());
+
+  function startLiveShare(bookingId: string) {
+    if (!navigator.geolocation) { alert('Geolocation not supported'); return; }
+    const etaStr = prompt('How many minutes until you arrive? (e.g. 15)');
+    if (etaStr == null) return;
+    const eta = parseInt(etaStr) || 0;
+    const watchId = navigator.geolocation.watchPosition(
+      async (pos) => {
+        const now = Date.now();
+        const entry = liveWatchRef.current[bookingId];
+        // Throttle to one POST per 30s so we don't hammer the API.
+        if (entry && now - entry.lastPostMs < 30_000) return;
+        try {
+          await api.updateChefLocation(bookingId, pos.coords.latitude, pos.coords.longitude, entry?.eta ?? eta, token());
+          if (liveWatchRef.current[bookingId]) liveWatchRef.current[bookingId].lastPostMs = now;
+          setBookings(prev => prev.map(b => b.id === bookingId
+            ? { ...b, chefLat: pos.coords.latitude, chefLng: pos.coords.longitude, etaMinutes: entry?.eta ?? eta, locationUpdatedAt: new Date().toISOString() }
+            : b));
+        } catch {}
+      },
+      (err) => { alert('Location access denied: ' + err.message); stopLiveShare(bookingId); },
+      { enableHighAccuracy: true, maximumAge: 10_000, timeout: 15_000 }
+    );
+    liveWatchRef.current[bookingId] = { watchId, lastPostMs: 0, eta };
+    setLiveSharing(prev => new Set([...prev, bookingId]));
+  }
+
+  function stopLiveShare(bookingId: string) {
+    const entry = liveWatchRef.current[bookingId];
+    if (entry) {
+      navigator.geolocation.clearWatch(entry.watchId);
+      delete liveWatchRef.current[bookingId];
+    }
+    setLiveSharing(prev => { const n = new Set(prev); n.delete(bookingId); return n; });
+  }
+
+  // Stop all watches on unmount to avoid leaking geolocation listeners.
+  useEffect(() => () => {
+    Object.values(liveWatchRef.current).forEach(e => { try { navigator.geolocation.clearWatch(e.watchId); } catch {} });
+    liveWatchRef.current = {};
+  }, []);
 
   async function shareLocation(bookingId: string) {
     if (!navigator.geolocation) {
@@ -514,7 +560,16 @@ export default function ChefDashboardPage() {
                       <button onClick={() => handleComplete(b.id)}
                         className="text-xs bg-green-500 hover:bg-green-600 text-white px-4 py-1.5 rounded-lg font-medium transition">Mark Complete</button>
                       <button onClick={() => shareLocation(b.id)}
-                        className="text-xs bg-indigo-500 hover:bg-indigo-600 text-white px-4 py-1.5 rounded-lg font-medium transition">📍 Share Location</button>
+                        className="text-xs bg-indigo-500 hover:bg-indigo-600 text-white px-4 py-1.5 rounded-lg font-medium transition">📍 Share once</button>
+                      {liveSharing.has(b.id) ? (
+                        <button onClick={() => stopLiveShare(b.id)}
+                          className="text-xs bg-red-500 hover:bg-red-600 text-white px-4 py-1.5 rounded-lg font-medium transition flex items-center gap-1">
+                          <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" /> Stop live
+                        </button>
+                      ) : (
+                        <button onClick={() => startLiveShare(b.id)}
+                          className="text-xs bg-emerald-500 hover:bg-emerald-600 text-white px-4 py-1.5 rounded-lg font-medium transition">🛰️ Share live</button>
+                      )}
                     </>
                   )}
                   {b.status === 'COMPLETED' && <span className="text-xs text-green-600 font-medium">Completed ✓</span>}
