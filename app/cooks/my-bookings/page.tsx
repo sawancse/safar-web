@@ -506,7 +506,7 @@ export default function MyChefBookingsPage() {
                   )}
                   {e.status === 'CONFIRMED' && (
                     <div className="mt-2 bg-green-50 border border-green-200 rounded-lg px-3 py-2 text-xs text-green-700">
-                      Event confirmed! Please pay the 50% advance to lock in the booking.
+                      Event confirmed! Tap below to view the itemised bill and pay the 50% advance to lock in the booking.
                     </div>
                   )}
                   <div className="flex gap-2 mt-3">
@@ -533,7 +533,7 @@ export default function MyChefBookingsPage() {
                         <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
                           <path strokeLinecap="round" strokeLinejoin="round" d="M3 10h18M7 15h2m4 0h3M5 5h14a2 2 0 012 2v10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2z" />
                         </svg>
-                        Pay 50% Advance — {formatPaise(e.advanceAmountPaise)}
+                        View Bill & Pay Advance — {formatPaise(e.advanceAmountPaise)}
                       </button>
                     )}
                     {['INQUIRY', 'QUOTED', 'CONFIRMED'].includes(e.status) && (
@@ -816,38 +816,135 @@ export default function MyChefBookingsPage() {
                   <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
                 </svg>
               </div>
-              <h3 className="text-xl font-bold tracking-tight">Lock in your event</h3>
-              <p className="text-white/80 text-sm mt-1">Pay 50% now · balance on event day</p>
+              <h3 className="text-xl font-bold tracking-tight">Billing Summary</h3>
+              <p className="text-white/80 text-sm mt-1">Review your bill · pay 50% to lock in</p>
             </div>
 
-            {/* Amount card (overlap) */}
+            {/* Event header */}
             <div className="px-6 -mt-10 relative">
-              <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-5">
-                <p className="text-[11px] uppercase tracking-wider text-gray-400 font-semibold">Advance due now</p>
-                <p className="text-4xl font-bold text-gray-900 mt-1">{formatPaise(payAdvanceEvent.advanceAmountPaise)}</p>
-                <div className="mt-4 pt-4 border-t border-dashed border-gray-200 space-y-2 text-sm">
-                  <div className="flex justify-between">
-                    <span className="text-gray-500">Event total</span>
-                    <span className="font-semibold text-gray-800">{formatPaise(payAdvanceEvent.totalAmountPaise)}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-500">Balance on event day</span>
-                    <span className="font-semibold text-gray-800">{formatPaise(payAdvanceEvent.balanceAmountPaise)}</span>
-                  </div>
+              <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-4 flex items-start gap-3">
+                <div className="w-10 h-10 rounded-lg bg-orange-50 flex items-center justify-center shrink-0 text-lg">🎉</div>
+                <div className="flex-1 min-w-0">
+                  <p className="font-semibold text-gray-900 text-sm truncate">{payAdvanceEvent.chefName || 'Cook'} · {payAdvanceEvent.eventType}</p>
+                  <p className="text-xs text-gray-500 mt-0.5">Ref {payAdvanceEvent.bookingRef} · {formatDateTime(payAdvanceEvent.eventDate, payAdvanceEvent.eventTime)}</p>
+                  <p className="text-xs text-gray-500 truncate">{payAdvanceEvent.guestCount} guests · {payAdvanceEvent.venueAddress}</p>
                 </div>
               </div>
             </div>
 
-            {/* Event summary */}
-            <div className="px-6 pt-5 pb-2">
-              <div className="bg-orange-50 rounded-xl p-3 flex items-start gap-3">
-                <div className="w-9 h-9 rounded-lg bg-white flex items-center justify-center shrink-0 shadow-sm text-lg">🎉</div>
-                <div className="flex-1 min-w-0">
-                  <p className="font-semibold text-gray-900 text-sm truncate">{payAdvanceEvent.chefName || 'Cook'} · {payAdvanceEvent.eventType}</p>
-                  <p className="text-xs text-gray-500 mt-0.5">
-                    Ref {payAdvanceEvent.bookingRef} · {formatDateTime(payAdvanceEvent.eventDate, payAdvanceEvent.eventTime)}
-                  </p>
-                  <p className="text-xs text-gray-500">{payAdvanceEvent.guestCount} guests · {payAdvanceEvent.venueAddress}</p>
+            {/* Itemised bill */}
+            <div className="px-6 pt-5 pb-2 max-h-[45vh] overflow-y-auto">
+              {(() => {
+                const e = payAdvanceEvent;
+                const rows: { label: string; sub?: string; paise: number }[] = [];
+
+                // Food — always present
+                const foodPaise = e.totalFoodPaise || (e.pricePerPlatePaise || 0) * (e.guestCount || 0);
+                if (foodPaise > 0) {
+                  rows.push({
+                    label: 'Food',
+                    sub: e.pricePerPlatePaise ? `${e.guestCount} guests × ${formatPaise(e.pricePerPlatePaise)}/plate` : `${e.guestCount} guests`,
+                    paise: foodPaise,
+                  });
+                }
+                if (e.decorationPaise > 0) rows.push({ label: 'Decoration', paise: e.decorationPaise });
+                if (e.cakePaise > 0)       rows.push({ label: 'Cake',       paise: e.cakePaise });
+
+                // Staff breakdown — prefer staffRolesJson, else bulk staffPaise.
+                const ROLE_LABEL: Record<string, string> = { waiter: 'Waiter', cleaner: 'Cleaner', bartender: 'Bartender' };
+                let staffShown = false;
+                if (e.staffRolesJson) {
+                  try {
+                    const roles = JSON.parse(e.staffRolesJson);
+                    const entries = Object.entries(roles).filter(([, n]) => (n as number) > 0) as [string, number][];
+                    if (entries.length > 0 && e.staffPaise > 0) {
+                      const totalStaff = entries.reduce((sum, [, n]) => sum + n, 0);
+                      entries.forEach(([role, count]) => {
+                        // Even split by headcount — precise per-role rate isn't stored on the booking.
+                        const share = Math.round((e.staffPaise * count) / totalStaff);
+                        rows.push({ label: `${ROLE_LABEL[role] || role} × ${count}`, paise: share });
+                      });
+                      staffShown = true;
+                    }
+                  } catch { /* fall through to flat staff row */ }
+                }
+                if (!staffShown && e.staffPaise > 0) {
+                  rows.push({ label: 'Service staff', paise: e.staffPaise });
+                }
+
+                // Live counters + add-ons from menuDescription (addonsJson mirror)
+                if (e.menuDescription) {
+                  try {
+                    const md = JSON.parse(e.menuDescription);
+                    if (Array.isArray(md.liveCounters) && md.liveCounters.length > 0) {
+                      const names = md.liveCounters.map((c: string) => c.charAt(0).toUpperCase() + c.slice(1));
+                      rows.push({ label: `Live counters`, sub: names.join(', '), paise: 0 });
+                    }
+                  } catch { /* not JSON */ }
+                }
+                if (e.otherAddonsPaise > 0) rows.push({ label: 'Other add-ons', paise: e.otherAddonsPaise });
+
+                // Partner services (requested, chef-coordinated).
+                // Each service has an estimate (midpoint of the indicative
+                // range) stored in servicesJson so we can render a real
+                // number per line — chef will confirm the final vendor quote
+                // before the balance payment.
+                let servicesEstPaise = 0;
+                if (e.servicesJson) {
+                  try {
+                    const svcs = JSON.parse(e.servicesJson);
+                    if (Array.isArray(svcs) && svcs.length > 0) {
+                      for (const s of svcs) {
+                        const est = typeof s.estPaise === 'number' ? s.estPaise : 0;
+                        servicesEstPaise += est;
+                        rows.push({
+                          label: s.label || s.key,
+                          sub: (s.range ? `${s.range} · ` : '') + 'estimate · chef to confirm',
+                          paise: est,
+                        });
+                      }
+                    }
+                  } catch { /* ignore */ }
+                }
+
+                return (
+                  <div className="space-y-1.5 text-sm">
+                    {rows.map((r, i) => (
+                      <div key={i} className="flex justify-between items-start gap-3 py-1.5">
+                        <div className="min-w-0 flex-1">
+                          <p className="text-gray-800">{r.label}</p>
+                          {r.sub && <p className="text-[11px] text-gray-400 mt-0.5 truncate">{r.sub}</p>}
+                        </div>
+                        <span className="text-gray-800 font-medium shrink-0">{r.paise > 0 ? formatPaise(r.paise) : 'Included'}</span>
+                      </div>
+                    ))}
+                    {e.platformFeePaise > 0 && (
+                      <div className="flex justify-between py-1.5 text-gray-400 text-xs border-t border-dashed border-gray-200 pt-2 mt-2">
+                        <span>Platform fee</span>
+                        <span>{formatPaise(e.platformFeePaise)}</span>
+                      </div>
+                    )}
+                    <div className="flex justify-between pt-3 mt-1 border-t border-gray-200 text-base">
+                      <span className="font-semibold text-gray-900">Grand Total</span>
+                      <span className="font-bold text-gray-900">{formatPaise(e.totalAmountPaise)}</span>
+                    </div>
+                  </div>
+                );
+              })()}
+            </div>
+
+            {/* Payment split */}
+            <div className="px-6 pt-3 pb-2">
+              <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-4 space-y-2 text-sm">
+                <div className="flex justify-between items-baseline">
+                  <div>
+                    <p className="text-[11px] uppercase tracking-wider text-emerald-700 font-semibold">Advance due now (50%)</p>
+                    <p className="text-2xl font-bold text-emerald-800 mt-0.5">{formatPaise(payAdvanceEvent.advanceAmountPaise)}</p>
+                  </div>
+                </div>
+                <div className="flex justify-between pt-2 border-t border-emerald-200 text-xs">
+                  <span className="text-gray-600">Balance — collected on event day</span>
+                  <span className="font-semibold text-gray-800">{formatPaise(payAdvanceEvent.balanceAmountPaise)}</span>
                 </div>
               </div>
             </div>

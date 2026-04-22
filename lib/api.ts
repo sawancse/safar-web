@@ -2174,6 +2174,87 @@ export const api = {
       headers: { Authorization: `Bearer ${token}` },
     }),
 
+  // ── Chef team / service staff roster ───────────────────────────────
+  listMyStaff: (token: string, opts?: { activeOnly?: boolean; role?: string; includePool?: boolean }) => {
+    const qs = new URLSearchParams();
+    if (opts?.activeOnly != null) qs.set('activeOnly', String(opts.activeOnly));
+    if (opts?.role) qs.set('role', opts.role);
+    if (opts?.includePool) qs.set('includePool', 'true');
+    const path = `/api/v1/chefs/me/staff${qs.toString() ? `?${qs}` : ''}`;
+    return apiFetch<any[]>(path, { headers: { Authorization: `Bearer ${token}` } });
+  },
+
+  listStaffPool: (token: string, opts?: { activeOnly?: boolean; role?: string }) => {
+    const qs = new URLSearchParams();
+    if (opts?.activeOnly != null) qs.set('activeOnly', String(opts.activeOnly));
+    if (opts?.role) qs.set('role', opts.role);
+    const path = `/api/v1/staff/admin/pool${qs.toString() ? `?${qs}` : ''}`;
+    return apiFetch<any[]>(path, { headers: { Authorization: `Bearer ${token}` } });
+  },
+  createPoolStaff: (data: any, token: string) =>
+    apiFetch<any>('/api/v1/staff/admin/pool', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}` },
+      body: JSON.stringify(data),
+    }),
+  updatePoolStaff: (staffId: string, data: any, token: string) =>
+    apiFetch<any>(`/api/v1/staff/admin/pool/${staffId}`, {
+      method: 'PUT',
+      headers: { Authorization: `Bearer ${token}` },
+      body: JSON.stringify(data),
+    }),
+  deletePoolStaff: (staffId: string, token: string) =>
+    apiFetch<void>(`/api/v1/staff/admin/pool/${staffId}`, {
+      method: 'DELETE',
+      headers: { Authorization: `Bearer ${token}` },
+    }),
+  createStaff: (data: any, token: string) =>
+    apiFetch<any>('/api/v1/chefs/me/staff', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}` },
+      body: JSON.stringify(data),
+    }),
+  updateStaff: (staffId: string, data: any, token: string) =>
+    apiFetch<any>(`/api/v1/chefs/me/staff/${staffId}`, {
+      method: 'PUT',
+      headers: { Authorization: `Bearer ${token}` },
+      body: JSON.stringify(data),
+    }),
+  deleteStaff: (staffId: string, token: string) =>
+    apiFetch<void>(`/api/v1/chefs/me/staff/${staffId}`, {
+      method: 'DELETE',
+      headers: { Authorization: `Bearer ${token}` },
+    }),
+
+  // ── Event booking staff assignment ──────────────────────────────────
+  getEventStaff: (eventId: string, token?: string) =>
+    apiFetch<any[]>(`/api/v1/chef-events/${eventId}/staff`,
+      token ? { headers: { Authorization: `Bearer ${token}` } } : undefined),
+  assignEventStaff: (eventId: string, assignments: Array<{ staffId: string; role?: string; ratePaise?: number }>, token: string) =>
+    apiFetch<any[]>(`/api/v1/chef-events/${eventId}/assign-staff`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ assignments }),
+    }),
+  checkInEventStaff: (eventId: string, staffId: string, otp: string | undefined, token: string) =>
+    apiFetch<any>(`/api/v1/chef-events/${eventId}/staff/${staffId}/check-in${otp ? `?otp=${encodeURIComponent(otp)}` : ''}`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}` },
+    }),
+  markEventStaffNoShow: (eventId: string, staffId: string, token: string) =>
+    apiFetch<any>(`/api/v1/chef-events/${eventId}/staff/${staffId}/no-show`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}` },
+    }),
+  rateEventStaff: (eventId: string, staffId: string, stars: number, comment: string | undefined, token: string) => {
+    const qs = new URLSearchParams({ stars: String(stars) });
+    if (comment) qs.set('comment', comment);
+    return apiFetch<any>(`/api/v1/chef-events/${eventId}/staff/${staffId}/rate?${qs}`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}` },
+    });
+  },
+
   registerChef: (data: any, token: string) =>
     apiFetch<any>('/api/v1/chefs', {
       method: 'POST',

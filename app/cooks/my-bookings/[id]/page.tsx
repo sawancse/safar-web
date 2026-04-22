@@ -7,11 +7,12 @@ import { api } from '@/lib/api';
 import { formatPaise } from '@/lib/utils';
 import type { ChatMessage } from '@/types';
 
-type TabKey = 'ingredients' | 'chef' | 'otp' | 'pay' | 'rating';
+type TabKey = 'ingredients' | 'chef' | 'team' | 'otp' | 'pay' | 'rating';
 
 const TABS: { key: TabKey; label: string; icon: string }[] = [
   { key: 'ingredients', label: 'Ingredients', icon: '🛒' },
   { key: 'chef',        label: 'Chef',        icon: '👨‍🍳' },
+  { key: 'team',        label: 'Your Team',   icon: '🧑‍🍳' },
   { key: 'otp',         label: 'Start OTP',   icon: '🔑' },
   { key: 'pay',         label: 'Pay Balance', icon: '💳' },
   { key: 'rating',      label: 'Rate',        icon: '⭐' },
@@ -228,6 +229,7 @@ export default function ChefBookingDetailPage() {
               />
             )}
             {tab === 'chef'        && <ChefTab chef={chef} booking={booking} />}
+            {tab === 'team'        && <TeamTab booking={booking} bookingKind={bookingKind} token={token} />}
             {tab === 'otp'         && <OtpTab booking={booking} />}
             {tab === 'pay'         && <PayTab
                                         booking={booking}
@@ -800,6 +802,170 @@ function TrackingPanel({ bookingId, booking, chef, onBookingUpdated }: {
                   🗺️ Directions
                 </a>
               )}
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ────── Tab: Team (Service staff assigned to this event booking) ────── */
+
+const STAFF_ROLE_META: Record<string, { label: string; icon: string }> = {
+  waiter:    { label: 'Waiter',    icon: '🧑‍🍳' },
+  cleaner:   { label: 'Cleaner',   icon: '🧹' },
+  bartender: { label: 'Bartender', icon: '🍸' },
+};
+
+function TeamTab({ booking, bookingKind, token }: { booking: any; bookingKind: 'chef' | 'event' | null; token: string }) {
+  const [assignments, setAssignments] = useState<any[]>([]);
+  const [staffProfiles, setStaffProfiles] = useState<Record<string, any>>({});
+  const [loading, setLoading] = useState(true);
+  const [actionId, setActionId] = useState<string | null>(null);
+  const [rateModal, setRateModal] = useState<any | null>(null);
+  const [rateStars, setRateStars] = useState(5);
+  const [rateComment, setRateComment] = useState('');
+  const [rateSaving, setRateSaving] = useState(false);
+
+  const canRate = booking?.status === 'COMPLETED';
+
+  async function refresh() {
+    if (!booking?.id) return;
+    setLoading(true);
+    try {
+      const list = await api.getEventStaff(booking.id, token).catch(() => []);
+      setAssignments(list || []);
+    } finally { setLoading(false); }
+  }
+
+  useEffect(() => { refresh(); /* eslint-disable-next-line */ }, [booking?.id]);
+
+  async function onArrived(a: any) {
+    const otp = prompt(`Ask the staff to show their ID and hand over the OTP below.\n\nEnter the 4-digit OTP for ${staffProfiles[a.staffId]?.name || 'this staff member'}:`);
+    if (!otp) return;
+    setActionId(a.staffId);
+    try {
+      await api.checkInEventStaff(booking.id, a.staffId, otp, token);
+      await refresh();
+    } catch (e: any) {
+      alert(e?.message || 'Invalid OTP');
+    } finally {
+      setActionId(null);
+    }
+  }
+
+  async function submitRate() {
+    if (!rateModal) return;
+    setRateSaving(true);
+    try {
+      await api.rateEventStaff(booking.id, rateModal.staffId, rateStars, rateComment || undefined, token);
+      setRateModal(null);
+      setRateComment('');
+      setRateStars(5);
+      await refresh();
+    } catch (e: any) {
+      alert(e?.message || 'Failed to save rating');
+    } finally {
+      setRateSaving(false);
+    }
+  }
+
+  if (bookingKind !== 'event') {
+    return <p className="text-sm text-gray-500">Service staff only applies to event bookings.</p>;
+  }
+
+  if (loading) {
+    return <div className="py-8 text-center text-gray-400 text-sm">Loading your service team…</div>;
+  }
+
+  if (assignments.length === 0) {
+    return (
+      <div className="py-10 text-center">
+        <div className="text-4xl mb-2">🧑‍🍳</div>
+        <p className="text-sm text-gray-500">No staff assigned yet — your chef will pick from their team and add them here before the event.</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 text-xs text-amber-800">
+        <p className="font-semibold mb-1">How this works</p>
+        <p>When a staff member arrives, tap <b>Arrived</b> and enter the 4-digit OTP shown below. Each staff member has a unique OTP — share the matching one only with that person on arrival.</p>
+      </div>
+
+      <div className="divide-y border rounded-xl overflow-hidden">
+        {assignments.map((a: any) => {
+          const meta = STAFF_ROLE_META[a.role] || { label: a.role, icon: '🧑' };
+          const checkedIn = !!a.checkInAt;
+          const noShow = !!a.noShow;
+          return (
+            <div key={a.id} className="p-4 flex items-center gap-3">
+              <div className={`w-12 h-12 rounded-full flex items-center justify-center text-xl ${checkedIn ? 'bg-green-100' : noShow ? 'bg-red-100' : 'bg-gray-100'}`}>
+                {meta.icon}
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="font-semibold text-gray-900">{a.name || meta.label}</span>
+                  <span className="text-[10px] uppercase tracking-wide bg-orange-50 text-orange-700 px-2 py-0.5 rounded">{meta.label}</span>
+                  {checkedIn && <span className="text-[10px] bg-green-100 text-green-700 px-2 py-0.5 rounded">Arrived ✓</span>}
+                  {noShow && <span className="text-[10px] bg-red-100 text-red-700 px-2 py-0.5 rounded">No-show</span>}
+                </div>
+                <div className="text-xs text-gray-500 mt-0.5">
+                  {!checkedIn && !noShow && (
+                    <span>OTP to share on arrival: <span className="font-mono font-bold tracking-widest text-gray-900">{a.checkInOtp}</span></span>
+                  )}
+                  {checkedIn && <span>Checked in at {new Date(a.checkInAt).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}</span>}
+                  {typeof a.rating === 'number' && a.rating > 0 && (
+                    <span className="ml-2 text-yellow-600">{'★'.repeat(a.rating)}{'☆'.repeat(5 - a.rating)}</span>
+                  )}
+                </div>
+              </div>
+              <div className="flex flex-col gap-1">
+                {!checkedIn && !noShow && (
+                  <button
+                    onClick={() => onArrived(a)}
+                    disabled={actionId === a.staffId}
+                    className="text-xs bg-green-500 hover:bg-green-600 text-white px-3 py-1.5 rounded-lg font-semibold disabled:opacity-40">
+                    {actionId === a.staffId ? '…' : 'Arrived'}
+                  </button>
+                )}
+                {canRate && (
+                  <button
+                    onClick={() => { setRateModal(a); setRateStars(a.rating || 5); setRateComment(a.ratingComment || ''); }}
+                    className="text-xs border border-yellow-400 text-yellow-700 hover:bg-yellow-50 px-3 py-1.5 rounded-lg font-semibold">
+                    {a.rating ? 'Edit rating' : 'Rate'}
+                  </button>
+                )}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {rateModal && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={() => !rateSaving && setRateModal(null)}>
+          <div className="bg-white rounded-2xl p-6 max-w-sm w-full shadow-xl" onClick={e => e.stopPropagation()}>
+            <h3 className="text-lg font-bold mb-1">Rate staff</h3>
+            <p className="text-xs text-gray-500 mb-4">How was {rateModal.name || STAFF_ROLE_META[rateModal.role]?.label || rateModal.role}?</p>
+            <div className="flex justify-center gap-1 mb-4">
+              {[1,2,3,4,5].map(n => (
+                <button key={n} onClick={() => setRateStars(n)} className="text-4xl">
+                  {n <= rateStars ? '⭐' : '☆'}
+                </button>
+              ))}
+            </div>
+            <textarea value={rateComment} onChange={e => setRateComment(e.target.value)}
+              placeholder="Optional comment"
+              rows={3} className="w-full border rounded-lg px-3 py-2 text-sm resize-none mb-4" />
+            <div className="flex gap-3">
+              <button onClick={() => setRateModal(null)} disabled={rateSaving}
+                className="flex-1 border rounded-xl py-2.5 text-sm font-medium hover:bg-gray-50 disabled:opacity-40">Cancel</button>
+              <button onClick={submitRate} disabled={rateSaving}
+                className="flex-1 bg-orange-500 hover:bg-orange-600 text-white rounded-xl py-2.5 text-sm font-semibold disabled:opacity-40">
+                {rateSaving ? 'Saving…' : 'Submit'}
+              </button>
             </div>
           </div>
         </div>

@@ -68,21 +68,23 @@ const FALLBACK_ADDONS = [
 
 // Extra non-cooking services — especially for anniversaries, birthdays, housewarming.
 // These are *requests* (not chef-provided); chef factors them into the quote and
-// arranges a partner vendor where needed. Price ranges are indicative only.
-const EVENT_SERVICES: { key: string; label: string; icon: string; range: string; desc: string }[] = [
-  { key: 'photography',   label: 'Photographer',        icon: '📷', range: '₹5k–₹25k',  desc: 'Candid + posed photos for the event' },
-  { key: 'videography',   label: 'Videographer',        icon: '🎥', range: '₹8k–₹40k',  desc: 'Highlight reel / full event video' },
-  { key: 'decoration_pro',label: 'Premium Decor',       icon: '🌸', range: '₹10k–₹60k', desc: 'Flowers, stage, backdrop, lighting' },
-  { key: 'dj',            label: 'DJ',                  icon: '🎧', range: '₹8k–₹30k',  desc: 'Music + sound system + lights' },
-  { key: 'live_music',    label: 'Live music / band',   icon: '🎺', range: '₹10k–₹60k', desc: 'Sitar, flute, ghazal, or small band' },
-  { key: 'mc',            label: 'MC / Host',           icon: '🎤', range: '₹5k–₹20k',  desc: 'Anchor for the evening' },
-  { key: 'makeup',        label: 'Makeup artist',       icon: '💄', range: '₹3k–₹15k',  desc: 'For the couple / guest of honour' },
-  { key: 'mehndi',        label: 'Mehndi artist',       icon: '🎨', range: '₹2k–₹10k',  desc: 'Especially for anniversaries, birthdays' },
-  { key: 'pandit',        label: 'Pandit / Puja',       icon: '🪔', range: '₹3k–₹12k',  desc: 'Silver/gold/diamond jubilee puja' },
-  { key: 'bouquet',       label: 'Bouquet / gifts',     icon: '💐', range: '₹1k–₹5k',   desc: 'Anniversary flowers, curated gift' },
-  { key: 'cake_designer', label: 'Designer cake+',      icon: '🎂', range: '₹2k–₹10k',  desc: 'Tiered / photo-print / sugar-free' },
-  { key: 'entertainer',   label: 'Magician / Games',    icon: '🎩', range: '₹5k–₹20k',  desc: 'For kids-friendly anniversaries' },
-  { key: 'valet',         label: 'Valet / Parking',     icon: '🚗', range: '₹3k–₹10k',  desc: 'Valet + marshals for guests' },
+// arranges a partner vendor where needed.
+//   lowPaise / highPaise  → indicative band used for the sidebar estimate.
+//   range                 → human-readable label shown next to the checkbox.
+const EVENT_SERVICES: { key: string; label: string; icon: string; range: string; desc: string; lowPaise: number; highPaise: number }[] = [
+  { key: 'photography',   label: 'Photographer',        icon: '📷', range: '₹5k–₹25k',  desc: 'Candid + posed photos for the event',     lowPaise:  500000, highPaise: 2500000 },
+  { key: 'videography',   label: 'Videographer',        icon: '🎥', range: '₹8k–₹40k',  desc: 'Highlight reel / full event video',       lowPaise:  800000, highPaise: 4000000 },
+  { key: 'decoration_pro',label: 'Premium Decor',       icon: '🌸', range: '₹10k–₹60k', desc: 'Flowers, stage, backdrop, lighting',      lowPaise: 1000000, highPaise: 6000000 },
+  { key: 'dj',            label: 'DJ',                  icon: '🎧', range: '₹8k–₹30k',  desc: 'Music + sound system + lights',           lowPaise:  800000, highPaise: 3000000 },
+  { key: 'live_music',    label: 'Live music / band',   icon: '🎺', range: '₹10k–₹60k', desc: 'Sitar, flute, ghazal, or small band',     lowPaise: 1000000, highPaise: 6000000 },
+  { key: 'mc',            label: 'MC / Host',           icon: '🎤', range: '₹5k–₹20k',  desc: 'Anchor for the evening',                  lowPaise:  500000, highPaise: 2000000 },
+  { key: 'makeup',        label: 'Makeup artist',       icon: '💄', range: '₹3k–₹15k',  desc: 'For the couple / guest of honour',        lowPaise:  300000, highPaise: 1500000 },
+  { key: 'mehndi',        label: 'Mehndi artist',       icon: '🎨', range: '₹2k–₹10k',  desc: 'Especially for anniversaries, birthdays', lowPaise:  200000, highPaise: 1000000 },
+  { key: 'pandit',        label: 'Pandit / Puja',       icon: '🪔', range: '₹3k–₹12k',  desc: 'Silver/gold/diamond jubilee puja',        lowPaise:  300000, highPaise: 1200000 },
+  { key: 'bouquet',       label: 'Bouquet / gifts',     icon: '💐', range: '₹1k–₹5k',   desc: 'Anniversary flowers, curated gift',       lowPaise:  100000, highPaise:  500000 },
+  { key: 'cake_designer', label: 'Designer cake+',      icon: '🎂', range: '₹2k–₹10k',  desc: 'Tiered / photo-print / sugar-free',       lowPaise:  200000, highPaise: 1000000 },
+  { key: 'entertainer',   label: 'Magician / Games',    icon: '🎩', range: '₹5k–₹20k',  desc: 'For kids-friendly anniversaries',         lowPaise:  500000, highPaise: 2000000 },
+  { key: 'valet',         label: 'Valet / Parking',     icon: '🚗', range: '₹3k–₹10k',  desc: 'Valet + marshals for guests',             lowPaise:  300000, highPaise: 1000000 },
 ];
 
 interface PricingItem {
@@ -128,8 +130,9 @@ export default function EventBookingPage() {
   // Add-ons
   const [selectedAddons, setSelectedAddons] = useState<Set<string>>(new Set());
   const [selectedCounters, setSelectedCounters] = useState<Set<string>>(new Set());
-  const [extraStaff, setExtraStaff] = useState(false);
-  const [staffCount, setStaffCount] = useState(2);
+  // Per-role staff: { waiter: 2, cleaner: 1, bartender: 1 }. Roles are
+  // fetched from pricingItems where category === 'STAFF_ROLE'.
+  const [staffRoleCounts, setStaffRoleCounts] = useState<Record<string, number>>({});
 
   // Extra non-cooking services (photography, DJ, puja, etc.)
   const [selectedServices, setSelectedServices] = useState<Set<string>>(new Set());
@@ -192,6 +195,10 @@ export default function EventBookingPage() {
       }
       return { ...prev, [cat]: next };
     });
+    if (delta > 0) {
+      setSelectDishesNow(true);
+      setActiveSelectionCat(cat);
+    }
   }
 
   function toggleDish(cat: string, dishId: string) {
@@ -224,16 +231,10 @@ export default function EventBookingPage() {
     });
   }
 
-  function dishMenuTotal(): number {
-    const allIds = Object.values(selectedDishes).flat();
-    let total = 0;
-    for (const dishes of Object.values(dishCatalog)) {
-      for (const d of dishes) {
-        if (allIds.includes(d.id)) total += d.pricePaise;
-      }
-    }
-    return total * guestCount;
-  }
+  // Billing is flat per-plate (Option A) — dish selections are menu planning
+  // only, not line items. Retained as a helper in case admins switch back
+  // to per-dish billing later; returns 0 today.
+  function dishMenuTotal(): number { return 0; }
 
   useEffect(() => {
     api.getEventPricing(chefId || undefined)
@@ -251,18 +252,33 @@ export default function EventBookingPage() {
   const ADDONS = pricingLoaded
     ? pricingItems.filter(i => i.category === 'ADDON' && i.available !== false).map(i => ({ key: i.itemKey, label: i.label, desc: i.description || '', icon: i.icon || '', paise: i.pricePaise }))
     : FALLBACK_ADDONS;
+  // Per-role staff rates from STAFF_ROLE pricing rows (V17 seeds waiter/cleaner/bartender).
+  // If the API hasn't returned them yet, fall back to a minimal trio so the UI still renders.
+  const STAFF_ROLES = pricingLoaded && pricingItems.some(i => i.category === 'STAFF_ROLE')
+    ? pricingItems.filter(i => i.category === 'STAFF_ROLE' && i.available !== false).map(i => ({ key: i.itemKey, label: i.label, desc: i.description || '', icon: i.icon || '🧑‍🍳', paise: i.pricePaise }))
+    : [
+        { key: 'waiter',    label: 'Waiter',    desc: 'Serves food & drinks, clears plates',   icon: '🧑‍🍳', paise:  99900 },
+        { key: 'cleaner',   label: 'Cleaner',   desc: 'Setup & cleanup before, during, after', icon: '🧹',    paise:  99900 },
+        { key: 'bartender', label: 'Bartender', desc: 'Cocktails, mocktails, serves drinks',    icon: '🍸',   paise: 256900 },
+      ];
 
   const perPlatePaise = pricingItems.find(i => i.itemKey === 'per_plate')?.pricePaise ?? 30000;
-  const staffRatePaise = pricingItems.find(i => i.itemKey === 'staff')?.pricePaise ?? 150000;
   const platformFeePct = (pricingItems.find(i => i.itemKey === 'platform_fee_pct')?.pricePaise ?? 1000) / 10000; // basis points → fraction
 
-  // Price estimate
-  const menuPaise = selectDishesNow && totalSelectedDishes() > 0 ? dishMenuTotal() : 0;
-  const foodPaise = menuPaise > 0 ? menuPaise : guestCount * perPlatePaise;
+  // Price estimate — Option A: flat per-plate billing.
+  // Dish selections are menu planning (chef uses them to decide what to cook)
+  // and do not affect the bill.
+  const foodPaise = guestCount * perPlatePaise;
   const countersPaise = [...selectedCounters].reduce((sum, k) => sum + (LIVE_COUNTERS.find(c => c.key === k)?.paise ?? 0), 0);
   const addonsPaise = [...selectedAddons].reduce((sum, k) => sum + (ADDONS.find(a => a.key === k)?.paise ?? 0), 0);
-  const staffPaise = extraStaff ? staffCount * staffRatePaise : 0;
-  const subtotalPaise = foodPaise + countersPaise + addonsPaise + staffPaise;
+  const staffPaise = STAFF_ROLES.reduce((sum, r) => sum + (staffRoleCounts[r.key] || 0) * r.paise, 0);
+  const totalStaffCount = STAFF_ROLES.reduce((sum, r) => sum + (staffRoleCounts[r.key] || 0), 0);
+  // Partner services — indicative midpoint used as estimate. Chef will
+  // confirm the actual vendor quote before collecting balance.
+  const servicesLowPaise  = [...selectedServices].reduce((s, k) => s + (EVENT_SERVICES.find(x => x.key === k)?.lowPaise  ?? 0), 0);
+  const servicesHighPaise = [...selectedServices].reduce((s, k) => s + (EVENT_SERVICES.find(x => x.key === k)?.highPaise ?? 0), 0);
+  const servicesEstPaise  = Math.round((servicesLowPaise + servicesHighPaise) / 2);
+  const subtotalPaise = foodPaise + countersPaise + addonsPaise + staffPaise + servicesEstPaise;
   const platformFeePaise = Math.round(subtotalPaise * platformFeePct);
   const totalPaise = subtotalPaise + platformFeePaise;
 
@@ -301,6 +317,14 @@ export default function EventBookingPage() {
     setError('');
     try {
       const allSelectedDishIds = Object.values(selectedDishes).flat();
+      // Prune zero-count roles so the stored JSON stays compact.
+      const activeStaffRoles: Record<string, number> = {};
+      for (const r of STAFF_ROLES) {
+        const n = staffRoleCounts[r.key] || 0;
+        if (n > 0) activeStaffRoles[r.key] = n;
+      }
+      const hasStaff = Object.keys(activeStaffRoles).length > 0;
+      const staffRolesJson = hasStaff ? JSON.stringify(activeStaffRoles) : undefined;
       const addOnsJson = JSON.stringify({
         decoration: selectedAddons.has('decoration'),
         cake: selectedAddons.has('cake'),
@@ -308,7 +332,8 @@ export default function EventBookingPage() {
         appliances: selectedAddons.has('appliances'),
         tableSetup: selectedAddons.has('table_setup'),
         liveCounters: [...selectedCounters],
-        extraStaff, staffCount: extraStaff ? staffCount : 0,
+        extraStaff: hasStaff, staffCount: totalStaffCount,
+        staffRoles: hasStaff ? activeStaffRoles : undefined,
         vegNonVeg,
         selectedDishIds: allSelectedDishIds.length > 0 ? allSelectedDishIds : undefined,
         categoryCounts: totalDishCount() > 0 ? categoryCounts : undefined,
@@ -316,7 +341,17 @@ export default function EventBookingPage() {
       const servicesJson = selectedServices.size > 0
         ? JSON.stringify([...selectedServices].map(key => {
             const svc = EVENT_SERVICES.find(s => s.key === key);
-            return { key, label: svc?.label ?? key, range: svc?.range ?? '', notes: serviceNotes[key] || '' };
+            const low  = svc?.lowPaise  ?? 0;
+            const high = svc?.highPaise ?? 0;
+            return {
+              key,
+              label: svc?.label ?? key,
+              range: svc?.range ?? '',
+              notes: serviceNotes[key] || '',
+              lowPaise:  low,
+              highPaise: high,
+              estPaise:  Math.round((low + high) / 2),
+            };
           }))
         : undefined;
       await api.createEventBooking({
@@ -332,13 +367,14 @@ export default function EventBookingPage() {
         cuisinePreferences: cuisineType,
         decorationRequired: selectedAddons.has('decoration'),
         cakeRequired: selectedAddons.has('cake'),
-        staffRequired: extraStaff,
-        staffCount: extraStaff ? staffCount : 0,
+        staffRequired: hasStaff,
+        staffCount: totalStaffCount,
         specialRequests,
         customerName,
         customerPhone,
         menuDescription: addOnsJson,
         servicesJson,
+        staffRolesJson,
       }, token || undefined);
       router.push('/cooks/my-bookings');
     } catch (err: any) {
@@ -487,7 +523,7 @@ export default function EventBookingPage() {
                   <div className="bg-white rounded-xl shadow-sm border p-6 space-y-5">
                     <div>
                       <h2 className="text-xl font-bold text-gray-900 mb-1">Menu Preferences</h2>
-                      <p className="text-sm text-gray-500">Select dishes for your {eventLabel} ({guestCount} guests)</p>
+                      <p className="text-sm text-gray-500">Help your chef plan — pick the dishes you'd like for your {eventLabel} ({guestCount} guests). Billed at a flat {formatPaise(perPlatePaise)}/plate regardless of dish count.</p>
                     </div>
 
                     {/* Cuisine quick-pick */}
@@ -617,6 +653,7 @@ export default function EventBookingPage() {
                                 <span>{meta.icon}</span>
                                 <span className="text-sm font-semibold text-gray-800">{meta.label}</span>
                                 <span className="text-xs text-gray-400">({selected.length}/{maxCount})</span>
+                                <span className="text-[10px] text-blue-500 font-mono">[raw={(dishCatalog[cat] || []).length} filtered={filtered.length}]</span>
                               </div>
                               <div className="flex items-center gap-2">
                                 {selected.length > 0 && (
@@ -625,7 +662,7 @@ export default function EventBookingPage() {
                                       const d = (dishCatalog[cat] || []).find(x => x.id === id);
                                       return d ? (
                                         <span key={id} className="text-[10px] bg-orange-50 text-orange-700 px-2 py-0.5 rounded-full font-medium flex items-center gap-1">
-                                          {d.name} ({formatPaise(d.pricePaise)})
+                                          {d.name}
                                           <button type="button" onClick={e => { e.stopPropagation(); toggleDish(cat, id); }}
                                             className="text-red-400 hover:text-red-600 ml-0.5">&times;</button>
                                         </span>
@@ -680,7 +717,7 @@ export default function EventBookingPage() {
                                         </div>
                                         {dish.noOnionGarlic && <p className="text-[10px] text-purple-500 mt-0.5">Can be made without onion, garlic</p>}
                                       </div>
-                                      <span className="text-sm font-semibold text-gray-700 shrink-0">{formatPaise(dish.pricePaise)}</span>
+                                      {/* Dish prices are hidden — billing is flat per-plate (Option A). Dishes are menu planning. */}
                                       {isSelected && (
                                         <svg className="w-5 h-5 text-orange-500 shrink-0" fill="currentColor" viewBox="0 0 20 20">
                                           <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
@@ -709,7 +746,7 @@ export default function EventBookingPage() {
                       <div className="flex items-center justify-between">
                         <div>
                           <p className="text-sm font-semibold text-orange-800">{totalSelectedDishes()} dishes selected for {guestCount} guests</p>
-                          <p className="text-xs text-orange-600 mt-0.5">Menu cost: {formatPaise(dishMenuTotal())} ({formatPaise(Math.round(dishMenuTotal() / guestCount))}/person)</p>
+                          <p className="text-xs text-orange-600 mt-0.5">Included in the ₹{Math.round(perPlatePaise / 100).toLocaleString('en-IN')}/plate price — dishes help the chef plan.</p>
                         </div>
                       </div>
                     </div>
@@ -766,28 +803,52 @@ export default function EventBookingPage() {
                         </label>
                       ))}
 
-                      {/* Extra Staff */}
-                      <div className={`p-4 rounded-lg border ${extraStaff ? 'border-orange-500 bg-orange-50' : ''}`}>
-                        <label className="flex items-center gap-3 cursor-pointer">
-                          <input type="checkbox" checked={extraStaff} onChange={e => setExtraStaff(e.target.checked)}
-                            className="w-4 h-4 text-orange-500 rounded border-gray-300 focus:ring-orange-500" />
-                          <span className="text-xl">🧑‍🍳</span>
-                          <div className="flex-1">
-                            <span className="text-sm font-medium text-gray-900">Extra Serving Staff</span>
-                            <p className="text-xs text-gray-500">Waiters for serving & cleanup</p>
-                          </div>
-                          <span className="text-sm font-semibold text-gray-600">+{formatPaise(staffRatePaise)}/person</span>
-                        </label>
-                        {extraStaff && (
-                          <div className="mt-3 ml-11 flex items-center gap-3">
-                            <label className="text-xs text-gray-600">Number of staff:</label>
-                            <input type="number" min={1} max={20} value={staffCount}
-                              onChange={e => setStaffCount(Number(e.target.value))}
-                              className="w-20 border rounded px-2 py-1 text-sm" />
-                          </div>
-                        )}
-                      </div>
                     </div>
+                  </div>
+
+                  {/* Service Staff — per role */}
+                  <div className="bg-white rounded-xl shadow-sm border p-6">
+                    <h3 className="font-semibold text-gray-900 mb-1">Service Staff</h3>
+                    <p className="text-xs text-gray-500 mb-4">
+                      Add how many of each role you need. Rates are per person for the event.
+                    </p>
+                    <div className="space-y-2">
+                      {STAFF_ROLES.map(role => {
+                        const count = staffRoleCounts[role.key] || 0;
+                        const on = count > 0;
+                        return (
+                          <div key={role.key}
+                               className={`flex items-center gap-3 p-3 rounded-lg border transition ${on ? 'border-orange-500 bg-orange-50' : ''}`}>
+                            <span className="text-xl">{role.icon}</span>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center justify-between gap-2">
+                                <span className="text-sm font-medium text-gray-900">{role.label}</span>
+                                <span className="text-sm font-semibold text-gray-600 whitespace-nowrap">+{formatPaise(role.paise)} per {role.label.toLowerCase()}</span>
+                              </div>
+                              <p className="text-xs text-gray-500">{role.desc}</p>
+                            </div>
+                            <div className="flex items-center">
+                              <button type="button"
+                                onClick={() => setStaffRoleCounts(prev => ({ ...prev, [role.key]: Math.max(0, (prev[role.key] || 0) - 1) }))}
+                                className="w-8 h-8 rounded-l-lg border border-r-0 bg-gray-50 text-gray-600 hover:bg-gray-100 font-bold text-lg flex items-center justify-center"
+                                disabled={count === 0}>-</button>
+                              <div className={`w-10 h-8 border flex items-center justify-center text-sm font-bold ${on ? 'bg-orange-500 text-white' : 'bg-white text-gray-700'}`}>
+                                {count}
+                              </div>
+                              <button type="button"
+                                onClick={() => setStaffRoleCounts(prev => ({ ...prev, [role.key]: Math.min(20, (prev[role.key] || 0) + 1) }))}
+                                className="w-8 h-8 rounded-r-lg border border-l-0 bg-gray-50 text-gray-600 hover:bg-gray-100 font-bold text-lg flex items-center justify-center">+</button>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                    {totalStaffCount > 0 && (
+                      <div className="mt-3 text-xs text-gray-500 flex justify-between">
+                        <span>{totalStaffCount} staff total</span>
+                        <span className="font-semibold text-gray-700">{formatPaise(staffPaise)}</span>
+                      </div>
+                    )}
                   </div>
 
                   {/* Non-cooking services (photographer, DJ, puja, etc.) */}
@@ -898,7 +959,7 @@ export default function EventBookingPage() {
                     )}
                   </div>
 
-                  {(selectedCounters.size > 0 || selectedAddons.size > 0 || extraStaff) && (
+                  {(selectedCounters.size > 0 || selectedAddons.size > 0 || totalStaffCount > 0) && (
                     <div>
                       <h3 className="text-sm font-semibold text-gray-700 mb-2">Selected Add-ons</h3>
                       <div className="flex flex-wrap gap-2">
@@ -910,7 +971,11 @@ export default function EventBookingPage() {
                           const a = ADDONS.find(x => x.key === k);
                           return a && <span key={k} className="text-xs bg-purple-50 text-purple-700 px-3 py-1 rounded-full">{a.icon} {a.label}</span>;
                         })}
-                        {extraStaff && <span className="text-xs bg-blue-50 text-blue-700 px-3 py-1 rounded-full">🧑‍🍳 {staffCount} staff</span>}
+                        {STAFF_ROLES.filter(r => (staffRoleCounts[r.key] || 0) > 0).map(r => (
+                          <span key={r.key} className="text-xs bg-blue-50 text-blue-700 px-3 py-1 rounded-full">
+                            {r.icon} {staffRoleCounts[r.key]} {r.label.toLowerCase()}{(staffRoleCounts[r.key] || 0) > 1 ? 's' : ''}
+                          </span>
+                        ))}
                       </div>
                     </div>
                   )}
@@ -936,7 +1001,7 @@ export default function EventBookingPage() {
               <h3 className="font-bold text-gray-900 mb-4">Price Estimate</h3>
               <div className="space-y-2.5 text-sm">
                 <div className="flex justify-between">
-                  <span className="text-gray-600">{menuPaise > 0 ? `Menu (${totalSelectedDishes()} dishes x ${guestCount})` : `Food (${guestCount} x ${formatPaise(perPlatePaise)})`}</span>
+                  <span className="text-gray-600">Food ({guestCount} × {formatPaise(perPlatePaise)}/plate)</span>
                   <span className="font-medium">{formatPaise(foodPaise)}</span>
                 </div>
                 {[...selectedCounters].map(k => {
@@ -957,11 +1022,33 @@ export default function EventBookingPage() {
                     </div>
                   );
                 })}
-                {extraStaff && (
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Staff ({staffCount}x {formatPaise(staffRatePaise)})</span>
-                    <span className="font-medium">{formatPaise(staffPaise)}</span>
+                {STAFF_ROLES.filter(r => (staffRoleCounts[r.key] || 0) > 0).map(r => (
+                  <div key={r.key} className="flex justify-between">
+                    <span className="text-gray-600">{r.label} ({staffRoleCounts[r.key]}x {formatPaise(r.paise)})</span>
+                    <span className="font-medium">{formatPaise(staffRoleCounts[r.key] * r.paise)}</span>
                   </div>
+                ))}
+                {selectedServices.size > 0 && (
+                  <>
+                    <div className="pt-2 mt-1 border-t border-dashed border-gray-200">
+                      <p className="text-[11px] uppercase tracking-wider text-gray-400 font-semibold mb-1">Partner services (estimate)</p>
+                      {[...selectedServices].map(k => {
+                        const svc = EVENT_SERVICES.find(s => s.key === k);
+                        if (!svc) return null;
+                        return (
+                          <div key={k} className="flex justify-between text-xs">
+                            <span className="text-gray-600">{svc.icon} {svc.label}</span>
+                            <span className="text-gray-500">{svc.range}</span>
+                          </div>
+                        );
+                      })}
+                      <div className="flex justify-between mt-1.5 text-xs font-medium">
+                        <span className="text-gray-600">Est. services total</span>
+                        <span className="text-gray-800">~{formatPaise(servicesEstPaise)}</span>
+                      </div>
+                      <p className="text-[10px] text-gray-400 mt-0.5">Chef will confirm the final vendor quote before you pay the balance.</p>
+                    </div>
+                  </>
                 )}
                 <div className="flex justify-between text-gray-400">
                   <span>Platform fee (10%)</span>

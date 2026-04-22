@@ -42,6 +42,19 @@ export default function ChefDashboardPage() {
   const [bookingsError, setBookingsError] = useState('');
   const [gallery, setGallery] = useState<any[]>([]);
   const [galleryUploading, setGalleryUploading] = useState(false);
+  // Chef team (service staff roster)
+  const [staff, setStaff] = useState<any[]>([]);
+  const [staffModal, setStaffModal] = useState<{ mode: 'add' | 'edit'; data: any } | null>(null);
+  const [savingStaff, setSavingStaff] = useState(false);
+  const [uploadingStaffPhoto, setUploadingStaffPhoto] = useState(false);
+  // Assign-staff-to-booking modal. assignableStaff combines chef's own team + platform pool
+  // (without polluting the `staff` state that drives the My Team tab).
+  const [assignModal, setAssignModal] = useState<{ event: any; rolesNeeded: Record<string, number>; picks: Record<string, string[]> } | null>(null);
+  const [assignableStaff, setAssignableStaff] = useState<any[]>([]);
+  const [assigning, setAssigning] = useState(false);
+  // Expanded event card showing roster + check-in actions (keyed by eventId).
+  const [eventStaffView, setEventStaffView] = useState<Record<string, any[]>>({});
+  const [loadingEventStaff, setLoadingEventStaff] = useState<string | null>(null);
   const [quoteModal, setQuoteModal] = useState<string | null>(null);
   const [quoteAmount, setQuoteAmount] = useState('');
   const [editMode, setEditMode] = useState(false);
@@ -81,6 +94,8 @@ export default function ChefDashboardPage() {
         if (profile?.id) {
           api.getChefPhotos(profile.id).then(p => setGallery(p || [])).catch(() => {});
         }
+        // Load team (staff roster)
+        api.listMyStaff(token, { activeOnly: false }).then(s => setStaff(s || [])).catch(() => {});
         setViewState('ready');
       })
       .catch((err) => {
@@ -354,6 +369,7 @@ export default function ChefDashboardPage() {
     { key: 'events', label: `Events (${events.length})` },
     { key: 'subscriptions', label: `Subscriptions (${subscriptions.length})` },
     { key: 'gallery', label: `Gallery (${gallery.length})` },
+    { key: 'team', label: `My Team (${staff.length})` },
     { key: 'profile', label: 'Profile' },
   ];
 
@@ -679,7 +695,110 @@ export default function ChefDashboardPage() {
                       className="text-xs bg-green-500 hover:bg-green-600 text-white px-4 py-1.5 rounded-lg font-medium transition">Mark Complete</button>
                   )}
                   {e.status === 'COMPLETED' && <span className="text-xs text-green-600 font-medium">Completed ✓</span>}
+                  {e.staffRolesJson && (e.status === 'QUOTED' || e.status === 'ADVANCE_PAID' || e.status === 'IN_PROGRESS') && (() => {
+                    let rolesNeeded: Record<string, number> = {};
+                    try { rolesNeeded = JSON.parse(e.staffRolesJson); } catch { /* ignore */ }
+                    if (!rolesNeeded || Object.keys(rolesNeeded).length === 0) return null;
+                    return (
+                      <>
+                        <button
+                          onClick={async () => {
+                            const [existing, assignable] = await Promise.all([
+                              api.getEventStaff(e.id, token()).catch(() => []),
+                              api.listMyStaff(token(), { activeOnly: true, includePool: true }).catch(() => []),
+                            ]);
+                            setAssignableStaff(assignable || []);
+                            const picks: Record<string, string[]> = {};
+                            for (const role of Object.keys(rolesNeeded)) {
+                              picks[role] = (existing || []).filter((a: any) => a.role === role).map((a: any) => a.staffId);
+                            }
+                            setAssignModal({ event: e, rolesNeeded, picks });
+                          }}
+                          className="text-xs bg-purple-500 hover:bg-purple-600 text-white px-4 py-1.5 rounded-lg font-medium transition">
+                          Assign Staff
+                        </button>
+                        <button
+                          onClick={async () => {
+                            if (eventStaffView[e.id]) {
+                              setEventStaffView(prev => { const n = { ...prev }; delete n[e.id]; return n; });
+                              return;
+                            }
+                            setLoadingEventStaff(e.id);
+                            try {
+                              const list = await api.getEventStaff(e.id, token());
+                              setEventStaffView(prev => ({ ...prev, [e.id]: list || [] }));
+                            } finally { setLoadingEventStaff(null); }
+                          }}
+                          className="text-xs border border-gray-300 text-gray-700 hover:bg-gray-50 px-3 py-1.5 rounded-lg font-medium transition">
+                          {eventStaffView[e.id] ? 'Hide Team' : loadingEventStaff === e.id ? '…' : 'View Team'}
+                        </button>
+                      </>
+                    );
+                  })()}
                 </div>
+                {eventStaffView[e.id] && eventStaffView[e.id].length > 0 && (
+                  <div className="mt-3 border-t pt-3 space-y-2">
+                    {eventStaffView[e.id].map((a: any) => {
+                      const STAFF_META: Record<string, { label: string; icon: string }> = {
+                        waiter: { label: 'Waiter', icon: '🧑‍🍳' },
+                        cleaner: { label: 'Cleaner', icon: '🧹' },
+                        bartender: { label: 'Bartender', icon: '🍸' },
+                      };
+                      const meta = STAFF_META[a.role] || { label: a.role, icon: '🧑' };
+                      const checkedIn = !!a.checkInAt;
+                      const noShow = !!a.noShow;
+                      return (
+                        <div key={a.id} className="flex items-center gap-3 bg-gray-50 rounded-lg p-2">
+                          {a.photoUrl
+                            ? <img src={a.photoUrl} alt="" className="w-9 h-9 rounded-full object-cover" />
+                            : <div className="w-9 h-9 rounded-full bg-white border flex items-center justify-center text-sm">{meta.icon}</div>}
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              <span className="text-sm font-medium text-gray-900">{a.name || meta.label}</span>
+                              <span className="text-[10px] bg-orange-50 text-orange-700 px-1.5 py-0.5 rounded">{meta.label}</span>
+                              {a.poolMember && <span className="text-[10px] bg-indigo-100 text-indigo-700 px-1.5 py-0.5 rounded font-bold">POOL</span>}
+                              {checkedIn && <span className="text-[10px] bg-green-100 text-green-700 px-1.5 py-0.5 rounded">Arrived</span>}
+                              {noShow && <span className="text-[10px] bg-red-100 text-red-700 px-1.5 py-0.5 rounded">No-show</span>}
+                              {typeof a.rating === 'number' && a.rating > 0 && <span className="text-[10px] text-yellow-600">{'★'.repeat(a.rating)}</span>}
+                            </div>
+                            <p className="text-[11px] text-gray-500">
+                              OTP <span className="font-mono font-bold">{a.checkInOtp}</span>
+                              {a.phone && <span className="ml-2">· {a.phone}</span>}
+                              {checkedIn && <span className="ml-2">· {new Date(a.checkInAt).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}</span>}
+                            </p>
+                          </div>
+                          {!checkedIn && !noShow && (
+                            <>
+                              <button
+                                onClick={async () => {
+                                  try {
+                                    await api.checkInEventStaff(e.id, a.staffId, undefined, token());
+                                    const list = await api.getEventStaff(e.id, token());
+                                    setEventStaffView(prev => ({ ...prev, [e.id]: list || [] }));
+                                  } catch (err: any) { alert(err?.message || 'Failed'); }
+                                }}
+                                className="text-[11px] bg-green-500 hover:bg-green-600 text-white px-2 py-1 rounded font-semibold">
+                                Check in
+                              </button>
+                              <button
+                                onClick={async () => {
+                                  if (!confirm(`Mark ${a.name || 'this staff'} as no-show?`)) return;
+                                  try {
+                                    await api.markEventStaffNoShow(e.id, a.staffId, token());
+                                    const list = await api.getEventStaff(e.id, token());
+                                    setEventStaffView(prev => ({ ...prev, [e.id]: list || [] }));
+                                  } catch (err: any) { alert(err?.message || 'Failed'); }
+                                }}
+                                className="text-[11px] border border-red-300 text-red-600 hover:bg-red-50 px-2 py-1 rounded font-semibold">
+                                No-show
+                              </button>
+                            </>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
             ))}
           </div>
@@ -846,6 +965,73 @@ export default function ChefDashboardPage() {
                 ))}
               </div>
             )}
+          </div>
+        )}
+
+        {/* ── My Team Tab (service staff roster) ─────────────────── */}
+        {activeTab === 'team' && (
+          <div className="space-y-6">
+            <div className="bg-white border rounded-2xl p-6">
+              <div className="flex items-center justify-between mb-5">
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900">My Team</h3>
+                  <p className="text-sm text-gray-500 mt-0.5">Waiters, cleaners, bartenders — you'll assign them to event bookings</p>
+                </div>
+                <button
+                  onClick={() => setStaffModal({ mode: 'add', data: { role: 'waiter', name: '', phone: '', photoUrl: '', languages: '', yearsExperience: '', notes: '', hourlyRatePaise: '', active: true } })}
+                  className="bg-orange-500 hover:bg-orange-600 text-white text-sm font-semibold px-4 py-2 rounded-lg">
+                  + Add Staff
+                </button>
+              </div>
+
+              {staff.length === 0 ? (
+                <div className="text-center py-10 text-gray-400">
+                  <div className="text-5xl mb-2">🧑‍🍳</div>
+                  <p className="text-sm">No staff yet. Add waiters, cleaners or bartenders so you can assign them to event bookings.</p>
+                </div>
+              ) : (
+                <div className="divide-y">
+                  {staff.map((m: any) => (
+                    <div key={m.id} className="py-3 flex items-center gap-3">
+                      {m.photoUrl ? (
+                        <img src={m.photoUrl} alt="" className="w-12 h-12 rounded-full object-cover" />
+                      ) : (
+                        <div className="w-12 h-12 rounded-full bg-orange-100 flex items-center justify-center text-xl">
+                          {m.role === 'bartender' ? '🍸' : m.role === 'cleaner' ? '🧹' : '🧑‍🍳'}
+                        </div>
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="font-semibold text-gray-900">{m.name}</span>
+                          <span className="text-[10px] uppercase tracking-wide bg-orange-50 text-orange-700 px-2 py-0.5 rounded">{m.role}</span>
+                          {m.kycStatus === 'VERIFIED' && <span className="text-[10px] bg-green-50 text-green-700 px-2 py-0.5 rounded">KYC ✓</span>}
+                          {!m.active && <span className="text-[10px] bg-gray-200 text-gray-600 px-2 py-0.5 rounded">Inactive</span>}
+                        </div>
+                        <div className="text-xs text-gray-500 mt-0.5">
+                          {m.phone && <span>📞 {m.phone}</span>}
+                          {m.yearsExperience != null && <span className="ml-2">⭐ {m.yearsExperience}y exp</span>}
+                          {m.languages && <span className="ml-2">🗣 {m.languages}</span>}
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => setStaffModal({ mode: 'edit', data: { ...m, hourlyRatePaise: m.hourlyRatePaise ?? '', yearsExperience: m.yearsExperience ?? '' } })}
+                        className="text-xs text-orange-600 hover:text-orange-700 font-medium px-3 py-1.5 rounded border border-orange-200">
+                        Edit
+                      </button>
+                      <button
+                        onClick={async () => {
+                          if (!confirm(`Remove ${m.name} from your team?`)) return;
+                          try { await api.deleteStaff(m.id, token()); setStaff(prev => prev.filter((x: any) => x.id !== m.id)); }
+                          catch (e: any) { alert(e?.message || 'Failed to remove'); }
+                        }}
+                        className="text-xs text-red-500 hover:text-red-600 font-medium px-3 py-1.5 rounded border border-red-200">
+                        Remove
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
         )}
 
@@ -1063,6 +1249,255 @@ export default function ChefDashboardPage() {
               <button onClick={handleSendQuote} disabled={!quoteAmount || Number(quoteAmount) <= 0}
                 className="flex-1 bg-orange-500 hover:bg-orange-600 text-white rounded-xl py-2.5 text-sm font-semibold transition disabled:opacity-40">
                 Send Quote
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Assign-Staff-to-Booking Modal ────────────────────────── */}
+      {assignModal && (() => {
+        const ROLE_META: Record<string, { label: string; icon: string }> = {
+          waiter:    { label: 'Waiter',    icon: '🧑‍🍳' },
+          cleaner:   { label: 'Cleaner',   icon: '🧹' },
+          bartender: { label: 'Bartender', icon: '🍸' },
+        };
+        const totalNeeded = Object.values(assignModal.rolesNeeded).reduce((a, b) => a + b, 0);
+        const totalPicked = Object.values(assignModal.picks).reduce((a, b) => a + b.length, 0);
+        return (
+          <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={() => !assigning && setAssignModal(null)}>
+            <div className="bg-white rounded-2xl p-6 max-w-lg w-full shadow-xl max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+              <h3 className="text-lg font-bold mb-1">Assign Staff</h3>
+              <p className="text-xs text-gray-500 mb-4">
+                {assignModal.event.customerName} · {formatDateTime(assignModal.event.eventDate, assignModal.event.eventTime)}
+              </p>
+
+              <div className="space-y-5">
+                {Object.entries(assignModal.rolesNeeded).map(([role, needed]) => {
+                  const meta = ROLE_META[role] || { label: role, icon: '🧑' };
+                  // My team first, then platform pool — stable order within groups.
+                  const roster = (assignableStaff.length > 0 ? assignableStaff : staff)
+                    .filter((s: any) => s.role === role && s.active);
+                  const picked = assignModal.picks[role] || [];
+                  return (
+                    <div key={role} className="border rounded-xl p-3">
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center gap-2">
+                          <span className="text-xl">{meta.icon}</span>
+                          <span className="font-semibold text-gray-900">{meta.label}</span>
+                          <span className="text-xs text-gray-400">({picked.length}/{needed})</span>
+                        </div>
+                      </div>
+                      {roster.length === 0 ? (
+                        <p className="text-xs text-gray-400">No {meta.label.toLowerCase()}s in your team. Add some in the My Team tab first.</p>
+                      ) : (
+                        <div className="space-y-1">
+                          {roster.map((m: any) => {
+                            const on = picked.includes(m.id);
+                            const canPick = on || picked.length < needed;
+                            return (
+                              <label key={m.id} className={`flex items-center gap-2 p-2 rounded-lg border cursor-pointer ${on ? 'border-orange-500 bg-orange-50' : canPick ? 'hover:bg-gray-50' : 'opacity-40 cursor-not-allowed'}`}>
+                                <input type="checkbox" checked={on} disabled={!canPick}
+                                  onChange={() => {
+                                    const next = on
+                                      ? picked.filter(id => id !== m.id)
+                                      : [...picked, m.id];
+                                    setAssignModal({ ...assignModal, picks: { ...assignModal.picks, [role]: next } });
+                                  }}
+                                  className="w-4 h-4 text-orange-500 rounded" />
+                                {m.photoUrl ? (
+                                  <img src={m.photoUrl} alt="" className="w-8 h-8 rounded-full object-cover" />
+                                ) : (
+                                  <div className="w-8 h-8 rounded-full bg-orange-100 flex items-center justify-center text-sm">{meta.icon}</div>
+                                )}
+                                <div className="flex-1">
+                                  <div className="flex items-center gap-1.5 flex-wrap">
+                                    <p className="text-sm font-medium text-gray-900">{m.name}</p>
+                                    {m.chefId == null && (
+                                      <span className="text-[9px] bg-indigo-100 text-indigo-700 px-1.5 py-0.5 rounded font-bold">POOL</span>
+                                    )}
+                                    {m.kycStatus === 'VERIFIED' && (
+                                      <span className="text-[9px] bg-green-100 text-green-700 px-1.5 py-0.5 rounded">KYC ✓</span>
+                                    )}
+                                  </div>
+                                  <p className="text-[11px] text-gray-500">
+                                    {m.phone || 'No phone'}{m.yearsExperience != null ? ` · ${m.yearsExperience}y exp` : ''}
+                                  </p>
+                                </div>
+                              </label>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+
+              <p className="text-xs text-gray-500 mt-4">{totalPicked}/{totalNeeded} slots filled</p>
+
+              <div className="flex gap-3 mt-4">
+                <button onClick={() => setAssignModal(null)} disabled={assigning}
+                  className="flex-1 border rounded-xl py-2.5 text-sm font-medium hover:bg-gray-50 disabled:opacity-40">Cancel</button>
+                <button
+                  disabled={assigning}
+                  onClick={async () => {
+                    setAssigning(true);
+                    try {
+                      const assignments: Array<{ staffId: string; role: string; ratePaise?: number }> = [];
+                      for (const [role, ids] of Object.entries(assignModal.picks)) {
+                        for (const id of ids) assignments.push({ staffId: id, role });
+                      }
+                      await api.assignEventStaff(assignModal.event.id, assignments, token());
+                      setAssignModal(null);
+                    } catch (e: any) {
+                      alert(e?.message || 'Failed to assign staff');
+                    } finally {
+                      setAssigning(false);
+                    }
+                  }}
+                  className="flex-1 bg-orange-500 hover:bg-orange-600 text-white rounded-xl py-2.5 text-sm font-semibold disabled:opacity-40">
+                  {assigning ? 'Saving…' : 'Save Assignments'}
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* ── Staff Add/Edit Modal ─────────────────────────────────── */}
+      {staffModal && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={() => !savingStaff && setStaffModal(null)}>
+          <div className="bg-white rounded-2xl p-6 max-w-md w-full shadow-xl max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+            <h3 className="text-lg font-bold mb-1">{staffModal.mode === 'add' ? 'Add Staff' : 'Edit Staff'}</h3>
+            <p className="text-xs text-gray-500 mb-4">These people will appear when you assign staff to an event booking</p>
+
+            <div className="space-y-3">
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">Role *</label>
+                <select value={staffModal.data.role} onChange={e => setStaffModal({ ...staffModal, data: { ...staffModal.data, role: e.target.value } })}
+                  className="w-full border rounded-lg px-3 py-2 text-sm">
+                  <option value="waiter">Waiter</option>
+                  <option value="cleaner">Cleaner</option>
+                  <option value="bartender">Bartender</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">Name *</label>
+                <input value={staffModal.data.name} onChange={e => setStaffModal({ ...staffModal, data: { ...staffModal.data, name: e.target.value } })}
+                  className="w-full border rounded-lg px-3 py-2 text-sm" placeholder="Ramesh Kumar" autoFocus />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">Phone</label>
+                  <input value={staffModal.data.phone || ''} onChange={e => setStaffModal({ ...staffModal, data: { ...staffModal.data, phone: e.target.value } })}
+                    className="w-full border rounded-lg px-3 py-2 text-sm" placeholder="9876543210" maxLength={10} />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">Years exp.</label>
+                  <input type="number" min={0} value={staffModal.data.yearsExperience ?? ''} onChange={e => setStaffModal({ ...staffModal, data: { ...staffModal.data, yearsExperience: e.target.value } })}
+                    className="w-full border rounded-lg px-3 py-2 text-sm" />
+                </div>
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">Photo</label>
+                <div className="flex items-center gap-3">
+                  {staffModal.data.photoUrl ? (
+                    <img src={staffModal.data.photoUrl} alt="" className="w-14 h-14 rounded-full object-cover border" />
+                  ) : (
+                    <div className="w-14 h-14 rounded-full bg-gray-100 flex items-center justify-center text-2xl text-gray-400">👤</div>
+                  )}
+                  <label className={`flex-1 border-2 border-dashed rounded-lg py-2 px-3 text-center text-xs cursor-pointer transition ${uploadingStaffPhoto ? 'border-gray-200 bg-gray-50 text-gray-400 cursor-wait' : 'border-orange-200 text-orange-600 hover:bg-orange-50'}`}>
+                    {uploadingStaffPhoto ? 'Uploading…' : staffModal.data.photoUrl ? 'Change photo' : 'Upload photo (JPG/PNG, max 5MB)'}
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      disabled={uploadingStaffPhoto}
+                      onChange={async (e) => {
+                        const file = e.target.files?.[0];
+                        e.target.value = '';
+                        if (!file) return;
+                        if (file.size > 5 * 1024 * 1024) { alert('Photo must be under 5MB'); return; }
+                        setUploadingStaffPhoto(true);
+                        try {
+                          const url = await api.uploadGenericFile(file, 'staff-photos', token());
+                          setStaffModal(m => m ? { ...m, data: { ...m.data, photoUrl: url } } : m);
+                        } catch (err: any) {
+                          alert(err?.message || 'Upload failed');
+                        } finally {
+                          setUploadingStaffPhoto(false);
+                        }
+                      }}
+                    />
+                  </label>
+                  {staffModal.data.photoUrl && (
+                    <button type="button"
+                      onClick={() => setStaffModal({ ...staffModal, data: { ...staffModal.data, photoUrl: '' } })}
+                      className="text-xs text-red-500 hover:text-red-600">Remove</button>
+                  )}
+                </div>
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">Languages</label>
+                <input value={staffModal.data.languages || ''} onChange={e => setStaffModal({ ...staffModal, data: { ...staffModal.data, languages: e.target.value } })}
+                  className="w-full border rounded-lg px-3 py-2 text-sm" placeholder="Hindi, English, Tamil" />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">Custom rate (₹, optional)</label>
+                <input type="number" min={0} value={staffModal.data.hourlyRatePaise === '' ? '' : Math.round((staffModal.data.hourlyRatePaise || 0) / 100)}
+                  onChange={e => setStaffModal({ ...staffModal, data: { ...staffModal.data, hourlyRatePaise: e.target.value === '' ? '' : Number(e.target.value) * 100 } })}
+                  className="w-full border rounded-lg px-3 py-2 text-sm" placeholder="Leave blank to use default role rate" />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">Notes</label>
+                <textarea value={staffModal.data.notes || ''} onChange={e => setStaffModal({ ...staffModal, data: { ...staffModal.data, notes: e.target.value } })}
+                  rows={2} className="w-full border rounded-lg px-3 py-2 text-sm resize-none" />
+              </div>
+              {staffModal.mode === 'edit' && (
+                <label className="flex items-center gap-2 text-sm">
+                  <input type="checkbox" checked={!!staffModal.data.active} onChange={e => setStaffModal({ ...staffModal, data: { ...staffModal.data, active: e.target.checked } })}
+                    className="w-4 h-4 text-orange-500 rounded" />
+                  <span className="text-gray-700">Active (can be assigned to bookings)</span>
+                </label>
+              )}
+            </div>
+
+            <div className="flex gap-3 mt-5">
+              <button onClick={() => setStaffModal(null)} disabled={savingStaff}
+                className="flex-1 border rounded-xl py-2.5 text-sm font-medium hover:bg-gray-50 disabled:opacity-40">Cancel</button>
+              <button
+                disabled={savingStaff || !staffModal.data.name?.trim() || !staffModal.data.role}
+                onClick={async () => {
+                  setSavingStaff(true);
+                  try {
+                    const payload: any = {
+                      name: staffModal.data.name.trim(),
+                      role: staffModal.data.role,
+                      phone: staffModal.data.phone || null,
+                      photoUrl: staffModal.data.photoUrl || null,
+                      languages: staffModal.data.languages || null,
+                      yearsExperience: staffModal.data.yearsExperience === '' || staffModal.data.yearsExperience == null ? null : Number(staffModal.data.yearsExperience),
+                      hourlyRatePaise: staffModal.data.hourlyRatePaise === '' || staffModal.data.hourlyRatePaise == null ? null : Number(staffModal.data.hourlyRatePaise),
+                      notes: staffModal.data.notes || null,
+                      active: staffModal.mode === 'edit' ? !!staffModal.data.active : true,
+                    };
+                    if (staffModal.mode === 'add') {
+                      const created = await api.createStaff(payload, token());
+                      setStaff(prev => [created, ...prev]);
+                    } else {
+                      const updated = await api.updateStaff(staffModal.data.id, payload, token());
+                      setStaff(prev => prev.map((x: any) => x.id === updated.id ? updated : x));
+                    }
+                    setStaffModal(null);
+                  } catch (e: any) {
+                    alert(e?.message || 'Failed to save');
+                  } finally {
+                    setSavingStaff(false);
+                  }
+                }}
+                className="flex-1 bg-orange-500 hover:bg-orange-600 text-white rounded-xl py-2.5 text-sm font-semibold disabled:opacity-40">
+                {savingStaff ? 'Saving…' : staffModal.mode === 'add' ? 'Add to Team' : 'Save Changes'}
               </button>
             </div>
           </div>
