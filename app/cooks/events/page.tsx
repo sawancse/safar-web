@@ -66,12 +66,11 @@ const FALLBACK_ADDONS = [
   { key: 'table_setup', label: 'Fine Dine Table Setup', desc: 'Premium tablecloth, candles, flowers', icon: '🕯️', paise: 80000 },
 ];
 
-// Extra non-cooking services — especially for anniversaries, birthdays, housewarming.
-// These are *requests* (not chef-provided); chef factors them into the quote and
-// arranges a partner vendor where needed.
-//   lowPaise / highPaise  → indicative band used for the sidebar estimate.
-//   range                 → human-readable label shown next to the checkbox.
-const EVENT_SERVICES: { key: string; label: string; icon: string; range: string; desc: string; lowPaise: number; highPaise: number }[] = [
+// Fallback list of partner services — used when /chef-events/pricing has no
+// PARTNER_SERVICE rows yet (old seed, API down, etc). After V20 runs the
+// page reads rates + labels from pricingItems.category === 'PARTNER_SERVICE'
+// and this array only backs up the UI.
+const FALLBACK_EVENT_SERVICES: { key: string; label: string; icon: string; range: string; desc: string; lowPaise: number; highPaise: number }[] = [
   { key: 'photography',   label: 'Photographer',        icon: '📷', range: '₹5k–₹25k',  desc: 'Candid + posed photos for the event',     lowPaise:  500000, highPaise: 2500000 },
   { key: 'videography',   label: 'Videographer',        icon: '🎥', range: '₹8k–₹40k',  desc: 'Highlight reel / full event video',       lowPaise:  800000, highPaise: 4000000 },
   { key: 'decoration_pro',label: 'Premium Decor',       icon: '🌸', range: '₹10k–₹60k', desc: 'Flowers, stage, backdrop, lighting',      lowPaise: 1000000, highPaise: 6000000 },
@@ -95,6 +94,9 @@ interface PricingItem {
   icon?: string;
   pricePaise: number;
   priceType: string;
+  minPricePaise?: number;
+  maxPricePaise?: number;
+  sortOrder?: number;
   available?: boolean;
 }
 
@@ -105,6 +107,9 @@ export default function EventBookingPage() {
   const chefId = searchParams.get('chefId') ?? '';
   const chefName = searchParams.get('chefName') ?? '';
   const preselectedEvent = searchParams.get('eventType') ?? '';
+  // ?focus=<key> from /cooks/services tiles: auto-toggles a service or staff role
+  // so the customer lands in step-2 with the right box ticked.
+  const focusParam = searchParams.get('focus') ?? '';
 
   const [token, setToken] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -262,6 +267,30 @@ export default function EventBookingPage() {
         { key: 'bartender', label: 'Bartender', desc: 'Cocktails, mocktails, serves drinks',    icon: '🍸',   paise: 256900 },
       ];
 
+  // Partner services (photographer, DJ, pandit etc.) — driven by V20's
+  // PARTNER_SERVICE rows in event_pricing_defaults. Range string rebuilt
+  // from min/max paise so admin edits flow through without code changes.
+  // Falls back to FALLBACK_EVENT_SERVICES if the API hasn't returned any.
+  const EVENT_SERVICES = pricingLoaded && pricingItems.some(i => i.category === 'PARTNER_SERVICE')
+    ? pricingItems
+        .filter(i => i.category === 'PARTNER_SERVICE' && i.available !== false)
+        .sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0))
+        .map(i => {
+          const low  = i.minPricePaise ?? i.pricePaise;
+          const high = i.maxPricePaise ?? i.pricePaise;
+          const toK = (p: number) => `₹${Math.round(p / 1000 / 100)}k`;
+          return {
+            key: i.itemKey,
+            label: i.label,
+            icon: i.icon || '✨',
+            range: `${toK(low)}–${toK(high)}`,
+            desc: i.description || '',
+            lowPaise:  low,
+            highPaise: high,
+          };
+        })
+    : FALLBACK_EVENT_SERVICES;
+
   const perPlatePaise = pricingItems.find(i => i.itemKey === 'per_plate')?.pricePaise ?? 30000;
   const platformFeePct = (pricingItems.find(i => i.itemKey === 'platform_fee_pct')?.pricePaise ?? 1000) / 10000; // basis points → fraction
 
@@ -288,6 +317,24 @@ export default function EventBookingPage() {
   const toggleCounter = (key: string) => {
     setSelectedCounters(prev => { const n = new Set(prev); n.has(key) ? n.delete(key) : n.add(key); return n; });
   };
+
+  // If the customer arrived from a /cooks/services tile with ?focus=<key>,
+  // pre-select that service (or staff role). We leave them on step 1 so they
+  // still fill date/venue/guests — those are required for a valid quote.
+  useEffect(() => {
+    if (!focusParam) return;
+    if (focusParam.startsWith('staff-')) {
+      const role = focusParam.slice('staff-'.length);
+      setStaffRoleCounts(prev => ({ ...prev, [role]: (prev[role] || 0) || 1 }));
+    } else {
+      setSelectedServices(prev => {
+        if (prev.has(focusParam)) return prev;
+        const n = new Set(prev);
+        n.add(focusParam);
+        return n;
+      });
+    }
+  }, [focusParam]);
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -386,6 +433,13 @@ export default function EventBookingPage() {
 
   const eventLabel = EVENT_TYPES.find(e => e.value === eventType)?.label || 'Event';
 
+  // Friendly label for the ?focus= banner on step 1.
+  const focusLabel = focusParam
+    ? focusParam.startsWith('staff-')
+      ? ({ waiter: 'Waiters', cleaner: 'Cleaners', bartender: 'Bartenders' } as Record<string, string>)[focusParam.slice('staff-'.length)] || focusParam
+      : EVENT_SERVICES.find(s => s.key === focusParam)?.label
+    : '';
+
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-5xl mx-auto px-4 py-8">
@@ -393,8 +447,19 @@ export default function EventBookingPage() {
         <nav className="text-sm text-gray-500 mb-6 flex items-center gap-2">
           <button onClick={() => router.push('/cooks')} className="hover:text-orange-500">Safar Cooks</button>
           <span>/</span>
+          <button onClick={() => router.push('/cooks/services')} className="hover:text-orange-500">Services</button>
+          <span>/</span>
           <span className="text-gray-900 font-medium">Event Catering</span>
         </nav>
+
+        {focusLabel && step === 1 && (
+          <div className="mb-5 bg-orange-50 border border-orange-200 rounded-xl px-4 py-3 flex items-center gap-3">
+            <div className="w-8 h-8 rounded-full bg-white flex items-center justify-center text-sm shrink-0">✨</div>
+            <p className="text-sm text-orange-800">
+              <span className="font-semibold">{focusLabel}</span> is pre-selected. Fill in the event details below and we'll carry it through to your quote.
+            </p>
+          </div>
+        )}
 
         {/* Step Indicator */}
         <div className="flex items-center gap-2 mb-8">

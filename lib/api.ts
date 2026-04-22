@@ -2524,6 +2524,9 @@ export const api = {
 
   /* ── Event Pricing ────────────────────────────────────────── */
 
+  getAggregateRatings: () =>
+    apiFetch<Record<string, { avg: number; count: number }>>('/api/v1/chef-events/aggregate-ratings'),
+
   getEventPricing: (chefId?: string) =>
     apiFetch<any[]>(`/api/v1/chef-events/pricing${chefId ? '?chefId=' + chefId : ''}`),
 
