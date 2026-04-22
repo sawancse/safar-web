@@ -25,65 +25,65 @@ type PricingItem = {
 // `pricingKey` maps into a pricing item so the "from ₹X" label is DB-driven.
 // `rating` is static for now (would need aggregate rating service later).
 const FLAGSHIP = [
-  { key: 'chef',      pricingKey: 'per_plate', priceSuffix: ' / plate',  label: 'Cooks & Chefs',             tagline: 'Home-cooked or gourmet meals at your venue',              icon: '👨‍🍳', gradient: 'from-orange-400 via-amber-400 to-red-400',    href: '/cooks' },
-  { key: 'bartender', pricingKey: 'bartender', priceSuffix: ' / person', label: 'Bartenders & Mixologists',  tagline: 'Craft cocktails, mocktails and drink service',            icon: '🍸',    gradient: 'from-purple-400 via-fuchsia-400 to-pink-400', href: '/cooks/events?focus=staff-bartender' },
-  { key: 'waiter',    pricingKey: 'waiter',    priceSuffix: ' / person', label: 'Waiters & Servers',         tagline: 'Trained staff to serve food, drinks and clear plates',    icon: '🧑‍🍳', gradient: 'from-blue-400 via-sky-400 to-cyan-400',       href: '/cooks/events?focus=staff-waiter' },
-  { key: 'cleaner',   pricingKey: 'cleaner',   priceSuffix: ' / person', label: 'Kitchen Cleaners',          tagline: 'Setup, serving and complete cleanup after your event',    icon: '🧹',    gradient: 'from-emerald-400 via-green-400 to-teal-400',  href: '/cooks/events?focus=staff-cleaner' },
+  { key: 'chef',      pricingKey: 'per_plate', priceSuffix: ' / plate',  label: 'Cooks & Chefs',             tagline: 'Home-cooked or gourmet meals at your venue',              icon: '👨‍🍳', photoUrl: 'https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?w=800&auto=format&fit=crop', href: '/cooks' },
+  { key: 'bartender', pricingKey: 'bartender', priceSuffix: ' / person', label: 'Bartenders & Mixologists',  tagline: 'Craft cocktails, mocktails and drink service',            icon: '🍸',    photoUrl: 'https://images.unsplash.com/photo-1514362545857-3bc16c4c7d1b?w=800&auto=format&fit=crop', href: '/cooks/events?focus=staff-bartender' },
+  { key: 'waiter',    pricingKey: 'waiter',    priceSuffix: ' / person', label: 'Waiters & Servers',         tagline: 'Trained staff to serve food, drinks and clear plates',    icon: '🧑‍🍳', photoUrl: 'https://images.unsplash.com/photo-1559329007-40df8a9345d8?w=800&auto=format&fit=crop', href: '/cooks/events?focus=staff-waiter' },
+  { key: 'cleaner',   pricingKey: 'cleaner',   priceSuffix: ' / person', label: 'Kitchen Cleaners',          tagline: 'Setup, serving and complete cleanup after your event',    icon: '🧹',    photoUrl: 'https://images.unsplash.com/photo-1581578731548-c64695cc6952?w=800&auto=format&fit=crop', href: '/cooks/events?focus=staff-cleaner' },
 ];
 
 // Add-on services — order matches coox.in's secondary grid. The first 5 are
 // ADDON rows, the rest are PARTNER_SERVICE rows. Each pricingKey maps to an
 // item_key in event_pricing_defaults — edit rates at /admin/event-pricing.
 const ADDONS = [
-  { pricingKey: 'crockery',       label: 'Crockery Rental',   icon: '🍽️', href: '/cooks/events?focus=crockery',        gradient: 'from-slate-100 to-gray-200' },
-  { pricingKey: 'appliances',     label: 'Appliance Rental',  icon: '🔌', href: '/cooks/events?focus=appliances',      gradient: 'from-zinc-100 to-slate-200' },
-  { pricingKey: 'table_setup',    label: 'Fine Dine Setup',   icon: '🕯️', href: '/cooks/events?focus=table_setup',    gradient: 'from-rose-100 to-pink-200' },
-  { pricingKey: 'decoration',     label: 'Event Decoration',  icon: '🎈', href: '/cooks/events?focus=decoration',      gradient: 'from-pink-100 to-rose-200' },
-  { pricingKey: 'cake',           label: 'Designer Cake',     icon: '🎂', href: '/cooks/events?focus=cake',            gradient: 'from-teal-100 to-cyan-200' },
-  { pricingKey: 'live_music',     label: 'Live Singer / Band',icon: '🎺', href: '/cooks/events?focus=live_music',      gradient: 'from-amber-100 to-orange-200' },
-  { pricingKey: 'decoration_pro', label: 'Party Decorator',   icon: '🌸', href: '/cooks/events?focus=decoration_pro',  gradient: 'from-pink-100 to-rose-200' },
-  { pricingKey: 'cake_designer',  label: 'Designer (Premium)',icon: '🧁', href: '/cooks/events?focus=cake_designer',   gradient: 'from-teal-100 to-cyan-200' },
-  { pricingKey: 'entertainer',    label: 'Live Entertainer',  icon: '🎩', href: '/cooks/events?focus=entertainer',     gradient: 'from-indigo-100 to-purple-200' },
-  { pricingKey: 'photography',    label: 'Photographer',      icon: '📷', href: '/cooks/events?focus=photography',     gradient: 'from-fuchsia-100 to-pink-200' },
-  { pricingKey: 'dj',             label: 'DJ & Sound',        icon: '🎧', href: '/cooks/events?focus=dj',              gradient: 'from-sky-100 to-blue-200' },
-  { pricingKey: 'pandit',         label: 'Pandit / Puja',     icon: '🪔', href: '/cooks/events?focus=pandit',          gradient: 'from-orange-100 to-yellow-200' },
-  { pricingKey: 'makeup',         label: 'Makeup Artist',     icon: '💄', href: '/cooks/events?focus=makeup',          gradient: 'from-rose-100 to-fuchsia-200' },
-  { pricingKey: 'mehndi',         label: 'Mehndi Artist',     icon: '🎨', href: '/cooks/events?focus=mehndi',          gradient: 'from-lime-100 to-emerald-200' },
-  { pricingKey: 'bouquet',        label: 'Bouquet & Gifts',   icon: '💐', href: '/cooks/events?focus=bouquet',         gradient: 'from-red-100 to-rose-200' },
-  { pricingKey: 'valet',          label: 'Valet / Parking',   icon: '🚗', href: '/cooks/events?focus=valet',           gradient: 'from-slate-100 to-gray-200' },
+  { pricingKey: 'crockery',       label: 'Crockery Rental',   icon: '🍽️', photoUrl: 'https://images.unsplash.com/photo-1511795409834-ef04bbd61622?w=600&auto=format&fit=crop',  href: '/cooks/services/crockery' },
+  { pricingKey: 'appliances',     label: 'Appliance Rental',  icon: '🔌', photoUrl: 'https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?w=600&auto=format&fit=crop',   href: '/cooks/services/appliances' },
+  { pricingKey: 'table_setup',    label: 'Fine Dine Setup',   icon: '🕯️', photoUrl: 'https://images.unsplash.com/photo-1530062845289-9109b2c9c868?w=600&auto=format&fit=crop', href: '/cooks/services/fine-dine' },
+  { pricingKey: 'decoration',     label: 'Event Decoration',  icon: '🎈', photoUrl: 'https://images.unsplash.com/photo-1527529482837-4698179dc6ce?w=600&auto=format&fit=crop',  href: '/cooks/services/decor' },
+  { pricingKey: 'cake',           label: 'Designer Cake',     icon: '🎂', photoUrl: 'https://images.unsplash.com/photo-1535254973040-607b474cb50d?w=600&auto=format&fit=crop',  href: '/cooks/services/cake' },
+  { pricingKey: 'live_music',     label: 'Live Singer / Band',icon: '🎺', photoUrl: 'https://images.unsplash.com/photo-1501386761578-eac5c94b800a?w=600&auto=format&fit=crop',  href: '/cooks/services/live-music' },
+  { pricingKey: 'decoration_pro', label: 'Party Decorator',   icon: '🌸', photoUrl: 'https://images.unsplash.com/photo-1519741497674-611481863552?w=600&auto=format&fit=crop',  href: '/cooks/services/decor' },
+  { pricingKey: 'cake_designer',  label: 'Designer (Premium)',icon: '🧁', photoUrl: 'https://images.unsplash.com/photo-1562777717-dc6984f65a63?w=600&auto=format&fit=crop',   href: '/cooks/services/cake' },
+  { pricingKey: 'entertainer',    label: 'Live Entertainer',  icon: '🎩', photoUrl: 'https://images.unsplash.com/photo-1549451371-64aa98a6f660?w=600&auto=format&fit=crop',   href: '/cooks/services/entertainer' },
+  { pricingKey: 'photography',    label: 'Photographer',      icon: '📷', photoUrl: 'https://images.unsplash.com/photo-1452587925148-ce544e77e70d?w=600&auto=format&fit=crop',  href: '/cooks/services/photographer' },
+  { pricingKey: 'dj',             label: 'DJ & Sound',        icon: '🎧', photoUrl: 'https://images.unsplash.com/photo-1571266028243-d220c6a3a6b2?w=600&auto=format&fit=crop',  href: '/cooks/services/dj' },
+  { pricingKey: 'pandit',         label: 'Pandit / Puja',     icon: '🪔', photoUrl: 'https://images.unsplash.com/photo-1609152867693-e7fd58b18b93?w=600&auto=format&fit=crop',  href: '/cooks/services/pandit' },
+  { pricingKey: 'makeup',         label: 'Makeup Artist',     icon: '💄', photoUrl: 'https://images.unsplash.com/photo-1487412947147-5cebf100ffc2?w=600&auto=format&fit=crop',  href: '/cooks/services/makeup' },
+  { pricingKey: 'mehndi',         label: 'Mehndi Artist',     icon: '🎨', photoUrl: 'https://images.unsplash.com/photo-1615716174835-7ba6bf7a0562?w=600&auto=format&fit=crop',  href: '/cooks/services/mehndi' },
+  { pricingKey: 'bouquet',        label: 'Bouquet & Gifts',   icon: '💐', photoUrl: 'https://images.unsplash.com/photo-1487070183336-b863922373d4?w=600&auto=format&fit=crop',  href: '/cooks/services/bouquet' },
+  { pricingKey: 'valet',          label: 'Valet / Parking',   icon: '🚗', photoUrl: 'https://images.unsplash.com/photo-1542282088-fe8426682b8f?w=600&auto=format&fit=crop',    href: '/cooks/services/valet' },
 ];
 
 const SPECIAL_OCCASIONS = [
-  { key: 'BIRTHDAY',    label: 'Birthday',    icon: '🎂' },
-  { key: 'ANNIVERSARY', label: 'Anniversary', icon: '💝' },
-  { key: 'POOJA',       label: 'Pooja',       icon: '🪔' },
-  { key: 'HOUSEWARMING',label: 'Housewarming',icon: '🏠' },
-  { key: 'KITTY_PARTY', label: 'Kitty Party', icon: '🎉' },
-  { key: 'COCKTAIL',    label: 'Cocktail',    icon: '🍹' },
-  { key: 'CORPORATE',   label: 'Corporate',   icon: '💼' },
-  { key: 'BABY_SHOWER', label: 'Baby Shower', icon: '👶' },
-  { key: 'BBQ',         label: 'BBQ Party',   icon: '🔥' },
-  { key: 'NAVRATRI',    label: 'Navratri',    icon: '🕉️' },
-  { key: 'FESTIVAL',    label: 'Festival',    icon: '🪔' },
-  { key: 'FAREWELL',    label: 'Farewell',    icon: '👋' },
+  { key: 'BIRTHDAY',    label: 'Birthday',    icon: '🎂', photoUrl: 'https://images.unsplash.com/photo-1464349095431-e9a21285b5f3?w=600&auto=format&fit=crop' },
+  { key: 'ANNIVERSARY', label: 'Anniversary', icon: '💝', photoUrl: 'https://images.unsplash.com/photo-1518049362265-d5b2a6467637?w=600&auto=format&fit=crop' },
+  { key: 'POOJA',       label: 'Pooja',       icon: '🪔', photoUrl: 'https://images.unsplash.com/photo-1605979257913-1704eb7b6246?w=600&auto=format&fit=crop' },
+  { key: 'HOUSEWARMING',label: 'Housewarming',icon: '🏠', photoUrl: 'https://images.unsplash.com/photo-1464366400600-7168b8af9bc3?w=600&auto=format&fit=crop' },
+  { key: 'KITTY_PARTY', label: 'Kitty Party', icon: '🎉', photoUrl: 'https://images.unsplash.com/photo-1529333166437-7750a6dd5a70?w=600&auto=format&fit=crop' },
+  { key: 'COCKTAIL',    label: 'Cocktail',    icon: '🍹', photoUrl: 'https://images.unsplash.com/photo-1514362545857-3bc16c4c7d1b?w=600&auto=format&fit=crop' },
+  { key: 'CORPORATE',   label: 'Corporate',   icon: '💼', photoUrl: 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=600&auto=format&fit=crop' },
+  { key: 'BABY_SHOWER', label: 'Baby Shower', icon: '👶', photoUrl: 'https://images.unsplash.com/photo-1515816052601-210d5501d471?w=600&auto=format&fit=crop' },
+  { key: 'BBQ',         label: 'BBQ Party',   icon: '🔥', photoUrl: 'https://images.unsplash.com/photo-1529193591184-b1d58069ecdd?w=600&auto=format&fit=crop' },
+  { key: 'NAVRATRI',    label: 'Navratri',    icon: '🕉️', photoUrl: 'https://images.unsplash.com/photo-1604580864964-0462f5d5b1a8?w=600&auto=format&fit=crop' },
+  { key: 'FESTIVAL',    label: 'Festival',    icon: '🪔', photoUrl: 'https://images.unsplash.com/photo-1603457461170-3f70e6a0b1e6?w=600&auto=format&fit=crop' },
+  { key: 'FAREWELL',    label: 'Farewell',    icon: '👋', photoUrl: 'https://images.unsplash.com/photo-1563729784474-d77dbb933a9e?w=600&auto=format&fit=crop' },
 ];
 
 const WEDDING_EVENTS = [
-  { key: 'WEDDING',    label: 'Wedding',         icon: '💍' },
-  { key: 'ENGAGEMENT', label: 'Engagement',      icon: '💎' },
-  { key: 'RECEPTION',  label: 'Reception',       icon: '🥂' },
-  { key: 'COCKTAIL',   label: 'Bachelor / Bachelorette', icon: '🍾' },
+  { key: 'WEDDING',    label: 'Wedding',                 icon: '💍', photoUrl: 'https://images.unsplash.com/photo-1519741497674-611481863552?w=600&auto=format&fit=crop' },
+  { key: 'ENGAGEMENT', label: 'Engagement',              icon: '💎', photoUrl: 'https://images.unsplash.com/photo-1606216794074-735e91aa2c92?w=600&auto=format&fit=crop' },
+  { key: 'RECEPTION',  label: 'Reception',               icon: '🥂', photoUrl: 'https://images.unsplash.com/photo-1511795409834-ef04bbd61622?w=600&auto=format&fit=crop' },
+  { key: 'COCKTAIL',   label: 'Bachelor / Bachelorette', icon: '🍾', photoUrl: 'https://images.unsplash.com/photo-1567593810070-7a3d471af022?w=600&auto=format&fit=crop' },
 ];
 
 const CUISINES = [
-  { label: 'North Indian',      icon: '🍛', gradient: 'from-orange-100 to-red-200' },
-  { label: 'Chinese',           icon: '🥡', gradient: 'from-red-100 to-orange-200' },
-  { label: 'South Indian',      icon: '🥞', gradient: 'from-amber-100 to-yellow-200' },
-  { label: 'Italian',           icon: '🍝', gradient: 'from-red-100 to-rose-200' },
-  { label: 'Continental',       icon: '🥗', gradient: 'from-lime-100 to-green-200' },
-  { label: 'Thai & Mexican',    icon: '🌮', gradient: 'from-yellow-100 to-amber-200' },
-  { label: 'Live Barbecue',     icon: '🔥', gradient: 'from-orange-200 to-red-300' },
-  { label: 'Vrat ka Khana',     icon: '🍚', gradient: 'from-yellow-50 to-amber-100' },
+  { label: 'North Indian',   icon: '🍛', photoUrl: 'https://images.unsplash.com/photo-1567188040759-fb8a883dc6d8?w=600&auto=format&fit=crop' },
+  { label: 'Chinese',        icon: '🥡', photoUrl: 'https://images.unsplash.com/photo-1603133872878-684f208fb84b?w=600&auto=format&fit=crop' },
+  { label: 'South Indian',   icon: '🥞', photoUrl: 'https://images.unsplash.com/photo-1630383249896-424e482df921?w=600&auto=format&fit=crop' },
+  { label: 'Italian',        icon: '🍝', photoUrl: 'https://images.unsplash.com/photo-1551892374-ecf8754cf8b0?w=600&auto=format&fit=crop' },
+  { label: 'Continental',    icon: '🥗', photoUrl: 'https://images.unsplash.com/photo-1540189549336-e6e99c3679fe?w=600&auto=format&fit=crop' },
+  { label: 'Thai & Mexican', icon: '🌮', photoUrl: 'https://images.unsplash.com/photo-1565299585323-38d6b0865b47?w=600&auto=format&fit=crop' },
+  { label: 'Live Barbecue',  icon: '🔥', photoUrl: 'https://images.unsplash.com/photo-1529193591184-b1d58069ecdd?w=600&auto=format&fit=crop' },
+  { label: 'Vrat ka Khana',  icon: '🍚', photoUrl: 'https://images.unsplash.com/photo-1625398407796-82650a8c135f?w=600&auto=format&fit=crop' },
 ];
 
 const TESTIMONIALS = [
@@ -217,10 +217,19 @@ export default function CooksServicesLandingPage() {
                 href={s.href}
                 className="group bg-white border border-gray-100 rounded-2xl overflow-hidden hover:shadow-xl hover:border-orange-200 transition-all"
               >
-                <div className={`bg-gradient-to-br ${s.gradient} aspect-[5/4] relative flex items-center justify-center`}>
-                  <span className="text-7xl drop-shadow-lg group-hover:scale-110 transition-transform duration-300">{s.icon}</span>
+                <div className="aspect-[5/4] relative bg-gradient-to-br from-orange-100 via-amber-100 to-red-100 overflow-hidden flex items-center justify-center">
+                  {/* Emoji fallback underneath — visible if the photo fails */}
+                  <span className="text-7xl opacity-30">{s.icon}</span>
+                  <img src={s.photoUrl} alt={s.label} loading="lazy"
+                       onError={e => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
+                       className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                  {/* Gradient overlay keeps top-right badges readable over busy photos */}
+                  <div className="absolute inset-0 bg-gradient-to-b from-black/20 via-transparent to-black/10" />
+                  <span className="absolute top-3 left-3 bg-white/95 backdrop-blur w-10 h-10 rounded-full flex items-center justify-center text-xl shadow-sm">
+                    {s.icon}
+                  </span>
                   {r && r.count > 0 && (
-                    <span className="absolute top-3 right-3 bg-white/90 backdrop-blur text-[11px] font-bold text-gray-800 rounded-full px-2 py-0.5">
+                    <span className="absolute top-3 right-3 bg-white/95 backdrop-blur text-[11px] font-bold text-gray-800 rounded-full px-2 py-0.5">
                       ⭐ {r.avg.toFixed(1)}
                       <span className="text-gray-400 font-normal ml-1">({r.count})</span>
                     </span>
@@ -259,7 +268,7 @@ export default function CooksServicesLandingPage() {
             <h2 className="text-2xl sm:text-3xl font-bold text-gray-900">Add-on services</h2>
             <p className="text-sm text-gray-500 mt-2">Mix and match anything extra for your event.</p>
           </div>
-          <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-6 gap-3">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
             {ADDONS.map(a => {
               const from = priceFromLabel(a.pricingKey);
               // Prefer DB icon/label when pricing row exists so admins can
@@ -271,13 +280,29 @@ export default function CooksServicesLandingPage() {
                 <Link
                   key={a.pricingKey}
                   href={a.href}
-                  className="group bg-white border border-gray-100 rounded-xl p-3 sm:p-4 hover:shadow-md hover:border-orange-200 transition text-center"
+                  className="group bg-white border border-gray-100 rounded-2xl overflow-hidden hover:shadow-lg hover:border-orange-200 transition-all"
                 >
-                  <div className={`w-14 h-14 mx-auto rounded-xl bg-gradient-to-br ${a.gradient} flex items-center justify-center text-3xl mb-2 group-hover:scale-105 transition-transform`}>
-                    {icon}
+                  <div className="aspect-[4/3] bg-gradient-to-br from-orange-50 to-amber-100 overflow-hidden relative flex items-center justify-center">
+                    <span className="text-5xl opacity-30">{icon}</span>
+                    <img src={a.photoUrl} alt={label} loading="lazy"
+                         onError={e => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
+                         className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                    <span className="absolute top-2 left-2 bg-white/95 backdrop-blur w-8 h-8 rounded-full flex items-center justify-center text-base shadow-sm">
+                      {icon}
+                    </span>
                   </div>
-                  <p className="text-xs sm:text-sm font-semibold text-gray-800 leading-tight">{label}</p>
-                  {from && <p className="text-[10px] text-gray-500 mt-1">from <span className="font-semibold text-gray-800">{from}</span></p>}
+                  <div className="p-3">
+                    <p className="text-sm font-semibold text-gray-900 leading-tight">{label}</p>
+                    <div className="flex items-center justify-between mt-1.5">
+                      {from ? (
+                        <span className="text-xs">
+                          <span className="text-gray-400">from </span>
+                          <span className="font-bold text-gray-900">{from}</span>
+                        </span>
+                      ) : <span className="text-[11px] text-gray-400">On request</span>}
+                      <span className="text-[11px] text-orange-600 font-bold opacity-0 group-hover:opacity-100 transition">Book →</span>
+                    </div>
+                  </div>
                 </Link>
               );
             })}
@@ -291,15 +316,24 @@ export default function CooksServicesLandingPage() {
           <h2 className="text-2xl sm:text-3xl font-bold text-gray-900">Special occasions</h2>
           <p className="text-sm text-gray-500 mt-2">Pick an occasion — we'll suggest the right mix of services.</p>
         </div>
-        <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-6 gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
           {SPECIAL_OCCASIONS.map(o => (
             <button
               key={o.key}
               onClick={() => router.push(`/cooks/events?eventType=${o.key}`)}
-              className="group bg-white border border-gray-100 rounded-xl p-4 hover:shadow-md hover:border-orange-200 transition text-center"
+              className="group bg-white border border-gray-100 rounded-2xl overflow-hidden hover:shadow-lg hover:border-orange-200 transition text-left"
             >
-              <span className="text-3xl block mb-1 group-hover:scale-110 transition-transform">{o.icon}</span>
-              <p className="text-xs sm:text-sm font-medium text-gray-700">{o.label}</p>
+              <div className="aspect-[4/3] relative bg-gradient-to-br from-orange-100 to-amber-100 overflow-hidden flex items-center justify-center">
+                <span className="text-6xl opacity-40">{o.icon}</span>
+                <img src={o.photoUrl} alt={o.label} loading="lazy"
+                     onError={e => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
+                     className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent" />
+                <span className="absolute top-2 left-2 bg-white/95 backdrop-blur w-8 h-8 rounded-full flex items-center justify-center text-base shadow-sm">
+                  {o.icon}
+                </span>
+                <p className="absolute bottom-2 left-2 right-2 text-white font-semibold text-sm drop-shadow-lg">{o.label}</p>
+              </div>
             </button>
           ))}
         </div>
@@ -318,10 +352,19 @@ export default function CooksServicesLandingPage() {
               <button
                 key={w.key}
                 onClick={() => router.push(`/cooks/events?eventType=${w.key}`)}
-                className="group bg-white border border-gray-100 rounded-2xl p-5 hover:shadow-lg hover:border-rose-200 transition text-center"
+                className="group bg-white border border-gray-100 rounded-2xl overflow-hidden hover:shadow-lg hover:border-rose-200 transition text-left"
               >
-                <span className="text-4xl block mb-2 group-hover:scale-110 transition-transform">{w.icon}</span>
-                <p className="text-sm font-semibold text-gray-800">{w.label}</p>
+                <div className="aspect-[4/3] relative bg-gradient-to-br from-rose-100 to-pink-200 overflow-hidden flex items-center justify-center">
+                  <span className="text-6xl opacity-40">{w.icon}</span>
+                  <img src={w.photoUrl} alt={w.label} loading="lazy"
+                       onError={e => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
+                       className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent" />
+                  <span className="absolute top-2 left-2 bg-white/95 backdrop-blur w-9 h-9 rounded-full flex items-center justify-center text-base shadow-sm">
+                    {w.icon}
+                  </span>
+                  <p className="absolute bottom-2 left-2 right-2 text-white font-semibold text-sm drop-shadow-lg">{w.label}</p>
+                </div>
               </button>
             ))}
           </div>
@@ -341,8 +384,16 @@ export default function CooksServicesLandingPage() {
               href={`/cooks?cuisine=${encodeURIComponent(c.label)}`}
               className="group bg-white border border-gray-100 rounded-2xl overflow-hidden hover:shadow-lg hover:border-orange-200 transition"
             >
-              <div className={`bg-gradient-to-br ${c.gradient} aspect-[4/3] flex items-center justify-center`}>
-                <span className="text-6xl drop-shadow-sm group-hover:scale-110 transition-transform duration-300">{c.icon}</span>
+              <div className="aspect-[4/3] relative bg-gradient-to-br from-orange-100 to-red-200 overflow-hidden flex items-center justify-center">
+                {/* Emoji fallback underneath — visible if the photo fails */}
+                <span className="text-6xl opacity-40">{c.icon}</span>
+                <img src={c.photoUrl} alt={c.label} loading="lazy"
+                     onError={e => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
+                     className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/30 via-transparent to-transparent" />
+                <span className="absolute bottom-2 left-2 bg-white/95 backdrop-blur w-8 h-8 rounded-full flex items-center justify-center text-base shadow-sm">
+                  {c.icon}
+                </span>
               </div>
               <div className="p-3 text-center">
                 <p className="text-sm font-semibold text-gray-800">{c.label}</p>
