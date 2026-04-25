@@ -69,7 +69,7 @@ export default function GenericServicePage() {
         <div className="max-w-6xl mx-auto px-4 py-2 text-xs text-gray-500 flex items-center gap-1.5">
           <Link href="/" className="hover:text-orange-500">Home</Link>
           <span>›</span>
-          <Link href="/cooks/services" className="hover:text-orange-500">Services</Link>
+          <Link href="/services" className="hover:text-orange-500">Services</Link>
           <span>›</span>
           <span className="text-gray-900 font-medium">{svc.label}</span>
         </div>

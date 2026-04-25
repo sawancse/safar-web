@@ -1,6 +1,6 @@
 // Shared cake catalog for the landing gallery and the order flow.
 // Keep both sides reading from the same source so clicking a specific cake
-// on /cooks/services/cake pre-selects it on the order page.
+// on /services/cake pre-selects it on the order page.
 
 export type CakeTier = 'STANDARD' | 'PREMIUM' | 'LUXURY';
 

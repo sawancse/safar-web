@@ -195,6 +195,10 @@ export default function ChefBookingDetailPage() {
           />
         )}
 
+        {/* Bespoke vendor chip — only renders if the booking has an assigned vendor */}
+        <VendorChip bookingId={bookingId} token={token} />
+
+
         {/* Tabs */}
         <div className="bg-white rounded-xl border overflow-hidden mb-6">
           <div className="flex overflow-x-auto border-b">
@@ -973,3 +977,46 @@ function TeamTab({ booking, bookingKind, token }: { booking: any; bookingKind: '
     </div>
   );
 }
+
+/* ────── Bespoke vendor chip ────── */
+function VendorChip({ bookingId, token }: { bookingId: string; token: string }) {
+  const [vendor, setVendor] = useState<any>(null);
+  const [loaded, setLoaded] = useState(false);
+
+  useEffect(() => {
+    if (!token) return;
+    api.getEventActiveVendor(bookingId, token).then(v => {
+      setVendor(v);
+      setLoaded(true);
+    });
+  }, [bookingId, token]);
+
+  if (!loaded || !vendor) return null;
+
+  const statusStyle: Record<string, string> = {
+    ASSIGNED:  'bg-amber-100 text-amber-700',
+    CONFIRMED: 'bg-blue-100 text-blue-700',
+    DELIVERED: 'bg-green-100 text-green-700',
+  };
+
+  return (
+    <div className="bg-white rounded-xl border p-4 mb-4 flex items-center gap-3 flex-wrap">
+      <div className="w-10 h-10 rounded-full bg-gradient-to-br from-orange-400 to-pink-500 flex items-center justify-center text-white text-lg">
+        🤝
+      </div>
+      <div className="flex-1 min-w-0">
+        <div className="text-xs text-gray-500">Service partner assigned</div>
+        <div className="font-semibold text-gray-900 truncate">{vendor.vendorBusinessName}</div>
+        {vendor.vendorPhone && (
+          <a href={`tel:${vendor.vendorPhone}`} className="text-xs text-orange-600 hover:underline">
+            📞 {vendor.vendorPhone}
+          </a>
+        )}
+      </div>
+      <span className={`text-xs font-medium px-3 py-1 rounded-full ${statusStyle[vendor.status] || 'bg-gray-100 text-gray-700'}`}>
+        {vendor.status}
+      </span>
+    </div>
+  );
+}
+

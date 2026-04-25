@@ -26,31 +26,31 @@ type PricingItem = {
 // `rating` is static for now (would need aggregate rating service later).
 const FLAGSHIP = [
   { key: 'chef',      pricingKey: 'per_plate', priceSuffix: ' / plate',  label: 'Cooks & Chefs',             tagline: 'Home-cooked or gourmet meals at your venue',              icon: '👨‍🍳', photoUrl: 'https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?w=800&auto=format&fit=crop', href: '/cooks' },
-  { key: 'bartender', pricingKey: 'bartender', priceSuffix: ' / person', label: 'Bartenders & Mixologists',  tagline: 'Craft cocktails, mocktails and drink service',            icon: '🍸',    photoUrl: 'https://images.unsplash.com/photo-1514362545857-3bc16c4c7d1b?w=800&auto=format&fit=crop', href: '/cooks/events?focus=staff-bartender' },
-  { key: 'waiter',    pricingKey: 'waiter',    priceSuffix: ' / person', label: 'Waiters & Servers',         tagline: 'Trained staff to serve food, drinks and clear plates',    icon: '🧑‍🍳', photoUrl: 'https://images.unsplash.com/photo-1559329007-40df8a9345d8?w=800&auto=format&fit=crop', href: '/cooks/events?focus=staff-waiter' },
-  { key: 'cleaner',   pricingKey: 'cleaner',   priceSuffix: ' / person', label: 'Kitchen Cleaners',          tagline: 'Setup, serving and complete cleanup after your event',    icon: '🧹',    photoUrl: 'https://images.unsplash.com/photo-1581578731548-c64695cc6952?w=800&auto=format&fit=crop', href: '/cooks/events?focus=staff-cleaner' },
+  { key: 'bartender', pricingKey: 'bartender', priceSuffix: ' / person', label: 'Bartenders & Mixologists',  tagline: 'Craft cocktails, mocktails and drink service',            icon: '🍸',    photoUrl: 'https://images.unsplash.com/photo-1514362545857-3bc16c4c7d1b?w=800&auto=format&fit=crop', href: '/services/staff-hire?role=bartender' },
+  { key: 'waiter',    pricingKey: 'waiter',    priceSuffix: ' / person', label: 'Waiters & Servers',         tagline: 'Trained staff to serve food, drinks and clear plates',    icon: '🧑‍🍳', photoUrl: 'https://images.unsplash.com/photo-1559329007-40df8a9345d8?w=800&auto=format&fit=crop', href: '/services/staff-hire?role=waiter' },
+  { key: 'cleaner',   pricingKey: 'cleaner',   priceSuffix: ' / person', label: 'Kitchen Cleaners',          tagline: 'Setup, serving and complete cleanup after your event',    icon: '🧹',    photoUrl: 'https://images.unsplash.com/photo-1581578731548-c64695cc6952?w=800&auto=format&fit=crop', href: '/services/staff-hire?role=cleaner' },
 ];
 
 // Add-on services — order matches coox.in's secondary grid. The first 5 are
 // ADDON rows, the rest are PARTNER_SERVICE rows. Each pricingKey maps to an
 // item_key in event_pricing_defaults — edit rates at /admin/event-pricing.
 const ADDONS = [
-  { pricingKey: 'crockery',       label: 'Crockery Rental',   icon: '🍽️', photoUrl: 'https://images.unsplash.com/photo-1511795409834-ef04bbd61622?w=600&auto=format&fit=crop',  href: '/cooks/services/crockery' },
-  { pricingKey: 'appliances',     label: 'Appliance Rental',  icon: '🔌', photoUrl: 'https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?w=600&auto=format&fit=crop',   href: '/cooks/services/appliances' },
-  { pricingKey: 'table_setup',    label: 'Fine Dine Setup',   icon: '🕯️', photoUrl: 'https://images.unsplash.com/photo-1530062845289-9109b2c9c868?w=600&auto=format&fit=crop', href: '/cooks/services/fine-dine' },
-  { pricingKey: 'decoration',     label: 'Event Decoration',  icon: '🎈', photoUrl: 'https://images.unsplash.com/photo-1527529482837-4698179dc6ce?w=600&auto=format&fit=crop',  href: '/cooks/services/decor' },
-  { pricingKey: 'cake',           label: 'Designer Cake',     icon: '🎂', photoUrl: 'https://images.unsplash.com/photo-1535254973040-607b474cb50d?w=600&auto=format&fit=crop',  href: '/cooks/services/cake' },
-  { pricingKey: 'live_music',     label: 'Live Singer / Band',icon: '🎺', photoUrl: 'https://images.unsplash.com/photo-1501386761578-eac5c94b800a?w=600&auto=format&fit=crop',  href: '/cooks/services/live-music' },
-  { pricingKey: 'decoration_pro', label: 'Party Decorator',   icon: '🌸', photoUrl: 'https://images.unsplash.com/photo-1519741497674-611481863552?w=600&auto=format&fit=crop',  href: '/cooks/services/decor' },
-  { pricingKey: 'cake_designer',  label: 'Designer (Premium)',icon: '🧁', photoUrl: 'https://images.unsplash.com/photo-1562777717-dc6984f65a63?w=600&auto=format&fit=crop',   href: '/cooks/services/cake' },
-  { pricingKey: 'entertainer',    label: 'Live Entertainer',  icon: '🎩', photoUrl: 'https://images.unsplash.com/photo-1549451371-64aa98a6f660?w=600&auto=format&fit=crop',   href: '/cooks/services/entertainer' },
-  { pricingKey: 'photography',    label: 'Photographer',      icon: '📷', photoUrl: 'https://images.unsplash.com/photo-1452587925148-ce544e77e70d?w=600&auto=format&fit=crop',  href: '/cooks/services/photographer' },
-  { pricingKey: 'dj',             label: 'DJ & Sound',        icon: '🎧', photoUrl: 'https://images.unsplash.com/photo-1571266028243-d220c6a3a6b2?w=600&auto=format&fit=crop',  href: '/cooks/services/dj' },
-  { pricingKey: 'pandit',         label: 'Pandit / Puja',     icon: '🪔', photoUrl: 'https://images.unsplash.com/photo-1609152867693-e7fd58b18b93?w=600&auto=format&fit=crop',  href: '/cooks/services/pandit' },
-  { pricingKey: 'makeup',         label: 'Makeup Artist',     icon: '💄', photoUrl: 'https://images.unsplash.com/photo-1487412947147-5cebf100ffc2?w=600&auto=format&fit=crop',  href: '/cooks/services/makeup' },
-  { pricingKey: 'mehndi',         label: 'Mehndi Artist',     icon: '🎨', photoUrl: 'https://images.unsplash.com/photo-1615716174835-7ba6bf7a0562?w=600&auto=format&fit=crop',  href: '/cooks/services/mehndi' },
-  { pricingKey: 'bouquet',        label: 'Bouquet & Gifts',   icon: '💐', photoUrl: 'https://images.unsplash.com/photo-1487070183336-b863922373d4?w=600&auto=format&fit=crop',  href: '/cooks/services/bouquet' },
-  { pricingKey: 'valet',          label: 'Valet / Parking',   icon: '🚗', photoUrl: 'https://images.unsplash.com/photo-1542282088-fe8426682b8f?w=600&auto=format&fit=crop',    href: '/cooks/services/valet' },
+  { pricingKey: 'crockery',       label: 'Crockery Rental',   icon: '🍽️', photoUrl: 'https://images.unsplash.com/photo-1511795409834-ef04bbd61622?w=600&auto=format&fit=crop',  href: '/services/crockery' },
+  { pricingKey: 'appliances',     label: 'Appliance Rental',  icon: '🔌', photoUrl: 'https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?w=600&auto=format&fit=crop',   href: '/services/appliances' },
+  { pricingKey: 'table_setup',    label: 'Fine Dine Setup',   icon: '🕯️', photoUrl: 'https://images.unsplash.com/photo-1530062845289-9109b2c9c868?w=600&auto=format&fit=crop', href: '/services/fine-dine' },
+  { pricingKey: 'decoration',     label: 'Event Decoration',  icon: '🎈', photoUrl: 'https://images.unsplash.com/photo-1527529482837-4698179dc6ce?w=600&auto=format&fit=crop',  href: '/services/decor' },
+  { pricingKey: 'cake',           label: 'Designer Cake',     icon: '🎂', photoUrl: 'https://images.unsplash.com/photo-1535254973040-607b474cb50d?w=600&auto=format&fit=crop',  href: '/services/cake' },
+  { pricingKey: 'live_music',     label: 'Live Singer / Band',icon: '🎺', photoUrl: 'https://images.unsplash.com/photo-1501386761578-eac5c94b800a?w=600&auto=format&fit=crop',  href: '/services/live-music' },
+  { pricingKey: 'decoration_pro', label: 'Party Decorator',   icon: '🌸', photoUrl: 'https://images.unsplash.com/photo-1519741497674-611481863552?w=600&auto=format&fit=crop',  href: '/services/decor' },
+  { pricingKey: 'cake_designer',  label: 'Designer (Premium)',icon: '🧁', photoUrl: 'https://images.unsplash.com/photo-1562777717-dc6984f65a63?w=600&auto=format&fit=crop',   href: '/services/cake' },
+  { pricingKey: 'entertainer',    label: 'Live Entertainer',  icon: '🎩', photoUrl: 'https://images.unsplash.com/photo-1549451371-64aa98a6f660?w=600&auto=format&fit=crop',   href: '/services/entertainer' },
+  { pricingKey: 'photography',    label: 'Photographer',      icon: '📷', photoUrl: 'https://images.unsplash.com/photo-1452587925148-ce544e77e70d?w=600&auto=format&fit=crop',  href: '/services/photographer' },
+  { pricingKey: 'dj',             label: 'DJ & Sound',        icon: '🎧', photoUrl: 'https://images.unsplash.com/photo-1571266028243-d220c6a3a6b2?w=600&auto=format&fit=crop',  href: '/services/dj' },
+  { pricingKey: 'pandit',         label: 'Pandit / Puja',     icon: '🪔', photoUrl: 'https://images.unsplash.com/photo-1609152867693-e7fd58b18b93?w=600&auto=format&fit=crop',  href: '/services/pandit' },
+  { pricingKey: 'makeup',         label: 'Makeup Artist',     icon: '💄', photoUrl: 'https://images.unsplash.com/photo-1487412947147-5cebf100ffc2?w=600&auto=format&fit=crop',  href: '/services/makeup' },
+  { pricingKey: 'mehndi',         label: 'Mehndi Artist',     icon: '🎨', photoUrl: 'https://images.unsplash.com/photo-1615716174835-7ba6bf7a0562?w=600&auto=format&fit=crop',  href: '/services/mehndi' },
+  { pricingKey: 'bouquet',        label: 'Bouquet & Gifts',   icon: '💐', photoUrl: 'https://images.unsplash.com/photo-1487070183336-b863922373d4?w=600&auto=format&fit=crop',  href: '/services/bouquet' },
+  { pricingKey: 'valet',          label: 'Valet / Parking',   icon: '🚗', photoUrl: 'https://images.unsplash.com/photo-1542282088-fe8426682b8f?w=600&auto=format&fit=crop',    href: '/services/valet' },
 ];
 
 const SPECIAL_OCCASIONS = [

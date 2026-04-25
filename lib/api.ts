@@ -2255,6 +2255,11 @@ export const api = {
     });
   },
 
+  // ── Bespoke vendor (cake / decor / pandit / singer / appliances / staff-hire) ──
+  getEventActiveVendor: (eventId: string, token?: string) =>
+    apiFetch<any>(`/api/v1/chef-events/${eventId}/vendor`,
+      token ? { headers: { Authorization: `Bearer ${token}` } } : undefined).catch(() => null),
+
   registerChef: (data: any, token: string) =>
     apiFetch<any>('/api/v1/chefs', {
       method: 'POST',

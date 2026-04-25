@@ -32,7 +32,7 @@ export default function PanditLandingPage() {
         <div className="max-w-6xl mx-auto px-4 py-2 text-xs text-gray-500 flex items-center gap-1.5">
           <Link href="/" className="hover:text-orange-500">Home</Link>
           <span>›</span>
-          <Link href="/cooks/services" className="hover:text-orange-500">Services</Link>
+          <Link href="/services" className="hover:text-orange-500">Services</Link>
           <span>›</span>
           <span className="text-gray-900 font-medium">Pandit / Puja</span>
         </div>
@@ -59,7 +59,7 @@ export default function PanditLandingPage() {
                 <span>✓ On-time arrival</span>
               </div>
               <div className="mt-7 flex flex-wrap gap-3">
-                <Link href="/cooks/services/pandit/order" className="bg-orange-600 hover:bg-orange-700 text-white rounded-full px-6 py-3 text-sm font-bold shadow-lg shadow-orange-600/25 transition">
+                <Link href="/services/pandit/order" className="bg-orange-600 hover:bg-orange-700 text-white rounded-full px-6 py-3 text-sm font-bold shadow-lg shadow-orange-600/25 transition">
                   Book Now →
                 </Link>
                 <a href="#gallery" className="bg-white border border-gray-200 text-gray-800 rounded-full px-6 py-3 text-sm font-semibold hover:bg-gray-50 transition">
@@ -126,14 +126,14 @@ export default function PanditLandingPage() {
         {activePujas.length === 0 ? (
           <div className="text-center py-20 text-gray-400">
             <p>No pujas in this category yet.</p>
-            <Link href="/cooks/services/pandit/order" className="inline-block mt-3 text-orange-600 font-semibold">Request custom puja →</Link>
+            <Link href="/services/pandit/order" className="inline-block mt-3 text-orange-600 font-semibold">Request custom puja →</Link>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {activePujas.map(p => (
               <Link
                 key={p.key}
-                href={`/cooks/services/pandit/order?puja=${p.key}`}
+                href={`/services/pandit/order?puja=${p.key}`}
                 className="group bg-white rounded-2xl overflow-hidden border border-gray-100 hover:shadow-xl hover:border-orange-200 transition-all"
               >
                 <div className="aspect-video overflow-hidden relative bg-gradient-to-br from-amber-100 via-orange-100 to-red-100 flex items-center justify-center">
@@ -168,7 +168,7 @@ export default function PanditLandingPage() {
         <div className="mt-10 bg-gradient-to-r from-orange-500 to-amber-500 text-white rounded-2xl p-6 sm:p-8 text-center">
           <h3 className="text-xl sm:text-2xl font-bold">Need a specific puja?</h3>
           <p className="mt-2 text-white/90 text-sm">Tell us the puja, language and gotra — our pandit reaches out on WhatsApp within 2 hours to confirm.</p>
-          <Link href="/cooks/services/pandit/order" className="inline-block mt-4 bg-white text-orange-600 rounded-full px-6 py-2.5 text-sm font-bold hover:bg-orange-50 transition">
+          <Link href="/services/pandit/order" className="inline-block mt-4 bg-white text-orange-600 rounded-full px-6 py-2.5 text-sm font-bold hover:bg-orange-50 transition">
             Request custom puja →
           </Link>
         </div>
@@ -242,7 +242,7 @@ export default function PanditLandingPage() {
         <div className="max-w-5xl mx-auto px-4 py-14 sm:py-20 text-center">
           <h2 className="text-3xl sm:text-4xl font-bold">Book your pandit</h2>
           <p className="mt-3 text-white/90 max-w-xl mx-auto">Verified, experienced, multilingual. Backed by our 4.9-star rating.</p>
-          <Link href="/cooks/services/pandit/order" className="inline-block mt-6 bg-white text-orange-600 rounded-full px-7 py-3 text-sm font-bold shadow-xl hover:bg-orange-50 transition">
+          <Link href="/services/pandit/order" className="inline-block mt-6 bg-white text-orange-600 rounded-full px-7 py-3 text-sm font-bold shadow-xl hover:bg-orange-50 transition">
             Book puja →
           </Link>
           <p className="mt-4 text-xs text-white/80">Or call <a href="tel:9004044234" className="underline font-semibold">9004044234</a> for help</p>
@@ -250,7 +250,7 @@ export default function PanditLandingPage() {
       </section>
 
       <div className="fixed bottom-0 inset-x-0 bg-white border-t shadow-xl p-3 md:hidden z-30">
-        <Link href="/cooks/services/pandit/order" className="block w-full bg-orange-600 hover:bg-orange-700 text-white text-center rounded-xl py-3 text-sm font-bold transition">
+        <Link href="/services/pandit/order" className="block w-full bg-orange-600 hover:bg-orange-700 text-white text-center rounded-xl py-3 text-sm font-bold transition">
           Book Now →
         </Link>
       </div>

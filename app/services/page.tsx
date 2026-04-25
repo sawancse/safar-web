@@ -85,16 +85,17 @@ export default function ServicesPage() {
       {/* Hero */}
       <section className="bg-[#003B95] text-white">
         <div className="max-w-7xl mx-auto px-4 py-16 md:py-24 text-center">
-          <h1 className="text-4xl md:text-5xl font-bold mb-4">Complete Property Services</h1>
+          <h1 className="text-4xl md:text-5xl font-bold mb-4">Safar Services</h1>
           <p className="text-lg md:text-xl text-white/80 max-w-2xl mx-auto">
-            From legal agreements to home loans, property verification to interior design &mdash;
-            everything you need under one roof.
+            Property paperwork, home loans, legal verification, interiors &mdash; and everything you need
+            for celebrations: cooks, cake, decor, pandit, music, staff. Under one roof.
           </p>
         </div>
       </section>
 
-      {/* Service Cards */}
-      <section className="max-w-7xl mx-auto px-4 -mt-12 relative z-10 pb-16">
+      {/* Property Service Cards */}
+      <section className="max-w-7xl mx-auto px-4 -mt-12 relative z-10 pb-10">
+        <h2 className="text-xl md:text-2xl font-bold text-slate-900 mb-5 px-1">Property Services</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
           {services.map((s) => (
             <Link
@@ -118,6 +119,41 @@ export default function ServicesPage() {
                     <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" />
                   </svg>
                 </span>
+              </div>
+            </Link>
+          ))}
+        </div>
+      </section>
+
+      {/* Celebration & Event Services */}
+      <section className="max-w-7xl mx-auto px-4 pb-16">
+        <div className="flex items-end justify-between mb-5 px-1 flex-wrap gap-3">
+          <h2 className="text-xl md:text-2xl font-bold text-slate-900">Celebration & Event Services</h2>
+          <Link href="/services/events" className="text-sm font-semibold text-orange-500 hover:text-orange-600">
+            Explore the marketplace →
+          </Link>
+        </div>
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+          {[
+            { href: '/services/cake',        label: 'Designer Cake',  emoji: '🎂', tint: 'from-rose-100 to-pink-100' },
+            { href: '/services/decor',       label: 'Event Decor',    emoji: '🌸', tint: 'from-rose-100 to-orange-100' },
+            { href: '/services/pandit',      label: 'Pandit / Puja',  emoji: '🪔', tint: 'from-amber-100 to-yellow-100' },
+            { href: '/services/live-music',  label: 'Live Singer',    emoji: '🎺', tint: 'from-amber-100 to-orange-100' },
+            { href: '/services/appliances',  label: 'Appliances',     emoji: '🍳', tint: 'from-slate-100 to-gray-200' },
+            { href: '/services/staff-hire',  label: 'Hire Staff',     emoji: '🧑‍🍳', tint: 'from-blue-100 to-sky-100' },
+          ].map((c) => (
+            <Link
+              key={c.href}
+              href={c.href}
+              className="bg-white border border-gray-100 rounded-2xl overflow-hidden hover:shadow-xl transition-shadow group"
+            >
+              <div className={`h-24 bg-gradient-to-br ${c.tint} flex items-center justify-center text-3xl`}>
+                {c.emoji}
+              </div>
+              <div className="p-3">
+                <h3 className="font-semibold text-gray-900 text-sm group-hover:text-orange-600 transition-colors">
+                  {c.label}
+                </h3>
               </div>
             </Link>
           ))}

@@ -33,7 +33,7 @@ export default function DesignerCakeLandingPage() {
         <div className="max-w-6xl mx-auto px-4 py-2 text-xs text-gray-500 flex items-center gap-1.5">
           <Link href="/" className="hover:text-orange-500">Home</Link>
           <span>›</span>
-          <Link href="/cooks/services" className="hover:text-orange-500">Services</Link>
+          <Link href="/services" className="hover:text-orange-500">Services</Link>
           <span>›</span>
           <span className="text-gray-900 font-medium">Designer Cake</span>
         </div>
@@ -59,7 +59,7 @@ export default function DesignerCakeLandingPage() {
                 <span>✓ Same-day in metros</span>
               </div>
               <div className="mt-7 flex flex-wrap gap-3">
-                <Link href="/cooks/services/cake/order" className="bg-rose-600 hover:bg-rose-700 text-white rounded-full px-6 py-3 text-sm font-bold shadow-lg shadow-rose-600/25 transition">
+                <Link href="/services/cake/order" className="bg-rose-600 hover:bg-rose-700 text-white rounded-full px-6 py-3 text-sm font-bold shadow-lg shadow-rose-600/25 transition">
                   Book Now →
                 </Link>
                 <a href="#gallery" className="bg-white border border-gray-200 text-gray-800 rounded-full px-6 py-3 text-sm font-semibold hover:bg-gray-50 transition">
@@ -128,7 +128,7 @@ export default function DesignerCakeLandingPage() {
           {activeCakes.map(cake => (
             <Link
               key={cake.key}
-              href={`/cooks/services/cake/order?cake=${cake.key}`}
+              href={`/services/cake/order?cake=${cake.key}`}
               className="group bg-white rounded-2xl overflow-hidden border border-gray-100 hover:shadow-xl hover:border-rose-200 transition-all"
             >
               <div className="aspect-square overflow-hidden bg-gray-100">
@@ -151,7 +151,7 @@ export default function DesignerCakeLandingPage() {
         <div className="mt-10 bg-gradient-to-r from-rose-500 to-pink-500 text-white rounded-2xl p-6 sm:p-8 text-center">
           <h3 className="text-xl sm:text-2xl font-bold">Can't find what you want?</h3>
           <p className="mt-2 text-white/90 text-sm">Describe your design in the booking form — our baker will reach out on WhatsApp within 2 hours.</p>
-          <Link href="/cooks/services/cake/order" className="inline-block mt-4 bg-white text-rose-600 rounded-full px-6 py-2.5 text-sm font-bold hover:bg-rose-50 transition">
+          <Link href="/services/cake/order" className="inline-block mt-4 bg-white text-rose-600 rounded-full px-6 py-2.5 text-sm font-bold hover:bg-rose-50 transition">
             Start your custom order →
           </Link>
         </div>
@@ -225,7 +225,7 @@ export default function DesignerCakeLandingPage() {
         <div className="max-w-5xl mx-auto px-4 py-14 sm:py-20 text-center">
           <h2 className="text-3xl sm:text-4xl font-bold">Ready to order?</h2>
           <p className="mt-3 text-white/90 max-w-xl mx-auto">Fresh, hand-decorated, delivered on time. Every cake backed by our 4.8-star rating.</p>
-          <Link href="/cooks/services/cake/order" className="inline-block mt-6 bg-white text-rose-600 rounded-full px-7 py-3 text-sm font-bold shadow-xl hover:bg-rose-50 transition">
+          <Link href="/services/cake/order" className="inline-block mt-6 bg-white text-rose-600 rounded-full px-7 py-3 text-sm font-bold shadow-xl hover:bg-rose-50 transition">
             Book your cake →
           </Link>
           <p className="mt-4 text-xs text-white/80">Or call <a href="tel:9004044234" className="underline font-semibold">9004044234</a> for help</p>
@@ -234,7 +234,7 @@ export default function DesignerCakeLandingPage() {
 
       {/* Sticky mobile CTA */}
       <div className="fixed bottom-0 inset-x-0 bg-white border-t shadow-xl p-3 md:hidden z-30">
-        <Link href="/cooks/services/cake/order" className="block w-full bg-rose-600 hover:bg-rose-700 text-white text-center rounded-xl py-3 text-sm font-bold transition">
+        <Link href="/services/cake/order" className="block w-full bg-rose-600 hover:bg-rose-700 text-white text-center rounded-xl py-3 text-sm font-bold transition">
           Book Now →
         </Link>
       </div>

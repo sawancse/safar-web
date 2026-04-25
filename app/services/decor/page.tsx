@@ -32,7 +32,7 @@ export default function DecorLandingPage() {
         <div className="max-w-6xl mx-auto px-4 py-2 text-xs text-gray-500 flex items-center gap-1.5">
           <Link href="/" className="hover:text-orange-500">Home</Link>
           <span>›</span>
-          <Link href="/cooks/services" className="hover:text-orange-500">Services</Link>
+          <Link href="/services" className="hover:text-orange-500">Services</Link>
           <span>›</span>
           <span className="text-gray-900 font-medium">Event Decoration</span>
         </div>
@@ -59,7 +59,7 @@ export default function DecorLandingPage() {
                 <span>✓ Cleanup included</span>
               </div>
               <div className="mt-7 flex flex-wrap gap-3">
-                <Link href="/cooks/services/decor/order" className="bg-rose-600 hover:bg-rose-700 text-white rounded-full px-6 py-3 text-sm font-bold shadow-lg shadow-rose-600/25 transition">
+                <Link href="/services/decor/order" className="bg-rose-600 hover:bg-rose-700 text-white rounded-full px-6 py-3 text-sm font-bold shadow-lg shadow-rose-600/25 transition">
                   Book Now →
                 </Link>
                 <a href="#gallery" className="bg-white border border-gray-200 text-gray-800 rounded-full px-6 py-3 text-sm font-semibold hover:bg-gray-50 transition">
@@ -126,14 +126,14 @@ export default function DecorLandingPage() {
         {activeDecor.length === 0 ? (
           <div className="text-center py-20 text-gray-400">
             <p>No designs in this category yet.</p>
-            <Link href="/cooks/services/decor/order" className="inline-block mt-3 text-rose-600 font-semibold">Request custom decoration →</Link>
+            <Link href="/services/decor/order" className="inline-block mt-3 text-rose-600 font-semibold">Request custom decoration →</Link>
           </div>
         ) : (
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
             {activeDecor.map(d => (
               <Link
                 key={d.key}
-                href={`/cooks/services/decor/order?decor=${d.key}`}
+                href={`/services/decor/order?decor=${d.key}`}
                 className="group bg-white rounded-2xl overflow-hidden border border-gray-100 hover:shadow-xl hover:border-rose-200 transition-all"
               >
                 <div className="aspect-square overflow-hidden relative bg-gradient-to-br from-pink-100 via-rose-100 to-amber-100 flex items-center justify-center">
@@ -164,7 +164,7 @@ export default function DecorLandingPage() {
         <div className="mt-10 bg-gradient-to-r from-rose-500 to-pink-500 text-white rounded-2xl p-6 sm:p-8 text-center">
           <h3 className="text-xl sm:text-2xl font-bold">Want a custom theme?</h3>
           <p className="mt-2 text-white/90 text-sm">Describe your vision — our decorator reaches out on WhatsApp within 2 hours to scope it.</p>
-          <Link href="/cooks/services/decor/order" className="inline-block mt-4 bg-white text-rose-600 rounded-full px-6 py-2.5 text-sm font-bold hover:bg-rose-50 transition">
+          <Link href="/services/decor/order" className="inline-block mt-4 bg-white text-rose-600 rounded-full px-6 py-2.5 text-sm font-bold hover:bg-rose-50 transition">
             Start custom booking →
           </Link>
         </div>
@@ -238,7 +238,7 @@ export default function DecorLandingPage() {
         <div className="max-w-5xl mx-auto px-4 py-14 sm:py-20 text-center">
           <h2 className="text-3xl sm:text-4xl font-bold">Ready to book?</h2>
           <p className="mt-3 text-white/90 max-w-xl mx-auto">Hand-decorated, on-time, cleanup included. Backed by our 4.8-star rating.</p>
-          <Link href="/cooks/services/decor/order" className="inline-block mt-6 bg-white text-rose-600 rounded-full px-7 py-3 text-sm font-bold shadow-xl hover:bg-rose-50 transition">
+          <Link href="/services/decor/order" className="inline-block mt-6 bg-white text-rose-600 rounded-full px-7 py-3 text-sm font-bold shadow-xl hover:bg-rose-50 transition">
             Book your decoration →
           </Link>
           <p className="mt-4 text-xs text-white/80">Or call <a href="tel:9004044234" className="underline font-semibold">9004044234</a> for help</p>
@@ -247,7 +247,7 @@ export default function DecorLandingPage() {
 
       {/* Sticky mobile CTA */}
       <div className="fixed bottom-0 inset-x-0 bg-white border-t shadow-xl p-3 md:hidden z-30">
-        <Link href="/cooks/services/decor/order" className="block w-full bg-rose-600 hover:bg-rose-700 text-white text-center rounded-xl py-3 text-sm font-bold transition">
+        <Link href="/services/decor/order" className="block w-full bg-rose-600 hover:bg-rose-700 text-white text-center rounded-xl py-3 text-sm font-bold transition">
           Book Now →
         </Link>
       </div>

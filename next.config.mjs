@@ -23,6 +23,14 @@ const nextConfig = {
       },
     ];
   },
+  async redirects() {
+    return [
+      // Old celebrations marketplace landing → new events landing under /services
+      { source: '/cooks/services',         destination: '/services/events', permanent: true },
+      // Bespoke + dynamic-template pages moved 1:1 from /cooks/services/* to /services/*
+      { source: '/cooks/services/:path*',  destination: '/services/:path*', permanent: true },
+    ];
+  },
 };
 
 export default nextConfig;

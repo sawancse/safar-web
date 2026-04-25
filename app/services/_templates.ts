@@ -144,30 +144,9 @@ export const SERVICES: Record<string, ServiceTemplate> = {
     ],
   },
 
-  // ── Live Music ────────────────────────────────────────────────────
-  'live-music': {
-    slug: 'live-music',
-    pricingKey: 'live_music',
-    label: 'Live Singer / Band',
-    icon: '🎺',
-    heroTagline: 'Classical · Sufi · Bollywood · Band',
-    heroSubheading: 'Sitar, flute, ghazal, small bands or full-size acts — live music for weddings, anniversaries and corporate events.',
-    heroChips: ['✓ Sound system included', '✓ 1-2 hr to 6+ hr sets', '✓ Language / genre mix'],
-    heroPhoto: 'https://images.unsplash.com/photo-1501386761578-eac5c94b800a?w=1000&auto=format&fit=crop',
-    heroBadge: '60+ acts',
-    heroGradient: 'from-amber-100 via-orange-50 to-red-50',
-    ctaBg:    'bg-amber-600 hover:bg-amber-700',
-    ctaHover: 'text-amber-600',
-    accentText: 'text-amber-600',
-    galleryTitle: 'Our performers',
-    gallerySubtitle: 'A peek at our repertoire.',
-    gallery: [
-      { label: 'Sitar solo',        photoUrl: 'https://images.unsplash.com/photo-1519892338195-0b2aa22e6d4a?w=600&auto=format&fit=crop' },
-      { label: 'Band with lights',  photoUrl: 'https://images.unsplash.com/photo-1501386761578-eac5c94b800a?w=600&auto=format&fit=crop' },
-      { label: 'Ghazal evening',    photoUrl: 'https://images.unsplash.com/photo-1470229722913-7c0e2dbbafd3?w=600&auto=format&fit=crop' },
-      { label: 'Flute classical',   photoUrl: 'https://images.unsplash.com/photo-1485579149621-3123dd979885?w=600&auto=format&fit=crop' },
-    ],
-  },
+  // NOTE: `live-music` and `appliances` had entries here but now have their
+  // own bespoke pages at /services/live-music/ and /services/
+  // appliances/ which take precedence over this dynamic route.
 
   // ── MC / Host ─────────────────────────────────────────────────────
   mc: {
@@ -364,29 +343,7 @@ export const SERVICES: Record<string, ServiceTemplate> = {
     ],
   },
 
-  // ── Appliance Rental ──────────────────────────────────────────────
-  appliances: {
-    slug: 'appliances',
-    pricingKey: 'appliances',
-    label: 'Appliance Rental',
-    icon: '🔌',
-    heroTagline: 'Chafing dishes · Gas stoves · Induction',
-    heroSubheading: 'Chafing dishes, gas stoves, induction cookers, warmers — everything your chef needs to cook at your venue.',
-    heroChips: ['✓ Delivery + pickup', '✓ Gas refills on request', '✓ Buffet-grade chafers'],
-    heroPhoto: 'https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?w=1000&auto=format&fit=crop',
-    heroBadge: '100+ units',
-    heroGradient: 'from-zinc-100 via-slate-50 to-gray-50',
-    ctaBg:    'bg-gray-800 hover:bg-black',
-    ctaHover: 'text-gray-800',
-    accentText: 'text-gray-800',
-    galleryTitle: 'Our rental catalogue',
-    gallerySubtitle: 'Chafers, stoves, warmers, urns.',
-    gallery: [
-      { label: 'Chafing dishes', photoUrl: 'https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?w=600&auto=format&fit=crop' },
-      { label: 'Gas stove',      photoUrl: 'https://images.unsplash.com/photo-1556910633-5099dc3971e4?w=600&auto=format&fit=crop' },
-      { label: 'Induction top',  photoUrl: 'https://images.unsplash.com/photo-1565538810643-b5bdb714032a?w=600&auto=format&fit=crop' },
-    ],
-  },
+  // appliances moved to /services/appliances/ bespoke pages.
 };
 
 export function getService(slug: string): ServiceTemplate | undefined {

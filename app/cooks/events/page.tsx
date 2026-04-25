@@ -107,9 +107,13 @@ export default function EventBookingPage() {
   const chefId = searchParams.get('chefId') ?? '';
   const chefName = searchParams.get('chefName') ?? '';
   const preselectedEvent = searchParams.get('eventType') ?? '';
-  // ?focus=<key> from /cooks/services tiles: auto-toggles a service or staff role
+  // ?focus=<key> from /services tiles: auto-toggles a service or staff role
   // so the customer lands in step-2 with the right box ticked.
   const focusParam = searchParams.get('focus') ?? '';
+  // Customer came from a partner-service L2 page (photographer/dj/etc.) or
+  // staff-role tile. Hide chef/food/cuisine fields that are irrelevant for
+  // "book a photographer for my event" — keep the flow lean.
+  const serviceOnlyMode = !!focusParam;
 
   const [token, setToken] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -297,7 +301,9 @@ export default function EventBookingPage() {
   // Price estimate — Option A: flat per-plate billing.
   // Dish selections are menu planning (chef uses them to decide what to cook)
   // and do not affect the bill.
-  const foodPaise = guestCount * perPlatePaise;
+  // In service-only mode (came from /services/<partner>), there's no
+  // chef or food component — the customer is booking a single service.
+  const foodPaise = serviceOnlyMode ? 0 : guestCount * perPlatePaise;
   const countersPaise = [...selectedCounters].reduce((sum, k) => sum + (LIVE_COUNTERS.find(c => c.key === k)?.paise ?? 0), 0);
   const addonsPaise = [...selectedAddons].reduce((sum, k) => sum + (ADDONS.find(a => a.key === k)?.paise ?? 0), 0);
   const staffPaise = STAFF_ROLES.reduce((sum, r) => sum + (staffRoleCounts[r.key] || 0) * r.paise, 0);
@@ -318,7 +324,7 @@ export default function EventBookingPage() {
     setSelectedCounters(prev => { const n = new Set(prev); n.has(key) ? n.delete(key) : n.add(key); return n; });
   };
 
-  // If the customer arrived from a /cooks/services tile with ?focus=<key>,
+  // If the customer arrived from a /services tile with ?focus=<key>,
   // pre-select that service (or staff role). We leave them on step 1 so they
   // still fill date/venue/guests — those are required for a valid quote.
   useEffect(() => {
@@ -411,7 +417,7 @@ export default function EventBookingPage() {
         venueAddress,
         city,
         pincode,
-        cuisinePreferences: cuisineType,
+        cuisinePreferences: serviceOnlyMode ? undefined : cuisineType,
         decorationRequired: selectedAddons.has('decoration'),
         cakeRequired: selectedAddons.has('cake'),
         staffRequired: hasStaff,
@@ -447,7 +453,7 @@ export default function EventBookingPage() {
         <nav className="text-sm text-gray-500 mb-6 flex items-center gap-2">
           <button onClick={() => router.push('/cooks')} className="hover:text-orange-500">Safar Cooks</button>
           <span>/</span>
-          <button onClick={() => router.push('/cooks/services')} className="hover:text-orange-500">Services</button>
+          <button onClick={() => router.push('/services')} className="hover:text-orange-500">Services</button>
           <span>/</span>
           <span className="text-gray-900 font-medium">Event Catering</span>
         </nav>
@@ -543,7 +549,8 @@ export default function EventBookingPage() {
                     </div>
                   </div>
 
-                  {/* Gas Burners */}
+                  {/* Gas Burners — only relevant when a chef is cooking */}
+                  {!serviceOnlyMode && (
                   <div className="border-t pt-5">
                     <label className="block text-xs font-medium text-gray-600 mb-2">No. of Gas Burners in your kitchen</label>
                     <div className="flex flex-wrap gap-2">
@@ -556,6 +563,7 @@ export default function EventBookingPage() {
                       ))}
                     </div>
                   </div>
+                  )}
 
                   {/* Contact */}
                   <div className="border-t pt-5 space-y-4">
@@ -584,7 +592,10 @@ export default function EventBookingPage() {
               {/* Step 2: Menu & Add-ons */}
               {step === 2 && (
                 <div className="space-y-6">
-                  {/* Menu Preferences — Coox.in-style dish selection */}
+                  {/* Menu Preferences — Coox.in-style dish selection. Hidden
+                      entirely in service-only mode (customer came from a
+                      partner-service tile, not the full event booking). */}
+                  {!serviceOnlyMode && (
                   <div className="bg-white rounded-xl shadow-sm border p-6 space-y-5">
                     <div>
                       <h2 className="text-xl font-bold text-gray-900 mb-1">Menu Preferences</h2>
@@ -673,9 +684,10 @@ export default function EventBookingPage() {
                       </div>
                     )}
                   </div>
+                  )}
 
                   {/* ── Dish selection (expandable per category) ── */}
-                  {selectDishesNow && totalDishCount() > 0 && (
+                  {!serviceOnlyMode && selectDishesNow && totalDishCount() > 0 && (
                     <div className="bg-white rounded-xl shadow-sm border p-6">
                       <div className="flex items-center justify-between mb-3">
                         <h3 className="text-sm font-semibold text-gray-700">Select Dishes</h3>
@@ -1012,10 +1024,12 @@ export default function EventBookingPage() {
                       <p className="text-xs text-gray-500 mb-0.5">Venue</p>
                       <p className="font-semibold">{venueAddress}, {city} {pincode}</p>
                     </div>
-                    <div className="bg-gray-50 rounded-lg p-3">
-                      <p className="text-xs text-gray-500 mb-0.5">Cuisine</p>
-                      <p className="font-semibold">{cuisineType} ({vegNonVeg === 'BOTH' ? 'Veg + Non-veg' : vegNonVeg === 'VEG' ? 'Pure Veg' : 'Non-Veg'})</p>
-                    </div>
+                    {!serviceOnlyMode && (
+                      <div className="bg-gray-50 rounded-lg p-3">
+                        <p className="text-xs text-gray-500 mb-0.5">Cuisine</p>
+                        <p className="font-semibold">{cuisineType} ({vegNonVeg === 'BOTH' ? 'Veg + Non-veg' : vegNonVeg === 'VEG' ? 'Pure Veg' : 'Non-Veg'})</p>
+                      </div>
+                    )}
                     {chefName && (
                       <div className="bg-gray-50 rounded-lg p-3">
                         <p className="text-xs text-gray-500 mb-0.5">Chef</p>
@@ -1065,10 +1079,12 @@ export default function EventBookingPage() {
             <div className="bg-white rounded-xl shadow-sm border p-6 sticky top-24">
               <h3 className="font-bold text-gray-900 mb-4">Price Estimate</h3>
               <div className="space-y-2.5 text-sm">
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Food ({guestCount} × {formatPaise(perPlatePaise)}/plate)</span>
-                  <span className="font-medium">{formatPaise(foodPaise)}</span>
-                </div>
+                {!serviceOnlyMode && (
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Food ({guestCount} × {formatPaise(perPlatePaise)}/plate)</span>
+                    <span className="font-medium">{formatPaise(foodPaise)}</span>
+                  </div>
+                )}
                 {[...selectedCounters].map(k => {
                   const c = LIVE_COUNTERS.find(x => x.key === k);
                   return c && (

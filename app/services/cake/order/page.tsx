@@ -86,10 +86,15 @@ export default function DesignerCakeOrderPage() {
 
   async function handlePay() {
     if (!priceBreakdown || !selectedWeight || !selectedCake) return;
+    const token = localStorage.getItem('access_token') || '';
+    if (!token) {
+      const returnTo = '/services/cake/order' + (selectedCake ? `?cake=${selectedCake.key}` : '');
+      router.push(`/auth?redirect=${encodeURIComponent(returnTo)}`);
+      return;
+    }
     setError('');
     setProcessing(true);
     try {
-      const token = localStorage.getItem('access_token') || '';
       // Persist as an event booking with event_type=DESIGNER_CAKE — reuses
       // the existing payment, lifecycle, and admin surfaces.
       const menuDescription = JSON.stringify({
@@ -172,7 +177,7 @@ export default function DesignerCakeOrderPage() {
       {/* Header */}
       <div className="bg-white border-b sticky top-0 z-30">
         <div className="max-w-5xl mx-auto px-4 py-3 flex items-center justify-between">
-          <button onClick={() => step === 'summary' ? setStep('design') : router.push('/cooks/services')}
+          <button onClick={() => step === 'summary' ? setStep('design') : router.push('/services')}
                   className="text-gray-500 hover:text-gray-800 flex items-center gap-1 text-sm">
             ← {step === 'summary' ? 'Edit cake' : 'Back'}
           </button>

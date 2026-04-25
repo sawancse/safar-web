@@ -5,32 +5,31 @@ import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { api } from '@/lib/api';
 import { formatPaise } from '@/lib/utils';
-import { PUJAS, OCCASIONS, ARRIVAL_SLOTS, LANGUAGES, formatSlot, pujasForOccasion } from '../catalog';
+import { DECORATIONS, OCCASIONS, ARRIVAL_SLOTS, formatSlot, decorationsForOccasion } from '../catalog';
 
 const GST_RATE = 0.18;
-const ADVANCE_PCT = 0.60;
-const COUPON_CODE = 'PUJABLESS';
-const COUPON_DISCOUNT_PAISE = 5000;
+const ADVANCE_PCT = 0.60;                 // 60% advance, 40% balance on delivery
+const COUPON_CODE = 'DECORLOVE';
+const COUPON_DISCOUNT_PAISE = 5000;       // ₹50
 
 type Step = 'design' | 'summary';
 
-export default function PanditOrderPage() {
+export default function DecorOrderPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const preselectedPuja = searchParams.get('puja') ?? '';
+  const preselectedDecor = searchParams.get('decor') ?? '';
 
-  const preselectedService = PUJAS.find(p => p.key === preselectedPuja) || null;
-  const preselectedOccasion = preselectedService?.tags[0] ?? 'HOUSEWARMING';
+  // Find the occasion this decor belongs to, so we can default the dropdown.
+  const preselectedDecoration = DECORATIONS.find(d => d.key === preselectedDecor) || null;
+  const preselectedOccasion = preselectedDecoration?.tags[0] ?? 'ANNIVERSARY';
 
   const [step, setStep] = useState<Step>('design');
   const [occasion, setOccasion] = useState<string>(preselectedOccasion);
   const [eventDate, setEventDate] = useState<string>('');
   const [arrivalSlot, setArrivalSlot] = useState<string>('');
-  const [pujaKey, setPujaKey] = useState<string>(preselectedPuja);
-  const [language, setLanguage] = useState<string>('Hindi');
-  const [gotra, setGotra] = useState<string>('');
-  const [familyNames, setFamilyNames] = useState<string>('');
+  const [decorKey, setDecorKey] = useState<string>(preselectedDecor);
 
+  // Customer + delivery
   const [address, setAddress] = useState('');
   const [city, setCity] = useState('');
   const [pincode, setPincode] = useState('');
@@ -39,6 +38,7 @@ export default function PanditOrderPage() {
   const [customerEmail, setCustomerEmail] = useState('');
   const [specialRequests, setSpecialRequests] = useState('');
 
+  // Payment
   const [couponApplied, setCouponApplied] = useState(false);
   const [couponInput, setCouponInput] = useState('');
   const [couponError, setCouponError] = useState('');
@@ -46,29 +46,29 @@ export default function PanditOrderPage() {
   const [processing, setProcessing] = useState(false);
   const [error, setError] = useState('');
 
-  // Reset puja selection if customer changes occasion and the puja no longer fits.
+  // Keep decor in sync with occasion — clear selection if it doesn't fit.
   useEffect(() => {
-    if (!pujaKey) return;
-    const p = PUJAS.find(x => x.key === pujaKey);
-    if (p && !p.tags.includes(occasion)) setPujaKey('');
-  }, [occasion, pujaKey]);
+    if (!decorKey) return;
+    const d = DECORATIONS.find(x => x.key === decorKey);
+    if (d && !d.tags.includes(occasion)) setDecorKey('');
+  }, [occasion, decorKey]);
 
-  const availablePujas = useMemo(() => pujasForOccasion(occasion), [occasion]);
-  const selectedPuja = PUJAS.find(p => p.key === pujaKey) || null;
+  const availableDecor = useMemo(() => decorationsForOccasion(occasion), [occasion]);
+  const selectedDecor = DECORATIONS.find(d => d.key === decorKey) || null;
 
   const priceBreakdown = useMemo(() => {
-    if (!selectedPuja) return null;
-    const service = selectedPuja.pricePaise;
+    if (!selectedDecor) return null;
+    const service = selectedDecor.pricePaise;
     const discount = couponApplied ? COUPON_DISCOUNT_PAISE : 0;
     const taxable = Math.max(0, service - discount);
     const gst = Math.round(taxable * GST_RATE);
     const total = taxable + gst;
     const advance = Math.round(total * ADVANCE_PCT);
     const balance = total - advance;
-    return { service, discount, gst, total, advance, balance, dakshina: selectedPuja.recommendedDakshinaPaise };
-  }, [selectedPuja, couponApplied]);
+    return { service, discount, gst, total, advance, balance };
+  }, [selectedDecor, couponApplied]);
 
-  const canProceedToSummary = !!occasion && !!eventDate && !!arrivalSlot && !!selectedPuja && !!language;
+  const canProceedToSummary = !!occasion && !!eventDate && !!arrivalSlot && !!selectedDecor;
   const canPay = !!priceBreakdown && !!address.trim() && !!city.trim() && !!pincode.trim()
     && !!customerName.trim() && !!customerPhone.trim() && agreeTerms;
 
@@ -79,32 +79,34 @@ export default function PanditOrderPage() {
   }
 
   async function handlePay() {
-    if (!priceBreakdown || !selectedPuja) return;
+    if (!priceBreakdown || !selectedDecor) return;
+    const token = localStorage.getItem('access_token') || '';
+    if (!token) {
+      const returnTo = `/services/decor/order?decor=${selectedDecor.key}`;
+      router.push(`/auth?redirect=${encodeURIComponent(returnTo)}`);
+      return;
+    }
     setError('');
     setProcessing(true);
     try {
-      const token = localStorage.getItem('access_token') || '';
       const menuDescription = JSON.stringify({
-        type: 'PANDIT_PUJA',
+        type: 'EVENT_DECOR',
         occasion,
         arrivalSlot,
-        pujaKey: selectedPuja.key,
-        pujaLabel: selectedPuja.label,
-        pujaTier: selectedPuja.tier,
-        pujaPhotoUrl: selectedPuja.photoUrl,
-        inclusions: selectedPuja.inclusions,
-        samagri: selectedPuja.samagri,
-        durationHours: selectedPuja.durationHours,
-        language,
-        gotra,
-        familyNames,
+        decorKey: selectedDecor.key,
+        decorLabel: selectedDecor.label,
+        decorTier: selectedDecor.tier,
+        decorPhotoUrl: selectedDecor.photoUrl,
+        inclusions: selectedDecor.inclusions,
+        setupHours: selectedDecor.setupHours,
+        overtimePerHourPaise: selectedDecor.overtimePerHourPaise,
         breakdown: priceBreakdown,
       });
       const created: any = await api.createEventBooking({
         eventType: occasion,
         eventDate,
         eventTime: arrivalSlot,
-        durationHours: selectedPuja.durationHours + 1,
+        durationHours: selectedDecor.setupHours + 2,   // buffer after setup
         guestCount: 1,
         venueAddress: address.trim(),
         city: city.trim(),
@@ -113,12 +115,13 @@ export default function PanditOrderPage() {
         customerName,
         customerPhone,
         customerEmail,
-        decorationRequired: false,
+        decorationRequired: true,
         cakeRequired: false,
         staffRequired: false,
         specialRequests,
       }, token || undefined);
 
+      // 60% advance via Razorpay.
       const order = await api.createPaymentOrder(created.id, priceBreakdown.advance, token);
       if (!(window as any).Razorpay) {
         await new Promise<void>((resolve, reject) => {
@@ -133,8 +136,8 @@ export default function PanditOrderPage() {
         key: order.razorpayKeyId,
         amount: order.amountPaise,
         currency: 'INR',
-        name: 'Safar Pandit',
-        description: `${selectedPuja.label} · ${new Date(eventDate).toDateString()}`,
+        name: 'Safar Decor',
+        description: `${selectedDecor.label} · ${new Date(eventDate).toDateString()}`,
         order_id: order.razorpayOrderId,
         handler: async () => {
           try {
@@ -146,7 +149,7 @@ export default function PanditOrderPage() {
           }
         },
         prefill: { name: customerName, contact: customerPhone, email: customerEmail },
-        theme: { color: '#ea580c' },
+        theme: { color: '#e11d48' },
         modal: { ondismiss: () => setProcessing(false) },
       });
       rzp.on('payment.failed', (r: any) => {
@@ -164,17 +167,17 @@ export default function PanditOrderPage() {
     <div className="min-h-screen bg-gray-50">
       <div className="bg-white border-b sticky top-0 z-30">
         <div className="max-w-5xl mx-auto px-4 py-3 flex items-center justify-between">
-          <button onClick={() => step === 'summary' ? setStep('design') : router.push('/cooks/services/pandit')}
+          <button onClick={() => step === 'summary' ? setStep('design') : router.push('/services/decor')}
                   className="text-gray-500 hover:text-gray-800 flex items-center gap-1 text-sm">
             ← {step === 'summary' ? 'Edit booking' : 'Back'}
           </button>
-          <h1 className="font-bold text-gray-900">{step === 'design' ? 'Select Puja' : 'Summary'}</h1>
+          <h1 className="font-bold text-gray-900">{step === 'design' ? 'Select Decoration' : 'Summary'}</h1>
           <span className="w-16" />
         </div>
       </div>
 
       <div className="max-w-5xl mx-auto px-4 py-6 pb-28">
-        {/* ── Step 1 ───────────────────────────────────────────── */}
+        {/* ── Step 1: Design ───────────────────────────────────── */}
         {step === 'design' && (
           <div className="grid grid-cols-1 lg:grid-cols-[1.2fr_1fr] gap-6">
             <div className="bg-white rounded-xl border p-5 space-y-5">
@@ -196,53 +199,51 @@ export default function PanditOrderPage() {
                 <p className="text-[10px] text-gray-400 mt-1">Earliest: tomorrow (24-hr lead time)</p>
               </div>
 
-              {/* Arrival time */}
+              {/* Arrival time pills */}
               <div>
-                <label className="block text-sm font-semibold text-gray-900 mb-2">Select Pandit Arrival Time</label>
+                <label className="block text-sm font-semibold text-gray-900 mb-2">Select Decorator Arrival Time</label>
                 <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 gap-2">
                   {ARRIVAL_SLOTS.map(s => (
                     <button key={s} type="button" onClick={() => setArrivalSlot(s)}
-                            className={`py-2 rounded-lg border text-sm font-medium transition ${arrivalSlot === s ? 'bg-orange-600 text-white border-orange-600' : 'bg-white border-gray-200 text-gray-700 hover:border-orange-300'}`}>
+                            className={`py-2 rounded-lg border text-sm font-medium transition ${arrivalSlot === s ? 'bg-rose-600 text-white border-rose-600' : 'bg-white border-gray-200 text-gray-700 hover:border-rose-300'}`}>
                       {formatSlot(s)}
                     </button>
                   ))}
                 </div>
               </div>
 
-              {/* Puja picker */}
+              {/* Decoration dropdown */}
               <div>
-                <label className="block text-sm font-semibold text-gray-900 mb-1.5">Select Puja</label>
-                <select value={pujaKey} onChange={e => setPujaKey(e.target.value)}
+                <label className="block text-sm font-semibold text-gray-900 mb-1.5">Select Decoration</label>
+                <select value={decorKey} onChange={e => setDecorKey(e.target.value)}
                         className="w-full border rounded-lg px-3 py-2.5 text-sm">
                   <option value="">Select from here</option>
-                  {availablePujas.map(p => (
-                    <option key={p.key} value={p.key}>{p.label} — {formatPaise(p.pricePaise)}</option>
+                  {availableDecor.map(d => (
+                    <option key={d.key} value={d.key}>{d.label} — {formatPaise(d.pricePaise)}</option>
                   ))}
                 </select>
 
-                {availablePujas.length > 0 && (
-                  <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-[420px] overflow-y-auto pr-1">
-                    {availablePujas.map(p => {
-                      const on = pujaKey === p.key;
+                {/* Gallery of available decor for the selected occasion */}
+                {availableDecor.length > 0 && (
+                  <div className="mt-3 grid grid-cols-2 sm:grid-cols-3 gap-3 max-h-[380px] overflow-y-auto pr-1">
+                    {availableDecor.map(d => {
+                      const on = decorKey === d.key;
                       return (
-                        <button key={p.key} id={`puja-${p.key}`} type="button" onClick={() => setPujaKey(p.key)}
-                                className={`text-left rounded-xl border overflow-hidden transition ${on ? 'border-orange-500 ring-2 ring-orange-200' : 'border-gray-200 hover:border-orange-300'}`}>
-                          <div className="aspect-video bg-gradient-to-br from-amber-100 via-orange-100 to-red-100 overflow-hidden relative flex items-center justify-center">
-                            <span className="text-5xl opacity-40">🪔</span>
-                            <img src={p.photoUrl} alt={p.label} loading="lazy"
+                        <button key={d.key} id={`decor-${d.key}`} type="button" onClick={() => setDecorKey(d.key)}
+                                className={`text-left rounded-xl border overflow-hidden transition ${on ? 'border-rose-500 ring-2 ring-rose-200' : 'border-gray-200 hover:border-rose-300'}`}>
+                          <div className="aspect-video bg-gradient-to-br from-pink-100 to-rose-200 overflow-hidden relative flex items-center justify-center">
+                            <span className="text-4xl opacity-40">🌸</span>
+                            <img src={d.photoUrl} alt={d.label} loading="lazy"
                                  onError={e => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
                                  className="absolute inset-0 w-full h-full object-cover" />
-                            <span className={`absolute top-1.5 right-1.5 text-[9px] font-bold px-1.5 py-0.5 rounded ${p.tier === 'LUXURY' ? 'bg-purple-600 text-white' : p.tier === 'PREMIUM' ? 'bg-amber-500 text-white' : 'bg-white/95 text-gray-700'}`}>
-                              {p.tier}
+                            <span className={`absolute top-1.5 right-1.5 text-[9px] font-bold px-1.5 py-0.5 rounded ${d.tier === 'LUXURY' ? 'bg-purple-600 text-white' : d.tier === 'PREMIUM' ? 'bg-amber-500 text-white' : 'bg-white/95 text-gray-700'}`}>
+                              {d.tier}
                             </span>
                           </div>
-                          <div className="p-2.5">
-                            <p className="text-sm font-semibold text-gray-900">{p.label}</p>
-                            <p className="text-[10px] text-gray-500 mt-0.5">{p.durationHours}h · {p.inclusions[0]}</p>
-                            <div className="flex items-center justify-between mt-1.5">
-                              <span className="text-sm font-bold text-gray-900">{formatPaise(p.pricePaise)}</span>
-                              <span className="text-[10px] text-gray-400">+dakshina {formatPaise(p.recommendedDakshinaPaise)}</span>
-                            </div>
+                          <div className="p-2">
+                            <p className="text-xs font-semibold text-gray-900 truncate">{d.label}</p>
+                            <p className="text-[10px] text-gray-500 truncate">{d.inclusions[0]}</p>
+                            <p className="text-xs font-bold text-gray-900 mt-1">{formatPaise(d.pricePaise)}</p>
                           </div>
                         </button>
                       );
@@ -251,76 +252,41 @@ export default function PanditOrderPage() {
                 )}
               </div>
 
-              {/* Language */}
-              <div>
-                <label className="block text-sm font-semibold text-gray-900 mb-1.5">Preferred Language</label>
-                <div className="flex flex-wrap gap-2">
-                  {LANGUAGES.map(l => (
-                    <button key={l} type="button" onClick={() => setLanguage(l)}
-                            className={`px-3 py-1.5 rounded-full text-xs font-medium border transition ${language === l ? 'bg-orange-500 text-white border-orange-500' : 'border-gray-200 text-gray-700 hover:border-orange-300'}`}>
-                      {l}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Optional lineage details */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-medium text-gray-600 mb-1">Gotra (optional)</label>
-                  <input type="text" value={gotra} onChange={e => setGotra(e.target.value)}
-                         placeholder="e.g. Bharadwaj"
-                         className="w-full border rounded-lg px-3 py-2 text-sm" />
-                </div>
-                <div>
-                  <label className="block text-xs font-medium text-gray-600 mb-1">Family names for sankalp (optional)</label>
-                  <input type="text" value={familyNames} onChange={e => setFamilyNames(e.target.value)}
-                         placeholder="e.g. Rohan & Priya"
-                         className="w-full border rounded-lg px-3 py-2 text-sm" />
-                </div>
-              </div>
-
               {/* Special requests */}
               <div>
                 <label className="block text-sm font-semibold text-gray-900 mb-1.5">Special requests (optional)</label>
                 <textarea value={specialRequests} onChange={e => setSpecialRequests(e.target.value)}
-                          rows={2} placeholder="Specific mantras, avoidances, elder-sensitive timing…"
+                          rows={2} placeholder="Colour theme, favourite flowers, allergies, kid-safe materials…"
                           className="w-full border rounded-lg px-3 py-2 text-sm resize-none" />
               </div>
             </div>
 
-            {/* Preview */}
+            {/* Preview + selection panel */}
             <div className="bg-white rounded-xl border p-5 lg:sticky lg:top-20 lg:self-start">
-              <h3 className="font-semibold text-gray-900 mb-3">Selected puja</h3>
-              {selectedPuja ? (
+              <h3 className="font-semibold text-gray-900 mb-3">Selected decoration</h3>
+              {selectedDecor ? (
                 <>
-                  <div className="w-full aspect-video rounded-lg mb-3 relative bg-gradient-to-br from-amber-100 via-orange-100 to-red-100 overflow-hidden flex items-center justify-center">
-                    <span className="text-6xl opacity-40">🪔</span>
-                    <img src={selectedPuja.photoUrl} alt={selectedPuja.label}
+                  <div className="w-full aspect-square rounded-lg mb-3 relative bg-gradient-to-br from-pink-100 via-rose-100 to-amber-100 overflow-hidden flex items-center justify-center">
+                    <span className="text-6xl opacity-40">🌸</span>
+                    <img src={selectedDecor.photoUrl} alt={selectedDecor.label}
                          onError={e => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
                          className="absolute inset-0 w-full h-full object-cover" />
                   </div>
-                  <p className="font-bold text-gray-900">{selectedPuja.label}</p>
-                  <p className="text-[11px] text-gray-500 mt-0.5">Duration: {selectedPuja.durationHours} hours</p>
+                  <p className="font-bold text-gray-900">{selectedDecor.label}</p>
+                  <p className="text-[11px] text-gray-500 mt-0.5">Setup time: {selectedDecor.setupHours} hours</p>
                   <div className="mt-3">
-                    <p className="text-[11px] font-semibold text-gray-500 uppercase tracking-wide">Included</p>
+                    <p className="text-[11px] font-semibold text-gray-500 uppercase tracking-wide">What's included</p>
                     <ul className="mt-1 space-y-0.5 text-xs text-gray-700">
-                      {selectedPuja.inclusions.map((it, i) => <li key={i}>• {it}</li>)}
-                    </ul>
-                  </div>
-                  <div className="mt-3">
-                    <p className="text-[11px] font-semibold text-gray-500 uppercase tracking-wide">Samagri kit</p>
-                    <ul className="mt-1 space-y-0.5 text-xs text-gray-700">
-                      {selectedPuja.samagri.map((it, i) => <li key={i}>• {it}</li>)}
+                      {selectedDecor.inclusions.map((it, i) => <li key={i}>• {it}</li>)}
                     </ul>
                   </div>
                   <p className="text-[10px] text-amber-700 bg-amber-50 rounded-lg p-2 mt-3">
-                    Recommended dakshina: <strong>{formatPaise(selectedPuja.recommendedDakshinaPaise)}</strong> (paid in cash to the pandit on the day).
+                    Overtime: {formatPaise(selectedDecor.overtimePerHourPaise)}/hr if setup runs past the {selectedDecor.setupHours}-hour window.
                   </p>
                 </>
               ) : (
-                <div className="w-full aspect-video bg-gradient-to-br from-amber-50 to-orange-100 rounded-lg flex items-center justify-center mb-3">
-                  <span className="text-6xl opacity-40">🪔</span>
+                <div className="w-full aspect-square bg-gradient-to-br from-pink-50 to-rose-100 rounded-lg flex items-center justify-center mb-3">
+                  <span className="text-6xl opacity-40">🌸</span>
                 </div>
               )}
               {priceBreakdown && (
@@ -338,27 +304,27 @@ export default function PanditOrderPage() {
               <button
                 disabled={!canProceedToSummary}
                 onClick={() => setStep('summary')}
-                className="w-full mt-5 bg-orange-600 hover:bg-orange-700 disabled:opacity-40 text-white rounded-xl py-3 text-sm font-semibold transition">
+                className="w-full mt-5 bg-rose-600 hover:bg-rose-700 disabled:opacity-40 text-white rounded-xl py-3 text-sm font-semibold transition">
                 View Total Bill →
               </button>
             </div>
           </div>
         )}
 
-        {/* ── Step 2 ───────────────────────────────────────────── */}
-        {step === 'summary' && selectedPuja && priceBreakdown && (
+        {/* ── Step 2: Summary ──────────────────────────────────── */}
+        {step === 'summary' && selectedDecor && priceBreakdown && (
           <div className="grid grid-cols-1 lg:grid-cols-[1.3fr_1fr] gap-6">
             <div className="space-y-4">
-              {/* Header */}
+              {/* Header row */}
               <div className="bg-white rounded-xl border p-5 space-y-3">
                 <div className="flex items-start gap-2 text-sm">
-                  <span className="text-gray-400 text-lg">🙏</span>
-                  <p className="text-gray-900">1 Pandit will arrive · language: <strong>{language}</strong></p>
+                  <span className="text-gray-400 text-lg">👤</span>
+                  <p className="text-gray-900">1 Decorator will arrive</p>
                 </div>
                 <div className="flex items-start gap-2 text-sm">
                   <span className="text-gray-400 text-lg">🗓️</span>
                   <div>
-                    <p className="text-gray-900">Arrival by <strong>{formatSlot(arrivalSlot)}</strong> <button onClick={() => setStep('design')} className="text-blue-600 text-xs ml-2">✏ Edit</button></p>
+                    <p className="text-gray-900">Decorator will arrive by <strong>{formatSlot(arrivalSlot)}</strong> <button onClick={() => setStep('design')} className="text-blue-600 text-xs ml-2">✏ Edit</button></p>
                     <p className="text-gray-700 text-xs mt-0.5">{new Date(eventDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', weekday: 'long' })}</p>
                   </div>
                 </div>
@@ -370,33 +336,28 @@ export default function PanditOrderPage() {
                 </div>
               </div>
 
-              {/* Puja card */}
+              {/* Decoration card */}
               <div className="bg-white rounded-xl border p-5 flex items-start gap-4">
-                <div className="w-24 h-24 rounded-lg relative bg-gradient-to-br from-amber-100 to-orange-200 overflow-hidden flex items-center justify-center shrink-0">
-                  <span className="text-3xl opacity-40">🪔</span>
-                  <img src={selectedPuja.photoUrl} alt=""
+                <div className="w-24 h-24 rounded-lg relative bg-gradient-to-br from-pink-100 to-rose-200 overflow-hidden flex items-center justify-center shrink-0">
+                  <span className="text-3xl opacity-40">🌸</span>
+                  <img src={selectedDecor.photoUrl} alt=""
                        onError={e => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
                        className="absolute inset-0 w-full h-full object-cover" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-bold text-gray-900">{selectedPuja.label}</p>
-                  <p className="text-[11px] text-gray-500 mt-0.5">{selectedPuja.tier} · {selectedPuja.durationHours}h · Samagri included</p>
+                  <p className="text-sm font-bold text-gray-900">{selectedDecor.label}</p>
+                  <p className="text-[11px] text-gray-500 mt-0.5">{selectedDecor.tier} · Setup {selectedDecor.setupHours} hrs</p>
                   <ul className="text-[11px] text-gray-600 mt-1 space-y-0.5">
-                    {selectedPuja.inclusions.slice(0, 3).map((it, i) => <li key={i}>• {it}</li>)}
+                    {selectedDecor.inclusions.slice(0, 3).map((it, i) => <li key={i}>• {it}</li>)}
+                    {selectedDecor.inclusions.length > 3 && <li className="text-gray-400">+{selectedDecor.inclusions.length - 3} more included</li>}
                   </ul>
-                  {(gotra || familyNames) && (
-                    <p className="text-[11px] text-orange-700 mt-2">
-                      {gotra && <>Gotra: <strong>{gotra}</strong>{familyNames && ' · '}</>}
-                      {familyNames && <>Sankalp: <strong>{familyNames}</strong></>}
-                    </p>
-                  )}
                 </div>
                 <button onClick={() => setStep('design')} className="text-xs text-blue-600 hover:text-blue-700 whitespace-nowrap">✏ Edit</button>
               </div>
 
               {/* Delivery */}
               <div className="bg-white rounded-xl border p-5 space-y-3">
-                <h3 className="font-semibold text-gray-900">Puja venue</h3>
+                <h3 className="font-semibold text-gray-900">Delivery details</h3>
                 <div>
                   <label className="block text-xs font-medium text-gray-600 mb-1">Address *</label>
                   <textarea required value={address} onChange={e => setAddress(e.target.value)}
@@ -446,15 +407,11 @@ export default function PanditOrderPage() {
                 </div>
                 <div className="flex justify-between pt-2">
                   <span className="text-gray-700">Pay Now (60%)</span>
-                  <span className="font-bold text-orange-700">{formatPaise(priceBreakdown.advance)}</span>
+                  <span className="font-bold text-rose-700">{formatPaise(priceBreakdown.advance)}</span>
                 </div>
                 <div className="flex justify-between text-xs">
-                  <span className="text-gray-500">Balance on puja day</span>
+                  <span className="text-gray-500">Balance on event day</span>
                   <span className="text-gray-700">{formatPaise(priceBreakdown.balance)}</span>
-                </div>
-                <div className="flex justify-between text-xs pt-1 border-t border-dashed">
-                  <span className="text-gray-500">Dakshina (recommended, cash on day)</span>
-                  <span className="text-gray-700">{formatPaise(priceBreakdown.dakshina)}</span>
                 </div>
               </div>
 
@@ -464,7 +421,7 @@ export default function PanditOrderPage() {
                   <label className="block text-xs font-medium text-gray-600 mb-1">Have a coupon?</label>
                   <div className="flex gap-2">
                     <input type="text" value={couponInput} onChange={e => setCouponInput(e.target.value)}
-                           placeholder="PUJABLESS" className="flex-1 border rounded-lg px-3 py-2 text-sm" />
+                           placeholder="DECORLOVE" className="flex-1 border rounded-lg px-3 py-2 text-sm" />
                     <button onClick={applyCoupon} className="bg-gray-900 hover:bg-black text-white rounded-lg px-4 text-sm font-semibold">Apply</button>
                   </div>
                   {couponError && <p className="text-[11px] text-red-500 mt-1">{couponError}</p>}
@@ -476,7 +433,7 @@ export default function PanditOrderPage() {
                 <input type="checkbox" checked={agreeTerms} onChange={e => setAgreeTerms(e.target.checked)}
                        className="mt-0.5 w-4 h-4" />
                 <span className="text-[11px] text-gray-600 leading-snug">
-                  60% advance is non-refundable after pandit confirmation. Dakshina is separate and customer pays in cash on the day. I agree to the <Link href="/terms" className="text-blue-600 hover:underline">T&C</Link>, <Link href="/privacy" className="text-blue-600 hover:underline">privacy policy</Link> and <Link href="/cancellation" className="text-blue-600 hover:underline">cancellation policy</Link>.
+                  60% advance is non-refundable after decorator confirmation. Overtime is {formatPaise(selectedDecor.overtimePerHourPaise)}/hr beyond the {selectedDecor.setupHours}-hr setup window. I agree to the <Link href="/terms" className="text-blue-600 hover:underline">T&C</Link>, <Link href="/privacy" className="text-blue-600 hover:underline">privacy policy</Link> and <Link href="/cancellation" className="text-blue-600 hover:underline">cancellation policy</Link>.
                 </span>
               </label>
 
@@ -497,12 +454,13 @@ export default function PanditOrderPage() {
         )}
       </div>
 
+      {/* Sticky bottom CTA for step 1 on mobile (matches the doc's "View Total Bill" bar) */}
       {step === 'design' && (
         <div className="fixed bottom-0 inset-x-0 bg-amber-500 text-white text-center py-3 px-4 text-sm font-bold shadow-xl lg:hidden">
           {canProceedToSummary ? (
             <button onClick={() => setStep('summary')} className="w-full">View Total Bill →</button>
           ) : (
-            <span className="opacity-80">Pick occasion, date, time, puja and language</span>
+            <span className="opacity-80">Pick occasion, date, time and decoration</span>
           )}
         </div>
       )}

@@ -165,13 +165,13 @@ export default function Navbar() {
                 {t('nav.search')}
               </Link>
               <div className="relative group">
-                {/* Clicking "Services" lands on the /cooks/services marketplace.
+                {/* Clicking "Services" lands on the /services marketplace.
                     Hover still reveals the sub-category dropdown below. */}
-                <Link href="/cooks/services" className="hover:text-white transition flex items-center gap-1">
+                <Link href="/services" className="hover:text-white transition flex items-center gap-1">
                   Services <span className="text-[10px]">▼</span>
                 </Link>
                 <div className="absolute top-full left-0 mt-2 w-56 bg-white rounded-xl shadow-lg border border-gray-100 py-2 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50">
-                  <Link href="/cooks/services" className="flex items-center gap-3 px-4 py-2.5 hover:bg-orange-50 transition border-b">
+                  <Link href="/services" className="flex items-center gap-3 px-4 py-2.5 hover:bg-orange-50 transition border-b">
                     <span className="text-lg">🎉</span>
                     <div>
                       <p className="text-sm font-medium text-gray-900">House Parties</p>
@@ -462,11 +462,11 @@ export default function Navbar() {
               {/* Services section for logged-in users */}
               {!isInHostMode && (
                 <div className="border-t mt-2 pt-2">
-                  <Link href="/cooks/services" className="flex items-center justify-between py-1" onClick={() => setMenuOpen(false)}>
+                  <Link href="/services" className="flex items-center justify-between py-1" onClick={() => setMenuOpen(false)}>
                     <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Services</p>
                     <span className="text-[10px] text-orange-500 font-semibold">View all →</span>
                   </Link>
-                  <Link href="/cooks/services" className="flex items-center gap-3 py-2 text-gray-700 hover:text-orange-500" onClick={() => setMenuOpen(false)}>
+                  <Link href="/services" className="flex items-center gap-3 py-2 text-gray-700 hover:text-orange-500" onClick={() => setMenuOpen(false)}>
                     <span className="w-5 text-center">🎉</span> House Parties
                   </Link>
                   <Link href="/cooks" className="flex items-center gap-3 py-2 text-gray-700 hover:text-orange-500" onClick={() => setMenuOpen(false)}>
@@ -515,11 +515,11 @@ export default function Navbar() {
               <Link href="/search" className="flex items-center gap-3 py-2.5 text-gray-700 hover:text-orange-500" onClick={() => setMenuOpen(false)}>
                 <span className="w-5 text-center">{'\u{1F50D}'}</span> {t('nav.search')}
               </Link>
-              <Link href="/cooks/services" className="flex items-center justify-between pt-3 pb-1" onClick={() => setMenuOpen(false)}>
+              <Link href="/services" className="flex items-center justify-between pt-3 pb-1" onClick={() => setMenuOpen(false)}>
                 <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Services</p>
                 <span className="text-[10px] text-orange-500 font-semibold">View all →</span>
               </Link>
-              <Link href="/cooks/services" className="flex items-center gap-3 py-2 text-gray-700 hover:text-orange-500" onClick={() => setMenuOpen(false)}>
+              <Link href="/services" className="flex items-center gap-3 py-2 text-gray-700 hover:text-orange-500" onClick={() => setMenuOpen(false)}>
                 <span className="w-5 text-center">🎉</span> House Parties
               </Link>
               <Link href="/cooks" className="flex items-center gap-3 py-2 text-gray-700 hover:text-orange-500" onClick={() => setMenuOpen(false)}>
