@@ -202,59 +202,183 @@ export const WIZARD_CONFIGS: Record<string, WizardConfig> = {
     ],
   },
 
-  // Stub configs for the remaining MVP types — minimum to get end-to-end testable.
-  // Will be expanded with full type-specific fields in Sprint 2.
+  // ────────────────── PANDIT ──────────────────────────
   PANDIT: {
-    serviceType: 'PANDIT', displayName: 'Pandit', hero: { emoji: '🪔', tagline: 'Offer pujas through Safar' },
-    pricingPattern: 'FLAT_PER_ITEM', calendarMode: 'DAY_GRAIN', defaultLeadTimeHours: 24,
+    serviceType: 'PANDIT',
+    displayName: 'Pandit / Acharya',
+    hero: { emoji: '🪔', tagline: 'Offer pujas through Safar' },
+    pricingPattern: 'FLAT_PER_ITEM',
+    calendarMode: 'DAY_GRAIN',
+    defaultLeadTimeHours: 24,
     requiredKyc: ['AADHAAR', 'PAN', 'LINEAGE_PROOF'],
     steps: [
       { key: 'business', title: 'About you', fields: COMMON_BUSINESS_FIELDS },
+      {
+        key: 'tradition',
+        title: 'Tradition & specialization',
+        description: 'Customers filter by tradition + language + puja type — be precise so the right families find you.',
+        fields: [
+          {
+            key: 'tradition', label: 'Tradition / sampradaya', type: 'select', target: 'typeAttributes', required: true,
+            options: [
+              'SMARTA','VAISHNAV','SHAIVITE','SHAKTA','SINDHI','ARYA_SAMAJ',
+              'KASHMIRI_PANDIT','IYER','IYENGAR','MAITHIL','BHATT','SARASWAT',
+            ].map(v => ({ value: v, label: v.replace(/_/g, ' ') })),
+          },
+          { key: 'panditGotra', label: 'Your gotra', type: 'text', target: 'typeAttributes', placeholder: 'Bharadwaj, Kashyap, etc.' },
+          {
+            key: 'textLanguages', label: 'Languages of recitation', type: 'multiselect', target: 'typeAttributes',
+            options: ['SANSKRIT','HINDI','TAMIL','BENGALI','MARATHI','GUJARATI','TELUGU','KANNADA','MALAYALAM','PUNJABI']
+              .map(v => ({ value: v, label: v })),
+          },
+          {
+            key: 'shastraSpecializations', label: 'Shastra specializations', type: 'multiselect', target: 'typeAttributes',
+            options: ['KARMA_KANDA','JYOTISH','VEDIC','TANTRIC','ASTROLOGY','VASTU']
+              .map(v => ({ value: v, label: v.replace(/_/g, ' ') })),
+          },
+          {
+            key: 'pujaTypesOffered', label: 'Pujas you offer', type: 'multiselect', target: 'typeAttributes',
+            helpText: 'Pick all that apply. Each can become a service item with its own price + tier.',
+            options: [
+              'GRIHA_PRAVESH','SATYANARAYAN','WEDDING','MUNDAN','ANNAPRASHAN','ANNIVERSARY',
+              'SHRADDHA','NAVAGRAHA','RUDRABHISHEK','GANESH_HOMA','LAKSHMI_PUJA','SARASWATI_PUJA',
+            ].map(v => ({ value: v, label: v.replace(/_/g, ' ') })),
+          },
+          {
+            key: 'samagriProvided', label: 'Samagri (puja kit) provided?', type: 'select', target: 'typeAttributes',
+            options: [
+              { value: 'ALL',     label: 'I bring everything' },
+              { value: 'PARTIAL', label: 'I bring some — customer arranges rest' },
+              { value: 'NONE',    label: 'Customer arranges all samagri' },
+            ],
+          },
+          {
+            key: 'onlineViaVideoCall', label: 'Available for online (video-call) pujas?', type: 'boolean', target: 'typeAttributes',
+            helpText: 'Many families have moved to online for daily pujas + Shraddha.',
+          },
+        ],
+      },
       { key: 'coverage', title: 'Service area', fields: COMMON_COVERAGE_FIELDS },
       {
-        key: 'kyc', title: 'KYC documents',
-        description: 'Lineage proof = guru-shishya parampara letter or recognized Vedic institution certificate.',
+        key: 'kyc',
+        title: 'KYC documents',
+        description: 'Lineage proof = guru-shishya parampara letter, Vedic institution certificate, or temple affiliation letter. Anything that establishes your right to perform vedic ceremonies.',
         fields: [
           { key: 'aadhaar', label: 'Aadhaar', type: 'kyc-doc', documentType: 'AADHAAR', required: true },
           { key: 'pan',     label: 'PAN',     type: 'kyc-doc', documentType: 'PAN',     required: true },
-          { key: 'lineage', label: 'Lineage proof', type: 'kyc-doc', documentType: 'LINEAGE_PROOF', required: true },
+          { key: 'lineage', label: 'Lineage / institution proof', type: 'kyc-doc', documentType: 'LINEAGE_PROOF', required: true,
+            helpText: 'Required. Admin reviews manually.' },
         ],
       },
     ],
   },
 
+  // ────────────────── DECORATOR ──────────────────────────
   DECORATOR: {
-    serviceType: 'DECORATOR', displayName: 'Decorator', hero: { emoji: '🌸', tagline: 'Decorate weddings, parties, events' },
-    pricingPattern: 'QUOTE_ON_REQUEST', calendarMode: 'DAY_GRAIN', defaultLeadTimeHours: 72,
+    serviceType: 'DECORATOR',
+    displayName: 'Decorator',
+    hero: { emoji: '🌸', tagline: 'Decorate weddings, sangeet, parties, corporate events' },
+    pricingPattern: 'QUOTE_ON_REQUEST',
+    calendarMode: 'DAY_GRAIN',
+    defaultLeadTimeHours: 72,
     requiredKyc: ['AADHAAR', 'PAN'],
     steps: [
       { key: 'business', title: 'About your service', fields: COMMON_BUSINESS_FIELDS },
+      {
+        key: 'capabilities',
+        title: 'Style & capabilities',
+        fields: [
+          {
+            key: 'decorStyles', label: 'Decoration styles', type: 'multiselect', target: 'typeAttributes', required: true,
+            options: ['PUNJABI','SOUTH_INDIAN','MARWARI','BENGALI','MODERN','RUSTIC','FUSION','THEME','MINIMALIST','ROYAL','FLORAL','BOHEMIAN']
+              .map(v => ({ value: v, label: v.replace(/_/g, ' ').toLowerCase() })),
+          },
+          {
+            key: 'setupCapabilities', label: 'Setup capabilities', type: 'multiselect', target: 'typeAttributes',
+            options: ['FLORAL','LIGHTING','STAGE','MANDAP','SEATING','CENTERPIECES','BACKDROP','PROPS','BALLOONS','LED_WALLS']
+              .map(v => ({ value: v, label: v.replace(/_/g, ' ').toLowerCase() })),
+          },
+          { key: 'indoorCapable',  label: 'Indoor venues?',  type: 'boolean', target: 'typeAttributes' },
+          { key: 'outdoorCapable', label: 'Outdoor venues?', type: 'boolean', target: 'typeAttributes' },
+          { key: 'largestEventHandledPax', label: 'Largest event handled (guests)', type: 'number', target: 'typeAttributes', placeholder: '500' },
+          { key: 'crewSizeDefault', label: 'Default crew size', type: 'number', target: 'typeAttributes', placeholder: '4' },
+        ],
+      },
       { key: 'coverage', title: 'Service area', fields: COMMON_COVERAGE_FIELDS },
       {
-        key: 'kyc', title: 'KYC documents',
+        key: 'kyc',
+        title: 'KYC documents',
         fields: [
           { key: 'aadhaar', label: 'Aadhaar', type: 'kyc-doc', documentType: 'AADHAAR', required: true },
           { key: 'pan',     label: 'PAN',     type: 'kyc-doc', documentType: 'PAN',     required: true },
-          { key: 'gst',     label: 'GST (optional)', type: 'kyc-doc', documentType: 'GST' },
+          { key: 'gst',     label: 'GST (optional)', type: 'kyc-doc', documentType: 'GST',
+            helpText: 'Required if your turnover crosses ₹20L.' },
+          { key: 'insurance', label: 'Liability insurance (optional)', type: 'kyc-doc', documentType: 'INSURANCE',
+            helpText: 'Recommended for jobs with electricals or heavy props.' },
         ],
       },
     ],
   },
 
+  // ────────────────── STAFF_HIRE ──────────────────────────
   STAFF_HIRE: {
-    serviceType: 'STAFF_HIRE', displayName: 'Staff Agency', hero: { emoji: '🧑‍🍳', tagline: 'Supply waiters, bartenders, cooks for events' },
-    pricingPattern: 'PER_TIME_BLOCK', calendarMode: 'SLOT_GRAIN', defaultLeadTimeHours: 48,
+    serviceType: 'STAFF_HIRE',
+    displayName: 'Staff Agency',
+    hero: { emoji: '🧑‍🍳', tagline: 'Supply waiters, bartenders, cooks for events' },
+    pricingPattern: 'PER_TIME_BLOCK',
+    calendarMode: 'SLOT_GRAIN',
+    defaultLeadTimeHours: 48,
     requiredKyc: ['AADHAAR', 'PAN', 'POLICE_VERIFICATION'],
     steps: [
       { key: 'business', title: 'About your agency', fields: COMMON_BUSINESS_FIELDS },
+      {
+        key: 'roster',
+        title: 'Roster & capabilities',
+        fields: [
+          {
+            key: 'agencyType', label: 'Agency type', type: 'select', target: 'typeAttributes', required: true,
+            options: [
+              { value: 'INDIVIDUAL_FREELANCER', label: 'Solo freelancer' },
+              { value: 'SMALL_AGENCY',          label: 'Small agency (2-10 staff)' },
+              { value: 'LARGE_AGENCY',          label: 'Large agency (10+ staff)' },
+            ],
+          },
+          {
+            key: 'rolesOffered', label: 'Roles you supply', type: 'multiselect', target: 'typeAttributes', required: true,
+            options: ['WAITER','BARTENDER','SERVER','KITCHEN_HELPER','HOSTESS','VALET','SECURITY','CLEANER','DJ_ASSISTANT','PHOTOGRAPHER_ASSISTANT']
+              .map(v => ({ value: v, label: v.replace(/_/g, ' ').toLowerCase() })),
+          },
+          { key: 'minCountPerBooking', label: 'Minimum staff per booking', type: 'number', target: 'typeAttributes', placeholder: '2' },
+          { key: 'maxCountPerBooking', label: 'Maximum staff per booking', type: 'number', target: 'typeAttributes', placeholder: '20' },
+          { key: 'experienceYearsAvg', label: 'Average experience of your staff (years)', type: 'number', target: 'typeAttributes', placeholder: '3' },
+          { key: 'uniformProvided', label: 'Uniform provided?', type: 'boolean', target: 'typeAttributes' },
+          {
+            key: 'languagesSpoken', label: 'Languages your staff speak', type: 'multiselect', target: 'typeAttributes',
+            options: ['HINDI','ENGLISH','TAMIL','BENGALI','MARATHI','GUJARATI','TELUGU','KANNADA','PUNJABI']
+              .map(v => ({ value: v, label: v })),
+          },
+          {
+            key: 'dressCodesSupported', label: 'Dress codes supported', type: 'multiselect', target: 'typeAttributes',
+            options: [
+              { value: 'FORMAL_BLACK', label: 'Formal black' },
+              { value: 'SAREE',        label: 'Saree' },
+              { value: 'KURTA',        label: 'Kurta' },
+              { value: 'EVENT_THEME',  label: 'Event-theme (custom)' },
+            ],
+          },
+        ],
+      },
       { key: 'coverage', title: 'Service area', fields: COMMON_COVERAGE_FIELDS },
       {
-        key: 'kyc', title: 'KYC documents',
-        description: 'Police verification is mandatory because staff enter customer homes.',
+        key: 'kyc',
+        title: 'KYC documents',
+        description: 'Police verification is mandatory because staff enter customer homes. Get it from your local police station.',
         fields: [
           { key: 'aadhaar', label: 'Aadhaar', type: 'kyc-doc', documentType: 'AADHAAR', required: true },
           { key: 'pan',     label: 'PAN',     type: 'kyc-doc', documentType: 'PAN',     required: true },
-          { key: 'police',  label: 'Police verification certificate', type: 'kyc-doc', documentType: 'POLICE_VERIFICATION', required: true },
+          { key: 'police',  label: 'Police verification certificate', type: 'kyc-doc', documentType: 'POLICE_VERIFICATION', required: true,
+            helpText: 'Required. Cover all staff in your roster.' },
+          { key: 'gst',     label: 'GST (if applicable)', type: 'kyc-doc', documentType: 'GST' },
         ],
       },
     ],

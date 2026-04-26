@@ -2811,4 +2811,51 @@ export const api = {
       headers: { Authorization: `Bearer ${token}` },
     }),
 
+  /* ── Service-leg listings: public browse + items (Sprint 3) ─── */
+
+  browseServiceListings: (params: { serviceType?: string; city?: string; availableOn?: string }) => {
+    const qs = new URLSearchParams();
+    if (params.serviceType) qs.set('serviceType', params.serviceType);
+    if (params.city) qs.set('city', params.city);
+    if (params.availableOn) qs.set('availableOn', params.availableOn);
+    return apiFetch<any[]>(`/api/v1/services/listings?${qs.toString()}`);
+  },
+  getServiceListingBySlug: (slug: string) =>
+    apiFetch<any>(`/api/v1/services/listings/by-slug/${slug}`),
+  getServiceListingItems: (listingId: string) =>
+    apiFetch<any[]>(`/api/v1/services/listings/${listingId}/items`),
+  getServiceItem: (itemId: string) =>
+    apiFetch<any>(`/api/v1/services/items/${itemId}`),
+
+  /* Vendor item ops */
+  listMyServiceItems: (listingId: string, token: string) =>
+    apiFetch<any[]>(`/api/v1/services/listings/${listingId}/items/all`, {
+      headers: { Authorization: `Bearer ${token}` },
+    }),
+  createServiceItem: (listingId: string, body: any, token: string) =>
+    apiFetch<any>(`/api/v1/services/listings/${listingId}/items`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    }),
+  updateServiceItem: (itemId: string, body: any, token: string) =>
+    apiFetch<any>(`/api/v1/services/items/${itemId}`, {
+      method: 'PATCH',
+      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    }),
+  deleteServiceItem: (itemId: string, token: string) =>
+    apiFetch<any>(`/api/v1/services/items/${itemId}`, {
+      method: 'DELETE',
+      headers: { Authorization: `Bearer ${token}` },
+    }),
+  pauseServiceItem: (itemId: string, token: string) =>
+    apiFetch<any>(`/api/v1/services/items/${itemId}/pause`, {
+      method: 'POST', headers: { Authorization: `Bearer ${token}` },
+    }),
+  activateServiceItem: (itemId: string, token: string) =>
+    apiFetch<any>(`/api/v1/services/items/${itemId}/activate`, {
+      method: 'POST', headers: { Authorization: `Bearer ${token}` },
+    }),
+
 };

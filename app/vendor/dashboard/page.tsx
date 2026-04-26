@@ -126,12 +126,19 @@ export default function VendorDashboardPage() {
 
                 {l.status === 'VERIFIED' && (
                   <p className="text-xs text-green-700 mt-1">
-                    🎉 Live at safar.com/services/{l.vendorSlug}
+                    🎉 Live at <Link href={`/services/storefront/${l.vendorSlug}`} className="underline">safar.com/services/storefront/{l.vendorSlug}</Link>
                     {l.ratingCount && l.ratingCount > 0 && (
                       <> · ★{l.avgRating?.toFixed(1)} ({l.ratingCount})</>
                     )}
                   </p>
                 )}
+
+                <div className="mt-2 flex items-center gap-3">
+                  <Link href={`/vendor/listings/${l.id}/items`}
+                    className="text-xs text-orange-600 hover:underline font-medium">
+                    Manage items →
+                  </Link>
+                </div>
               </div>
             </div>
           );
