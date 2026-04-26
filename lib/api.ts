@@ -2842,6 +2842,10 @@ export const api = {
   getServiceItem: (itemId: string) =>
     apiFetch<any>(`/api/v1/services/items/${itemId}`),
 
+  /* Vendor invites (Pattern E — WhatsApp BD outreach) */
+  resolveVendorInvite: (token: string) =>
+    apiFetch<{valid: boolean; phone?: string; businessName?: string; serviceType?: string; message?: string}>(`/api/v1/services/invites/${encodeURIComponent(token)}`),
+
   /* Vendor item ops */
   listMyServiceItems: (listingId: string, token: string) =>
     apiFetch<any[]>(`/api/v1/services/listings/${listingId}/items/all`, {
