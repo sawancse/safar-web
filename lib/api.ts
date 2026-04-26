@@ -2770,6 +2770,21 @@ export const api = {
       headers: { Authorization: `Bearer ${token}` },
     }),
 
+  /* ── Universal Trip (cross-vertical hub) ───────────────────── */
+
+  getTripByFlightBooking: (flightBookingId: string) =>
+    apiFetch<any>(`/api/v1/trips/by-flight-booking/${flightBookingId}`),
+
+  getTripSuggestions: (tripId: string) =>
+    apiFetch<{ tripId: string; intent: string; suggestedVerticals: string[]; matchedRules: string[] }>(
+      `/api/v1/trips/${tripId}/suggestions`,
+    ),
+
+  getMyTrips: (token: string, page: number = 0) =>
+    apiFetch<any>(`/api/v1/trips/my?page=${page}&size=20&sort=createdAt,desc`, {
+      headers: { Authorization: `Bearer ${token}` },
+    }),
+
   /* ── Service-leg listings (vendor self-onboarding) ─────────── */
 
   createServiceListing: (body: any, token: string) =>

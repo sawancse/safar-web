@@ -5,6 +5,7 @@ import { useRouter, useParams } from 'next/navigation';
 import Link from 'next/link';
 import { api } from '@/lib/api';
 import { formatPaise } from '@/lib/utils';
+import CompleteYourTrip from '@/components/CompleteYourTrip';
 
 const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string }> = {
   PENDING_PAYMENT: { label: 'Pending Payment', color: 'text-amber-700', bg: 'bg-amber-100' },
@@ -152,6 +153,13 @@ export default function FlightBookingDetailPage() {
       </div>
 
       <div className="max-w-5xl mx-auto px-4 py-8 space-y-6">
+
+        {/* Cross-vertical "Complete your trip" hub — only meaningful once
+             booking is confirmed (Trip is auto-created on flight.booking.created
+             but suggestions are most relevant post-payment). */}
+        {(status === 'CONFIRMED' || status === 'TICKETED' || status === 'COMPLETED') && (
+          <CompleteYourTrip flightBookingId={bookingId} />
+        )}
         {error && (
           <div className="bg-red-50 border border-red-200 rounded-xl p-4">
             <p className="text-sm text-red-600">{error}</p>
