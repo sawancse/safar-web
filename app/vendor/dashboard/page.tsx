@@ -20,6 +20,8 @@ type Listing = {
   completedBookingsCount?: number;
   commissionTier?: 'STARTER' | 'PRO' | 'COMMERCIAL';
   commissionPctOverride?: number;
+  hasPendingChanges?: boolean;
+  pendingChangesSubmittedAt?: string;
 };
 
 const COMMISSION_TIER_LABEL: Record<string, { label: string; color: string }> = {
@@ -140,6 +142,12 @@ export default function VendorDashboardPage() {
                       <> · ★{l.avgRating?.toFixed(1)} ({l.ratingCount})</>
                     )}
                   </p>
+                )}
+
+                {l.hasPendingChanges && (
+                  <div className="mt-2 bg-pink-50 border border-pink-200 rounded-lg px-3 py-1.5 text-xs text-pink-800">
+                    🔄 Material change submitted — admin reviewing. Listing stays live with current values until approved.
+                  </div>
                 )}
 
                 {/* Commission tier — vendors see their tier + booking progress */}
