@@ -2770,4 +2770,45 @@ export const api = {
       headers: { Authorization: `Bearer ${token}` },
     }),
 
+  /* ── Service-leg listings (vendor self-onboarding) ─────────── */
+
+  createServiceListing: (body: any, token: string) =>
+    apiFetch<any>('/api/v1/services/listings', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    }),
+  updateServiceListing: (id: string, body: any, token: string) =>
+    apiFetch<any>(`/api/v1/services/listings/${id}`, {
+      method: 'PATCH',
+      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    }),
+  submitServiceListing: (id: string, token: string) =>
+    apiFetch<any>(`/api/v1/services/listings/${id}/submit`, {
+      method: 'POST', headers: { Authorization: `Bearer ${token}` },
+    }),
+  pauseServiceListing: (id: string, token: string) =>
+    apiFetch<any>(`/api/v1/services/listings/${id}/pause`, {
+      method: 'POST', headers: { Authorization: `Bearer ${token}` },
+    }),
+  resumeServiceListing: (id: string, token: string) =>
+    apiFetch<any>(`/api/v1/services/listings/${id}/resume`, {
+      method: 'POST', headers: { Authorization: `Bearer ${token}` },
+    }),
+  getMyServiceListings: (token: string) =>
+    apiFetch<any[]>('/api/v1/services/listings/me', {
+      headers: { Authorization: `Bearer ${token}` },
+    }),
+  uploadServiceListingKyc: (id: string, body: any, token: string) =>
+    apiFetch<any>(`/api/v1/services/listings/${id}/kyc-documents`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    }),
+  getServiceListingKyc: (id: string, token: string) =>
+    apiFetch<any[]>(`/api/v1/services/listings/${id}/kyc-documents`, {
+      headers: { Authorization: `Bearer ${token}` },
+    }),
+
 };
