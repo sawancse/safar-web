@@ -81,6 +81,13 @@ function eventServiceLabel(e: any): string {
   return e?.eventType ? formatOccasion(e.eventType) : 'Event';
 }
 
+function formatBookedOn(iso?: string): string {
+  if (!iso) return '';
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return '';
+  return d.toLocaleString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+}
+
 type ViewState = 'loading' | 'not-logged-in' | 'not-chef' | 'suspended' | 'error' | 'ready';
 
 export default function ChefDashboardPage() {
@@ -140,9 +147,13 @@ export default function ChefDashboardPage() {
             api.getChefIncomingEvents(token).catch(() => []),
             api.getChefIncomingSubscriptions(token).catch(() => []),
           ]);
-          setBookings(b || []);
-          setEvents(e || []);
-          setSubscriptions(s || []);
+          // Newest first — sort by createdAt desc so the chef sees fresh
+          // requests at the top instead of having to scroll past stale ones.
+          const byCreatedDesc = (x: any, y: any) =>
+            new Date(y?.createdAt || 0).getTime() - new Date(x?.createdAt || 0).getTime();
+          setBookings(((b || []) as any[]).slice().sort(byCreatedDesc));
+          setEvents(((e || []) as any[]).slice().sort(byCreatedDesc));
+          setSubscriptions(((s || []) as any[]).slice().sort(byCreatedDesc));
         } catch (err: any) {
           console.error('Failed to load chef bookings:', err);
           setBookingsError(err?.message || 'Failed to load bookings');
@@ -638,6 +649,7 @@ export default function ChefDashboardPage() {
                     </div>
                     <p className="text-xs text-gray-500">{b.bookingRef} · {formatDateTime(b.serviceDate, b.serviceTime)} · {b.mealType}</p>
                     <p className="text-xs text-gray-500">{b.guestsCount} guests | {b.address}, {b.city}</p>
+                    {b.createdAt && <p className="text-[11px] text-gray-400 mt-0.5">Booked on {formatBookedOn(b.createdAt)}</p>}
                     {b.specialRequests && <p className="text-xs text-orange-600 mt-1 italic">"{b.specialRequests}"</p>}
                   </div>
                   <div className="text-right ml-4">
@@ -701,6 +713,7 @@ export default function ChefDashboardPage() {
                     </div>
                     <p className="text-xs text-gray-500">{e.bookingRef} · {formatDateTime(e.eventDate, e.eventTime)} · {e.durationHours}h{e.eventType ? ` · ${formatOccasion(e.eventType)}` : ''}</p>
                     <p className="text-xs text-gray-500">{e.guestCount} guests | {e.venueAddress}, {e.city}</p>
+                    {e.createdAt && <p className="text-[11px] text-gray-400 mt-0.5">Booked on {formatBookedOn(e.createdAt)}</p>}
                     {e.cuisinePreferences && <p className="text-xs text-gray-500">Cuisine: {e.cuisinePreferences}</p>}
                     {e.menuDescription && (() => {
                       let md: any = null;
@@ -912,6 +925,7 @@ export default function ChefDashboardPage() {
                     </div>
                     <p className="text-xs text-gray-500">{s.subscriptionRef} | {s.mealsPerDay} meals/day | {s.schedule}</p>
                     <p className="text-xs text-gray-500">{s.mealTypes} | {s.address}, {s.city}</p>
+                    {s.createdAt && <p className="text-[11px] text-gray-400 mt-0.5">Booked on {formatBookedOn(s.createdAt)}</p>}
                     {s.dietaryPreferences && <p className="text-xs text-orange-600 mt-1">Diet: {s.dietaryPreferences}</p>}
                   </div>
                   <div className="text-right">

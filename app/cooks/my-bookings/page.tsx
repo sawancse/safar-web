@@ -110,6 +110,10 @@ export default function MyChefBookingsPage() {
     return `Hi ${b.chefName || 'Chef'}, my Safar Cook start-job OTP is *${b.startJobOtp}*. Please enter it when you arrive. Booking ref: ${b.bookingRef ?? ''}.`;
   }
 
+  function eventOtpShareMessage(e: any, recipient: string) {
+    return `Hi ${recipient}, my Safar event start-job OTP is *${e.startJobOtp}*. Please enter it when you arrive. Booking ref: ${e.bookingRef ?? ''}.`;
+  }
+
   function formatBookedOn(iso?: string): string {
     if (!iso) return '';
     const d = new Date(iso);
@@ -679,6 +683,65 @@ export default function MyChefBookingsPage() {
                       </div>
                     );
                   })()}
+                  {/* Start-job OTP — share with chef/vendor when they arrive on the event day */}
+                  {e.startJobOtp && !e.jobStartedAt && (e.status === 'CONFIRMED' || e.status === 'ADVANCE_PAID' || e.status === 'IN_PROGRESS') && (() => {
+                    const v = eventVendors[e.id];
+                    const recipientName = v?.vendorBusinessName || e.chefName || 'team';
+                    const recipientPhone = v?.vendorPhone || e.chefPhone || '';
+                    const waPhone = recipientPhone.replace(/\D/g, '').replace(/^0+/, '');
+                    const waNumber = waPhone.length === 10 ? `91${waPhone}` : waPhone;
+                    const msg = eventOtpShareMessage(e, recipientName);
+                    return (
+                      <div className="mt-2 bg-orange-50 border border-orange-200 rounded-lg px-3 py-2.5 flex items-center justify-between gap-3 flex-wrap">
+                        <div className="flex items-center gap-2.5 min-w-0">
+                          <span className="text-xl shrink-0">🔑</span>
+                          <div className="min-w-0">
+                            <p className="text-[10px] uppercase font-bold text-orange-700 tracking-wider">
+                              Start-job OTP — share with {v ? v.vendorBusinessName : (e.chefName || 'the partner')} on arrival
+                            </p>
+                            <p className="text-2xl font-black tracking-[0.3em] text-orange-700 font-mono leading-tight">{e.startJobOtp}</p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-1.5 shrink-0">
+                          <button
+                            onClick={() => copyOtp(e.id, e.startJobOtp)}
+                            className="text-xs font-semibold bg-gray-900 hover:bg-gray-800 text-white px-3 py-2 rounded-lg transition"
+                          >
+                            {otpCopied === e.id ? 'Copied ✓' : '📋 Copy'}
+                          </button>
+                          <a
+                            href={recipientPhone && waNumber ? `https://wa.me/${waNumber}?text=${encodeURIComponent(msg)}` : `https://wa.me/?text=${encodeURIComponent(msg)}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-xs font-semibold bg-green-500 hover:bg-green-600 text-white px-3 py-2 rounded-lg transition"
+                          >
+                            💬 WhatsApp
+                          </a>
+                          <a
+                            href={recipientPhone ? `sms:${recipientPhone}?body=${encodeURIComponent(msg)}` : `sms:?body=${encodeURIComponent(msg)}`}
+                            className="text-xs font-semibold bg-blue-500 hover:bg-blue-600 text-white px-3 py-2 rounded-lg transition"
+                          >
+                            ✉️ SMS
+                          </a>
+                          {recipientPhone && (
+                            <a
+                              href={`tel:${recipientPhone}`}
+                              className="text-xs font-semibold border border-gray-300 text-gray-700 hover:bg-gray-50 px-3 py-2 rounded-lg transition"
+                            >
+                              📞 Call
+                            </a>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })()}
+                  {/* Job-started confirmation */}
+                  {e.jobStartedAt && (
+                    <div className="mt-2 bg-green-50 border border-green-200 rounded-lg px-3 py-2 text-xs text-green-700 flex items-center gap-2">
+                      <span>✓</span>
+                      <span>{eventVendors[e.id]?.vendorBusinessName || e.chefName || 'Partner'} started the job at {new Date(e.jobStartedAt).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}</span>
+                    </div>
+                  )}
                   {/* Status info banners */}
                   {e.status === 'INQUIRY' && !eventVendors[e.id] && (
                     <div className="mt-2 bg-yellow-50 border border-yellow-200 rounded-lg px-3 py-2 text-xs text-yellow-700">

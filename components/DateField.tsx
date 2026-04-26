@@ -86,7 +86,7 @@ export default function DateField({
         </svg>
       </button>
       {open && !disabled && (
-        <div className="absolute z-50 mt-2 left-0 bg-white rounded-2xl shadow-2xl border border-gray-100 p-2">
+        <div className="absolute z-[1100] mt-2 left-0 bg-white rounded-2xl shadow-2xl border border-gray-100 p-2">
           <DatePicker
             selected={isoToDate(value)}
             onChange={(d) => {

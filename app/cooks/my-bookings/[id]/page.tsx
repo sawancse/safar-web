@@ -310,11 +310,153 @@ export default function ChefBookingDetailPage() {
   );
 }
 
+/* ────── Service-only booking details (cake / decor / singer / pandit / staff / appliance) ────── */
+function ServiceBookingDetails({ md }: { md: any }) {
+  const Section = ({ title, icon, children }: { title: string; icon: string; children: any }) => (
+    <div className="mb-6">
+      <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wide mb-3 flex items-center gap-2">
+        <span>{icon}</span>{title}
+      </h3>
+      {children}
+    </div>
+  );
+  const Row = ({ label, value }: { label: string; value: any }) =>
+    value === undefined || value === null || value === '' ? null : (
+      <div className="flex justify-between gap-3 py-1.5 border-b border-dashed border-gray-100 last:border-0">
+        <span className="text-sm text-gray-500">{label}</span>
+        <span className="text-sm font-medium text-gray-900 text-right">{value}</span>
+      </div>
+    );
+
+  let title = 'Order Details';
+  let icon = '📋';
+  let photoUrl: string | undefined;
+  const rows: Array<[string, any]> = [];
+
+  switch (md.type) {
+    case 'DESIGNER_CAKE':
+    case 'CAKE_DESIGNER':
+      title = 'Cake Details'; icon = '🎂';
+      photoUrl = md.cakePhotoUrl;
+      rows.push(['Design',         md.cakeLabel]);
+      rows.push(['Weight',         md.weight]);
+      rows.push(['Tier',           md.tier]);
+      rows.push(['Flavour',        md.flavour]);
+      rows.push(['Eggless',        md.eggless == null ? null : (md.eggless ? 'Yes' : 'No')]);
+      rows.push(['Message on cake', md.messageOnCake ? `"${md.messageOnCake}"` : null]);
+      break;
+    case 'LIVE_MUSIC':
+      title = 'Performance Details'; icon = '🎤';
+      rows.push(['Genre',           md.genreLabel]);
+      rows.push(['Sound equipment', md.preference === 'WITH_SOUND' ? 'Included' : md.preference === 'WITHOUT_SOUND' ? 'Customer arranges' : md.preference]);
+      rows.push(['Performance',     md.performanceHours ? `${md.performanceHours} hrs` : null]);
+      rows.push(['Occasion',        md.occasionLabel || md.occasion]);
+      break;
+    case 'EVENT_DECOR':
+      title = 'Decor Details'; icon = '🌸';
+      photoUrl = md.decorPhotoUrl;
+      rows.push(['Theme',  md.decorLabel]);
+      rows.push(['Tier',   md.decorTier]);
+      rows.push(['Setup',  md.setupHours ? `${md.setupHours} hrs` : null]);
+      if (Array.isArray(md.inclusions) && md.inclusions.length) {
+        rows.push(['Inclusions', md.inclusions.join(', ')]);
+      }
+      break;
+    case 'PANDIT_PUJA':
+      title = 'Puja Details'; icon = '🪔';
+      photoUrl = md.pujaPhotoUrl;
+      rows.push(['Puja',          md.pujaLabel]);
+      rows.push(['Tier',          md.pujaTier]);
+      rows.push(['Language',      md.language]);
+      rows.push(['Duration',      md.durationHours ? `${md.durationHours} hrs` : null]);
+      rows.push(['Gotra',         md.gotra]);
+      rows.push(['Sankalp names', md.familyNames]);
+      if (Array.isArray(md.inclusions) && md.inclusions.length) {
+        rows.push(['Inclusions', md.inclusions.join(', ')]);
+      }
+      if (Array.isArray(md.samagri) && md.samagri.length) {
+        rows.push(['Samagri kit', md.samagri.join(', ')]);
+      }
+      break;
+    case 'STAFF_HIRE':
+      title = 'Staff Details'; icon = '🧑‍🍳';
+      rows.push(['Role',     md.roleLabel]);
+      rows.push(['Count',    md.count != null ? String(md.count) : null]);
+      rows.push(['Hours',    md.hours ? `${md.hours} hrs` : null]);
+      rows.push(['Occasion', md.occasionLabel || md.occasion]);
+      break;
+    case 'APPLIANCE_RENTAL':
+      title = 'Appliance Rental'; icon = '🍳';
+      rows.push(['Rental days', md.rentalDays != null ? String(md.rentalDays) : null]);
+      rows.push(['Delivery',    md.deliveryDate]);
+      rows.push(['Pickup',      md.pickupDate]);
+      break;
+  }
+
+  const breakdown = md.breakdown || {};
+  return (
+    <div>
+      {photoUrl && (
+        <div className="mb-5 rounded-2xl overflow-hidden border bg-gray-100 aspect-video max-w-md">
+          <img src={photoUrl} alt={title} className="w-full h-full object-cover" loading="lazy"
+               onError={e => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }} />
+        </div>
+      )}
+      <Section title={title} icon={icon}>
+        <div className="bg-white border rounded-xl p-4">
+          {rows.length > 0 ? rows.map(([k, v]) => <Row key={k} label={k} value={v} />)
+            : <p className="text-sm text-gray-400">Booking details not available.</p>}
+        </div>
+      </Section>
+      {(breakdown.total || breakdown.advance || breakdown.balance || breakdown.gst) && (
+        <Section title="Pricing breakdown" icon="₹">
+          <div className="bg-white border rounded-xl p-4 text-sm space-y-1.5">
+            {breakdown.serviceCharges != null && <Row label="Service charges" value={`₹${(breakdown.serviceCharges / 100).toLocaleString('en-IN')}`} />}
+            {breakdown.weightBase     != null && <Row label="Weight base"     value={`₹${(breakdown.weightBase / 100).toLocaleString('en-IN')}`} />}
+            {breakdown.tierAdd        != null && breakdown.tierAdd > 0 && <Row label="Tier surcharge" value={`+ ₹${(breakdown.tierAdd / 100).toLocaleString('en-IN')}`} />}
+            {breakdown.egglessAdd     != null && breakdown.egglessAdd > 0 && <Row label="Eggless surcharge" value={`+ ₹${(breakdown.egglessAdd / 100).toLocaleString('en-IN')}`} />}
+            {breakdown.discount       != null && breakdown.discount > 0 && <Row label="Discount" value={`− ₹${(breakdown.discount / 100).toLocaleString('en-IN')}`} />}
+            {breakdown.gst            != null && <Row label="GST" value={`₹${(breakdown.gst / 100).toLocaleString('en-IN')}`} />}
+            {breakdown.total          != null && (
+              <div className="flex justify-between pt-2 mt-2 border-t font-bold">
+                <span>Total</span>
+                <span>₹{(breakdown.total / 100).toLocaleString('en-IN')}</span>
+              </div>
+            )}
+            {breakdown.advance        != null && breakdown.advance > 0 && (
+              <div className="flex justify-between text-xs text-gray-500">
+                <span>Advance ({Math.round((breakdown.advance / breakdown.total) * 100)}%)</span>
+                <span>₹{(breakdown.advance / 100).toLocaleString('en-IN')}</span>
+              </div>
+            )}
+            {breakdown.balance        != null && breakdown.balance > 0 && (
+              <div className="flex justify-between text-xs text-gray-500">
+                <span>Balance on delivery</span>
+                <span>₹{(breakdown.balance / 100).toLocaleString('en-IN')}</span>
+              </div>
+            )}
+          </div>
+        </Section>
+      )}
+    </div>
+  );
+}
+
 /* ────── Tab: Ingredients ────── */
 function IngredientsTab({ menuItems, shoppingList, guests, menuName, menuDescription, addonsJson, appliancesJson, crockeryJson, servicesJson }: {
   menuItems: any[]; shoppingList: any; guests: number; menuName?: string; menuDescription?: string;
   addonsJson?: string; appliancesJson?: string; crockeryJson?: string; servicesJson?: string;
 }) {
+  // Service-only bookings (singer / decor / cake / pandit / staff / appliance)
+  // don't have an ingredients shopping list — render their booking details
+  // instead of the empty cooking-themed sections.
+  let parsedMd: any = null;
+  try { if (menuDescription) parsedMd = JSON.parse(menuDescription); } catch {}
+  const SERVICE_TYPES = new Set(['LIVE_MUSIC', 'EVENT_DECOR', 'DESIGNER_CAKE', 'CAKE_DESIGNER', 'PANDIT_PUJA', 'STAFF_HIRE', 'APPLIANCE_RENTAL']);
+  if (parsedMd?.type && SERVICE_TYPES.has(parsedMd.type)) {
+    return <ServiceBookingDetails md={parsedMd} />;
+  }
+
   let services: Array<{ key: string; label: string; range?: string; notes?: string }> = [];
   try { if (servicesJson) services = JSON.parse(servicesJson); } catch {}
   const categories = shoppingList?.categories ?? [];
