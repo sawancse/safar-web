@@ -17,6 +17,15 @@ type Listing = {
   trustTier?: string;
   ratingCount?: number;
   avgRating?: number;
+  completedBookingsCount?: number;
+  commissionTier?: 'STARTER' | 'PRO' | 'COMMERCIAL';
+  commissionPctOverride?: number;
+};
+
+const COMMISSION_TIER_LABEL: Record<string, { label: string; color: string }> = {
+  STARTER:    { label: 'Starter',    color: 'text-gray-600 bg-gray-100' },
+  PRO:        { label: 'Pro',        color: 'text-blue-700 bg-blue-100' },
+  COMMERCIAL: { label: 'Commercial', color: 'text-amber-700 bg-amber-100' },
 };
 
 const STATUS_BADGE: Record<string, { color: string; label: string }> = {
@@ -131,6 +140,25 @@ export default function VendorDashboardPage() {
                       <> · ★{l.avgRating?.toFixed(1)} ({l.ratingCount})</>
                     )}
                   </p>
+                )}
+
+                {/* Commission tier — vendors see their tier + booking progress */}
+                {l.status === 'VERIFIED' && l.commissionTier && (
+                  <div className="mt-2 flex items-center gap-2 flex-wrap">
+                    <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-full ${COMMISSION_TIER_LABEL[l.commissionTier]?.color}`}>
+                      {COMMISSION_TIER_LABEL[l.commissionTier]?.label} commission tier
+                    </span>
+                    {l.commissionPctOverride && (
+                      <span className="text-[11px] text-purple-700 bg-purple-100 px-2 py-0.5 rounded-full font-semibold">
+                        {l.commissionPctOverride}% — special rate
+                      </span>
+                    )}
+                    {l.commissionTier !== 'COMMERCIAL' && (
+                      <span className="text-[11px] text-gray-500">
+                        {l.completedBookingsCount ?? 0} bookings completed
+                      </span>
+                    )}
+                  </div>
                 )}
 
                 <div className="mt-2 flex items-center gap-3">
