@@ -2381,7 +2381,7 @@ export const api = {
       body: JSON.stringify(data),
     }),
 
-  // ── Chef Dashboard (chef-side views) ────────────────────
+  // ── Service Dashboard (provider-side views) ────────────────────
   getChefIncomingBookings: (token: string) =>
     apiFetch<any[]>('/api/v1/chef-bookings/chef', {
       headers: { Authorization: `Bearer ${token}` },

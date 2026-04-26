@@ -180,7 +180,7 @@ export default function ChefBookingDetailPage() {
         <div className="flex items-start justify-between mb-4 flex-wrap gap-2">
           <div>
             <Link href="/cooks/my-bookings" className="text-sm text-orange-500 hover:underline mb-1 inline-block">← My Bookings</Link>
-            <h1 className="text-2xl font-bold text-gray-900">{isChef ? 'Chef Booking' : 'Event Booking'}</h1>
+            <h1 className="text-2xl font-bold text-gray-900">{isChef ? 'Service Booking' : 'Event Booking'}</h1>
             {booking.bookingRef && <p className="text-xs text-gray-500 mt-1">Ref: {booking.bookingRef}</p>}
           </div>
           <span className={`text-xs font-medium px-3 py-1 rounded-full ${status.color}`}>{status.label}</span>

@@ -203,7 +203,7 @@ export default function MyChefBookingsPage() {
   const [trackingBooking, setTrackingBooking] = useState<any>(null);
   const [payAdvanceEvent, setPayAdvanceEvent] = useState<any>(null);
   const [payingAdvance, setPayingAdvance] = useState(false);
-  // Gate the "Are you a cook?" banner + "Chef Dashboard →" header CTA behind an
+  // Gate the "Are you a cook?" banner + "Service Dashboard →" header CTA behind an
   // actual chef profile lookup. Non-chef customers shouldn't see either — it
   // only confuses them.
   const [isChef, setIsChef] = useState(false);
@@ -363,14 +363,14 @@ export default function MyChefBookingsPage() {
             <span className="text-xl">🍳</span>
           </div>
           <div>
-            <h1 className="text-2xl font-bold text-gray-900 tracking-tight">Cooks I've Booked</h1>
+            <h1 className="text-2xl font-bold text-gray-900 tracking-tight">My Service Bookings</h1>
             <p className="text-sm text-gray-500">Bookings you placed as a customer</p>
           </div>
         </div>
         {isChef && (
           <Link href="/cooks/dashboard"
             className="text-sm bg-orange-500 text-white px-4 py-2 rounded-xl hover:bg-orange-600 transition font-semibold shadow-sm">
-            Chef Dashboard →
+            Service Dashboard →
           </Link>
         )}
       </div>
@@ -379,7 +379,7 @@ export default function MyChefBookingsPage() {
       {isChef && (
         <div className="mb-4 bg-gradient-to-r from-orange-50 to-amber-50 border border-orange-200 rounded-xl px-4 py-3 flex items-center justify-between">
           <p className="text-sm text-orange-700">
-            <strong>Are you a cook?</strong> This page shows bookings you placed as a customer. To view your <strong>incoming orders</strong>, go to the Chef Dashboard.
+            <strong>Are you a cook?</strong> This page shows bookings you placed as a customer. To view your <strong>incoming orders</strong>, go to the Service Dashboard.
           </p>
           <Link href="/cooks/dashboard" className="text-xs bg-orange-500 text-white px-3 py-1.5 rounded-lg font-medium hover:bg-orange-600 transition shrink-0 ml-3">
             My Incoming Orders

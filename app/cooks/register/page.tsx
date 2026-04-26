@@ -162,7 +162,7 @@ export default function RegisterCookPage() {
           <div className="flex gap-3 justify-center flex-wrap">
             <a href="/cooks/dashboard"
               className="bg-orange-500 hover:bg-orange-600 text-white font-semibold px-6 py-2.5 rounded-xl transition text-sm">
-              Chef Dashboard
+              Service Dashboard
             </a>
             <a href={`/cooks/${existingProfile.id}`}
               className="border border-gray-300 text-gray-700 font-semibold px-6 py-2.5 rounded-xl hover:bg-gray-50 transition text-sm">
@@ -170,7 +170,7 @@ export default function RegisterCookPage() {
             </a>
             <a href="/cooks/my-bookings"
               className="border border-gray-300 text-gray-700 font-semibold px-6 py-2.5 rounded-xl hover:bg-gray-50 transition text-sm">
-              Cooks I Booked
+              My Service Bookings
             </a>
           </div>
         </div>

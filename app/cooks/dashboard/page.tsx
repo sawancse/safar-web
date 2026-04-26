@@ -327,7 +327,7 @@ export default function ChefDashboardPage() {
       <div className="max-w-5xl mx-auto px-4 py-20">
         <div className="flex items-center justify-center gap-3">
           <div className="w-6 h-6 border-2 border-orange-500 border-t-transparent rounded-full animate-spin" />
-          <p className="text-gray-500">Loading your chef dashboard...</p>
+          <p className="text-gray-500">Loading your service dashboard...</p>
         </div>
       </div>
     </div>
@@ -340,7 +340,7 @@ export default function ChefDashboardPage() {
           <span className="text-3xl">🔐</span>
         </div>
         <h2 className="text-xl font-bold text-gray-900 mb-2">Login Required</h2>
-        <p className="text-sm text-gray-500 mb-6">Please login to access your chef dashboard.</p>
+        <p className="text-sm text-gray-500 mb-6">Please login to access your service dashboard.</p>
         <Link href="/auth" className="inline-block bg-orange-500 hover:bg-orange-600 text-white font-semibold px-8 py-3 rounded-xl transition">
           Login / Sign Up
         </Link>

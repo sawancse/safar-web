@@ -100,8 +100,8 @@ export default function Navbar() {
     { href: '/pg-dashboard', icon: '\u{1F3E0}', label: 'PG / Rent' },
     { href: '/dashboard/miles', icon: '\u{1F381}', label: 'Rewards & Wallet' },
     { href: '/dashboard/reviews', icon: '\u{2B50}', label: 'Reviews' },
-    { href: '/cooks/my-bookings', icon: '\u{1F468}\u{200D}\u{1F373}', label: 'Cooks I Booked' },
-    { href: '/cooks/dashboard', icon: '\u{1F4CA}', label: 'Chef Dashboard' },
+    { href: '/cooks/my-bookings', icon: '\u{1F468}\u{200D}\u{1F373}', label: 'My Service Bookings' },
+    { href: '/cooks/dashboard', icon: '\u{1F4CA}', label: 'Service Dashboard' },
     { href: '/dashboard/saved', icon: '\u{2764}\u{FE0F}', label: 'Saved' },
   ];
 
