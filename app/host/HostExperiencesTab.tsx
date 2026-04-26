@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { api } from '@/lib/api';
 import { formatPaise } from '@/lib/utils';
 import CityAutocomplete from '@/components/CityAutocomplete';
+import DateField from '@/components/DateField';
 import type { Experience, ExperienceCategory } from '@/types';
 
 const CATEGORIES: ExperienceCategory[] = ['CULINARY', 'CULTURAL', 'WELLNESS', 'ADVENTURE', 'CREATIVE'];
@@ -386,7 +387,7 @@ export default function HostExperiencesTab() {
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                     <div>
                       <label className="text-xs text-gray-500">Date</label>
-                      <input type="date" className="w-full border rounded px-2 py-1.5 text-sm"
+                      <DateField className="w-full border rounded px-2 py-1.5 text-sm"
                         value={sessionForm.sessionDate}
                         onChange={e => setSessionForm({ ...sessionForm, sessionDate: e.target.value })} />
                     </div>

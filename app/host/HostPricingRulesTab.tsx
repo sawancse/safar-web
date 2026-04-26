@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { api } from '@/lib/api';
 import { formatPaise } from '@/lib/utils';
+import DateField from '@/components/DateField';
 import type { Listing, PricingRule, PricingRuleType, PriceAdjustmentType } from '@/types';
 
 const RULE_TYPE_LABELS: Record<PricingRuleType, string> = {
@@ -301,8 +302,7 @@ export default function HostPricingRulesTab({ token, listings }: Props) {
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="block text-xs font-medium text-gray-700 mb-1">From Date</label>
-                <input
-                  type="date"
+                <DateField
                   value={formFromDate}
                   onChange={e => setFormFromDate(e.target.value)}
                   className="w-full border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
@@ -310,8 +310,7 @@ export default function HostPricingRulesTab({ token, listings }: Props) {
               </div>
               <div>
                 <label className="block text-xs font-medium text-gray-700 mb-1">To Date</label>
-                <input
-                  type="date"
+                <DateField
                   value={formToDate}
                   onChange={e => setFormToDate(e.target.value)}
                   min={formFromDate}
@@ -470,8 +469,7 @@ export default function HostPricingRulesTab({ token, listings }: Props) {
         <div className="flex items-end gap-3 flex-wrap">
           <div>
             <label className="block text-xs font-medium text-gray-700 mb-1">Date</label>
-            <input
-              type="date"
+            <DateField
               value={previewDate}
               onChange={e => setPreviewDate(e.target.value)}
               className="border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-orange-500 focus:border-orange-500"

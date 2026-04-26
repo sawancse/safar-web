@@ -7,6 +7,7 @@ import { api } from '@/lib/api';
 import LocalityAutocomplete from '@/components/LocalityAutocomplete';
 import CityAutocomplete from '@/components/CityAutocomplete';
 import MapLocationPicker from '@/components/MapLocationPicker';
+import DateField from '@/components/DateField';
 
 /* ── Constants ─────────────────────────────────────────────── */
 
@@ -1125,8 +1126,7 @@ function SellPropertyWizardInner() {
         {(data.possessionStatus === 'UNDER_CONSTRUCTION' || data.possessionStatus === 'NEW_LAUNCH') && (
           <div className="mb-6">
             <label className="block text-sm font-medium text-gray-700 mb-1">Expected Possession Date</label>
-            <input
-              type="date"
+            <DateField
               value={data.possessionDate}
               onChange={e => update({ possessionDate: e.target.value })}
               className="w-full border rounded-xl px-4 py-3 focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none"

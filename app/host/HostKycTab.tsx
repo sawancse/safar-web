@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { api } from '@/lib/api';
+import DateField from '@/components/DateField';
 
 interface KycData {
   id: string;
@@ -299,7 +300,7 @@ export default function HostKycTab({ token }: { token: string }) {
             </div>
             <div>
               <label className="block text-xs font-medium text-gray-600 mb-1">Date of birth</label>
-              <input type="date" className="w-full border rounded-lg px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-orange-400"
+              <DateField className="w-full border rounded-lg px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-orange-400"
                 value={dob} onChange={e => setDob(e.target.value)} disabled={isVerified} />
             </div>
             <div />

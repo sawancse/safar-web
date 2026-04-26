@@ -7,6 +7,9 @@ import { api } from '@/lib/api';
 import { formatPaise, formatDate, formatDateTime } from '@/lib/utils';
 import CityAutocomplete from '@/components/CityAutocomplete';
 import LocalityAutocomplete from '@/components/LocalityAutocomplete';
+import DateField from '@/components/DateField';
+import PeopleAlsoBooked from '@/components/PeopleAlsoBooked';
+import { GENRES as SINGER_GENRES } from '@/app/services/live-music/catalog';
 
 const STATUS_COLORS: Record<string, string> = {
   PENDING_PAYMENT: 'bg-amber-100 text-amber-700',
@@ -91,9 +94,101 @@ export default function MyChefBookingsPage() {
   const [bookings, setBookings] = useState<any[]>([]);
   const [subscriptions, setSubscriptions] = useState<any[]>([]);
   const [events, setEvents] = useState<any[]>([]);
+  const [eventVendors, setEventVendors] = useState<Record<string, any>>({});
   const [activeTab, setActiveTab] = useState('bookings');
   const [loading, setLoading] = useState(true);
   const [ratingModal, setRatingModal] = useState<{ id: string; type: string } | null>(null);
+  const [otpCopied, setOtpCopied] = useState<string | null>(null);
+
+  function copyOtp(bookingId: string, otp: string) {
+    navigator.clipboard?.writeText(otp);
+    setOtpCopied(bookingId);
+    setTimeout(() => setOtpCopied(prev => (prev === bookingId ? null : prev)), 1500);
+  }
+
+  function otpShareMessage(b: any) {
+    return `Hi ${b.chefName || 'Chef'}, my Safar Cook start-job OTP is *${b.startJobOtp}*. Please enter it when you arrive. Booking ref: ${b.bookingRef ?? ''}.`;
+  }
+
+  function formatBookedOn(iso?: string): string {
+    if (!iso) return '';
+    const d = new Date(iso);
+    if (Number.isNaN(d.getTime())) return '';
+    return d.toLocaleString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+  }
+
+  // Who is the customer waiting on? For service-only bookings (singer, decor,
+  // cake, pandit, staff, appliances) "the chef" is wrong — there is no chef.
+  function eventActor(e: any): string {
+    if (e?.menuDescription) {
+      try {
+        const md = JSON.parse(e.menuDescription);
+        switch (md.type) {
+          case 'LIVE_MUSIC':       return 'our team';
+          case 'EVENT_DECOR':      return 'the decorator';
+          case 'DESIGNER_CAKE':    return 'the baker';
+          case 'PANDIT_PUJA':      return 'the pandit';
+          case 'STAFF_HIRE':       return 'our team';
+          case 'APPLIANCE_RENTAL': return 'our team';
+        }
+      } catch { /* fall through */ }
+    }
+    return 'the chef';
+  }
+  const sentenceCase = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
+
+  // Occasion codes are SHOUT_SNAKE_CASE in the DB. Bespoke labels for the few
+  // that need lowercase prepositions ("Shadi ka Ghar"); fall back to title case.
+  const OCCASION_LABELS: Record<string, string> = {
+    SHADI_KA_GHAR: 'Shadi ka Ghar',
+    KITTY_PARTY:   'Kitty Party',
+    HOUSEWARMING:  'House-warming',
+    BABY_SHOWER:   'Baby Shower',
+    COCKTAIL:      'Cocktail Night',
+    BBQ:           'BBQ Party',
+    CORPORATE:     'Corporate Event',
+    POOJA:         'Pooja / Puja',
+    BIRTHDAY:      'Birthday Party',
+    ANNIVERSARY:   'Anniversary',
+    WEDDING:       'Wedding',
+    FESTIVAL:      'Festival',
+    NAVRATRI:      'Navratri',
+    RECEPTION:     'Reception',
+    ENGAGEMENT:    'Engagement',
+    FAREWELL:      'Farewell',
+    OTHER:         'Other Event',
+  };
+  function formatOccasion(code?: string): string {
+    if (!code) return '';
+    if (OCCASION_LABELS[code]) return OCCASION_LABELS[code];
+    return code.toLowerCase().split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+  }
+
+  // Service-only bookings (from live-music / decor / cake / pandit / staff-hire / appliances)
+  // have no chefName — the actual service name lives inside menuDescription.type.
+  // Without this lookup, the row shows "Cook — <occasion-code>" which hides what the
+  // customer actually booked.
+  function eventHeading(e: any): string {
+    const occasion = formatOccasion(e.eventType);
+    if (e.menuDescription) {
+      try {
+        const md = JSON.parse(e.menuDescription);
+        switch (md.type) {
+          case 'LIVE_MUSIC':       return md.genreLabel ? `Live Singer · ${md.genreLabel}` : 'Live Singer';
+          case 'EVENT_DECOR':      return md.decorLabel ? `Event Decor · ${md.decorLabel}` : 'Event Decor';
+          case 'DESIGNER_CAKE':    return md.cakeLabel  ? `Designer Cake · ${md.cakeLabel}` : 'Designer Cake';
+          case 'PANDIT_PUJA':      return md.pujaLabel  ? `Pandit · ${md.pujaLabel}`        : 'Pandit / Puja';
+          case 'STAFF_HIRE': {
+            const n = md.count || 1;
+            const role = md.roleLabel || 'Staff';
+            return `${n} × ${role}${n > 1 ? 's' : ''}`;
+          }
+          case 'APPLIANCE_RENTAL': return 'Appliance Rental';
+        }
+      } catch { /* fall through to default */ }
+    }
+    return `${e.chefName || 'Cook'} — ${occasion || 'Event'}`;
+  }
   const [rating, setRating] = useState(5);
   const [reviewComment, setReviewComment] = useState('');
   const [editModal, setEditModal] = useState<{ item: any; type: 'booking' | 'event' | 'subscription' } | null>(null);
@@ -120,9 +215,27 @@ export default function MyChefBookingsPage() {
       api.getMyChefSubscriptions(token).catch(() => []),
       api.getMyEventBookings(token).catch(() => []),
     ]).then(([b, s, e]) => {
-      setBookings(b || []);
-      setSubscriptions(s || []);
-      setEvents(e || []);
+      // Newest first — sort by createdAt desc so the most recent booking sits at the top.
+      const byCreatedDesc = (x: any, y: any) =>
+        new Date(y?.createdAt || 0).getTime() - new Date(x?.createdAt || 0).getTime();
+      setBookings(((b || []) as any[]).slice().sort(byCreatedDesc));
+      setSubscriptions(((s || []) as any[]).slice().sort(byCreatedDesc));
+      const sortedEvents = ((e || []) as any[]).slice().sort(byCreatedDesc);
+      setEvents(sortedEvents);
+
+      // For active events (INQUIRY/QUOTED/CONFIRMED/ADVANCE_PAID/IN_PROGRESS) fetch the
+      // assigned partner vendor in parallel so the row can show "Vendor X is preparing
+      // your quote" instead of the generic "waiting on our team" message after the
+      // admin assigns a singer / decorator / pandit etc.
+      const ACTIVE = new Set(['INQUIRY', 'QUOTED', 'CONFIRMED', 'ADVANCE_PAID', 'IN_PROGRESS']);
+      const candidates = sortedEvents.filter(ev => ACTIVE.has(ev.status));
+      Promise.all(candidates.map(ev =>
+        api.getEventActiveVendor(ev.id, token).then((v: any) => [ev.id, v] as const)
+      )).then(pairs => {
+        const map: Record<string, any> = {};
+        for (const [id, v] of pairs) if (v) map[id] = v;
+        setEventVendors(map);
+      }).catch(() => { /* vendor fetch failures shouldn't block the list */ });
       // Deep-link from the "Rate Your Experience" email:
       //   /cooks/my-bookings?rateEvent=<eventId>
       //   /cooks/my-bookings?rateBooking=<bookingId>
@@ -299,6 +412,7 @@ export default function MyChefBookingsPage() {
                       <p className="font-semibold text-gray-900">{b.chefName || 'Cook'}</p>
                       <p className="text-xs text-gray-500">Ref: {b.bookingRef} · {formatDateTime(b.serviceDate, b.serviceTime)}</p>
                       <p className="text-xs text-gray-500">{b.mealType} | {b.guestsCount} guests | {b.address}</p>
+                      {b.createdAt && <p className="text-[11px] text-gray-400 mt-0.5">Booked on {formatBookedOn(b.createdAt)}</p>}
                     </div>
                     <div className="text-right">
                       <span className={`text-xs px-2 py-1 rounded-full font-medium ${STATUS_COLORS[b.status] || 'bg-gray-100'}`}>
@@ -348,6 +462,47 @@ export default function MyChefBookingsPage() {
                   {b.status === 'CANCELLED' && (
                     <div className="mt-2 bg-red-50 rounded-lg px-3 py-2 text-xs text-red-600">
                       {b.cancellationReason || 'This booking was cancelled.'}
+                    </div>
+                  )}
+                  {/* Start-job OTP — share with chef when they arrive */}
+                  {b.startJobOtp && !b.jobStartedAt && b.status !== 'CANCELLED' && b.status !== 'COMPLETED' && (
+                    <div className="mt-2 bg-orange-50 border border-orange-200 rounded-lg px-3 py-2.5 flex items-center justify-between gap-3 flex-wrap">
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <span className="text-xl shrink-0">🔑</span>
+                        <div className="min-w-0">
+                          <p className="text-[10px] uppercase font-bold text-orange-700 tracking-wider">Start-job OTP — share with chef on arrival</p>
+                          <p className="text-2xl font-black tracking-[0.3em] text-orange-700 font-mono leading-tight">{b.startJobOtp}</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        <button
+                          onClick={() => copyOtp(b.id, b.startJobOtp)}
+                          className="text-xs font-semibold bg-gray-900 hover:bg-gray-800 text-white px-3 py-2 rounded-lg transition"
+                        >
+                          {otpCopied === b.id ? 'Copied ✓' : '📋 Copy'}
+                        </button>
+                        <a
+                          href={`https://wa.me/?text=${encodeURIComponent(otpShareMessage(b))}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-xs font-semibold bg-green-500 hover:bg-green-600 text-white px-3 py-2 rounded-lg transition"
+                        >
+                          💬 WhatsApp
+                        </a>
+                        <a
+                          href={`sms:?body=${encodeURIComponent(otpShareMessage(b))}`}
+                          className="text-xs font-semibold bg-blue-500 hover:bg-blue-600 text-white px-3 py-2 rounded-lg transition"
+                        >
+                          ✉️ SMS
+                        </a>
+                      </div>
+                    </div>
+                  )}
+                  {/* Job started — confirmation */}
+                  {b.jobStartedAt && (
+                    <div className="mt-2 bg-green-50 border border-green-200 rounded-lg px-3 py-2 text-xs text-green-700 flex items-center gap-2">
+                      <span>✓</span>
+                      <span>Chef started the job at {new Date(b.jobStartedAt).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}</span>
                     </div>
                   )}
                   <div className="flex gap-2 mt-3">
@@ -433,6 +588,7 @@ export default function MyChefBookingsPage() {
                       <p className="font-semibold text-gray-900">{s.chefName || 'Cook'} — {s.plan}</p>
                       <p className="text-xs text-gray-500">Ref: {s.subscriptionRef} | {s.mealsPerDay} meals/day | {s.schedule}</p>
                       <p className="text-xs text-gray-500">{s.mealTypes} | {s.address}</p>
+                      {s.createdAt && <p className="text-[11px] text-gray-400 mt-0.5">Booked on {formatBookedOn(s.createdAt)}</p>}
                     </div>
                     <div className="text-right">
                       <span className={`text-xs px-2 py-1 rounded-full font-medium ${STATUS_COLORS[s.status] || 'bg-gray-100'}`}>{s.status}</span>
@@ -459,9 +615,10 @@ export default function MyChefBookingsPage() {
                 <div key={e.id} className="border rounded-xl p-4">
                   <div className="flex items-start justify-between">
                     <div>
-                      <p className="font-semibold text-gray-900">{e.chefName || 'Cook'} — {e.eventType}</p>
-                      <p className="text-xs text-gray-500">Ref: {e.bookingRef} · {formatDateTime(e.eventDate, e.eventTime)}</p>
+                      <p className="font-semibold text-gray-900">{eventHeading(e)}</p>
+                      <p className="text-xs text-gray-500">Ref: {e.bookingRef} · {formatDateTime(e.eventDate, e.eventTime)}{e.eventType ? ` · ${formatOccasion(e.eventType)}` : ''}</p>
                       <p className="text-xs text-gray-500">{e.guestCount} guests | {e.venueAddress}</p>
+                      {e.createdAt && <p className="text-[11px] text-gray-400 mt-0.5">Booked on {formatBookedOn(e.createdAt)}</p>}
                       {e.menuDescription && (() => {
                         try {
                           const md = JSON.parse(e.menuDescription);
@@ -489,7 +646,7 @@ export default function MyChefBookingsPage() {
                   {e.status === 'QUOTED' && e.totalAmountPaise > 0 && (
                     <div className="mt-2 bg-blue-50 border border-blue-200 rounded-lg px-3 py-2">
                       <div className="flex items-center justify-between text-sm">
-                        <span className="text-blue-700 font-medium">Chef has sent a quote!</span>
+                        <span className="text-blue-700 font-medium">{sentenceCase(eventActor(e))} has sent a quote!</span>
                         <span className="text-blue-800 font-bold">{formatPaise(e.totalAmountPaise)}</span>
                       </div>
                       <div className="text-xs text-blue-600 mt-1 space-y-0.5">
@@ -498,10 +655,39 @@ export default function MyChefBookingsPage() {
                       </div>
                     </div>
                   )}
+                  {/* Assigned partner vendor — visible from INQUIRY onward once admin assigns one */}
+                  {eventVendors[e.id] && (() => {
+                    const v = eventVendors[e.id];
+                    const statusStyle: Record<string, string> = {
+                      ASSIGNED:  'bg-amber-100 text-amber-700',
+                      CONFIRMED: 'bg-blue-100 text-blue-700',
+                      DELIVERED: 'bg-green-100 text-green-700',
+                    };
+                    return (
+                      <div className="mt-2 bg-orange-50 border border-orange-200 rounded-lg px-3 py-2 flex items-center gap-3 flex-wrap">
+                        <span className="text-lg shrink-0">🤝</span>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-[10px] uppercase tracking-wider text-orange-700 font-bold">Service partner assigned</p>
+                          <p className="text-sm font-semibold text-gray-900 truncate">{v.vendorBusinessName}</p>
+                          {v.vendorPhone && (
+                            <a href={`tel:${v.vendorPhone}`} className="text-xs text-orange-600 hover:underline">📞 {v.vendorPhone}</a>
+                          )}
+                        </div>
+                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${statusStyle[v.status] || 'bg-gray-100 text-gray-700'}`}>
+                          {v.status}
+                        </span>
+                      </div>
+                    );
+                  })()}
                   {/* Status info banners */}
-                  {e.status === 'INQUIRY' && (
+                  {e.status === 'INQUIRY' && !eventVendors[e.id] && (
                     <div className="mt-2 bg-yellow-50 border border-yellow-200 rounded-lg px-3 py-2 text-xs text-yellow-700">
-                      Waiting for the chef to review your inquiry and send a quote.
+                      Waiting for {eventActor(e)} to review your inquiry and send a quote.
+                    </div>
+                  )}
+                  {e.status === 'INQUIRY' && eventVendors[e.id] && (
+                    <div className="mt-2 bg-yellow-50 border border-yellow-200 rounded-lg px-3 py-2 text-xs text-yellow-700">
+                      <strong>{eventVendors[e.id].vendorBusinessName}</strong> is preparing your quote — you'll see the price here as soon as it's ready.
                     </div>
                   )}
                   {e.status === 'CONFIRMED' && (
@@ -614,7 +800,7 @@ export default function MyChefBookingsPage() {
             )}
             {editModal.type === 'event' && editModal.item.status === 'QUOTED' && (
               <p className="text-xs text-amber-600 bg-amber-50 p-2 rounded-lg mb-4">
-                Modifying a quoted event will reset it to INQUIRY status for the chef to re-quote.
+                Modifying a quoted event will reset it to INQUIRY status for {eventActor(editModal.item)} to re-quote.
               </p>
             )}
             <div className="space-y-3">
@@ -825,7 +1011,7 @@ export default function MyChefBookingsPage() {
               <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-4 flex items-start gap-3">
                 <div className="w-10 h-10 rounded-lg bg-orange-50 flex items-center justify-center shrink-0 text-lg">🎉</div>
                 <div className="flex-1 min-w-0">
-                  <p className="font-semibold text-gray-900 text-sm truncate">{payAdvanceEvent.chefName || 'Cook'} · {payAdvanceEvent.eventType}</p>
+                  <p className="font-semibold text-gray-900 text-sm truncate">{eventHeading(payAdvanceEvent)}</p>
                   <p className="text-xs text-gray-500 mt-0.5">Ref {payAdvanceEvent.bookingRef} · {formatDateTime(payAdvanceEvent.eventDate, payAdvanceEvent.eventTime)}</p>
                   <p className="text-xs text-gray-500 truncate">{payAdvanceEvent.guestCount} guests · {payAdvanceEvent.venueAddress}</p>
                 </div>
@@ -1043,6 +1229,8 @@ export default function MyChefBookingsPage() {
           </div>
         </div>
       )}
+
+      <PeopleAlsoBooked />
     </div>
   );
 }
@@ -1143,6 +1331,93 @@ function MenuDescriptionEditor({ value, onChange }: { value: string; onChange: (
 
   if (!parsed || typeof parsed !== 'object') {
     return <Field label="Menu Description" value={value} onChange={onChange} textarea />;
+  }
+
+  // Service-only bookings (singer, decor, cake, pandit, staff, appliances)
+  // don't have a cooking menu — render their selection as a read-only summary.
+  // Customers can still edit date/time/venue/special-requests above.
+  const SERVICE_TYPES = ['LIVE_MUSIC', 'EVENT_DECOR', 'DESIGNER_CAKE', 'PANDIT_PUJA', 'STAFF_HIRE', 'APPLIANCE_RENTAL'];
+  // Local patch helper — defined before the SERVICE_TYPES early return because
+  // the regular `update` further down isn't in scope yet.
+  const patchMenu = (patch: Record<string, any>) => onChange(JSON.stringify({ ...parsed, ...patch }));
+  if (parsed.type && SERVICE_TYPES.includes(parsed.type)) {
+    type Row = { label: string; render: () => any };
+    const rows: Row[] = [];
+    switch (parsed.type) {
+      case 'LIVE_MUSIC':
+        rows.push({ label: 'Service', render: () => 'Live Singer' });
+        rows.push({
+          label: 'Genre',
+          render: () => (
+            <select
+              value={parsed.genre || ''}
+              onChange={e => {
+                const key = e.target.value;
+                const g = SINGER_GENRES.find(x => x.key === key);
+                patchMenu({ genre: key, genreLabel: g?.label || key });
+              }}
+              className="border border-amber-300 bg-white rounded px-2 py-0.5 text-xs text-gray-800 font-medium outline-none focus:ring-2 focus:ring-amber-300"
+            >
+              {!parsed.genre && <option value="">Select genre</option>}
+              {SINGER_GENRES.map(g => (
+                <option key={g.key} value={g.key}>{g.label}</option>
+              ))}
+            </select>
+          ),
+        });
+        if (parsed.preference)            rows.push({ label: 'Sound equipment', render: () => parsed.preference === 'WITH_SOUND' ? 'Included' : 'Customer arranges' });
+        if (parsed.performanceHours)      rows.push({ label: 'Performance',     render: () => `${parsed.performanceHours} hrs` });
+        break;
+      case 'EVENT_DECOR':
+        rows.push({ label: 'Service', render: () => 'Event Decor' });
+        if (parsed.decorLabel)            rows.push({ label: 'Theme', render: () => parsed.decorLabel });
+        if (parsed.decorTier)             rows.push({ label: 'Tier',  render: () => parsed.decorTier });
+        if (parsed.setupHours)            rows.push({ label: 'Setup', render: () => `${parsed.setupHours} hrs` });
+        break;
+      case 'DESIGNER_CAKE':
+        rows.push({ label: 'Service', render: () => 'Designer Cake' });
+        if (parsed.cakeLabel)             rows.push({ label: 'Design',  render: () => parsed.cakeLabel });
+        if (parsed.weight)                rows.push({ label: 'Weight',  render: () => parsed.weight });
+        if (parsed.flavour)               rows.push({ label: 'Flavour', render: () => parsed.flavour });
+        if (parsed.eggless != null)       rows.push({ label: 'Eggless', render: () => parsed.eggless ? 'Yes' : 'No' });
+        if (parsed.messageOnCake)         rows.push({ label: 'Message', render: () => parsed.messageOnCake });
+        break;
+      case 'PANDIT_PUJA':
+        rows.push({ label: 'Service', render: () => 'Pandit / Puja' });
+        if (parsed.pujaLabel)             rows.push({ label: 'Puja',          render: () => parsed.pujaLabel });
+        if (parsed.language)              rows.push({ label: 'Language',      render: () => parsed.language });
+        if (parsed.gotra)                 rows.push({ label: 'Gotra',         render: () => parsed.gotra });
+        if (parsed.familyNames)           rows.push({ label: 'Sankalp names', render: () => parsed.familyNames });
+        if (parsed.durationHours)         rows.push({ label: 'Duration',      render: () => `${parsed.durationHours} hrs` });
+        break;
+      case 'STAFF_HIRE':
+        rows.push({ label: 'Service', render: () => 'Staff Hire' });
+        if (parsed.roleLabel)             rows.push({ label: 'Role',  render: () => parsed.roleLabel });
+        if (parsed.count)                 rows.push({ label: 'Count', render: () => String(parsed.count) });
+        if (parsed.hours)                 rows.push({ label: 'Hours', render: () => `${parsed.hours} hrs` });
+        break;
+      case 'APPLIANCE_RENTAL':
+        rows.push({ label: 'Service', render: () => 'Appliance Rental' });
+        if (parsed.rentalDays)            rows.push({ label: 'Rental days', render: () => String(parsed.rentalDays) });
+        if (Array.isArray(parsed.items))  rows.push({ label: 'Items',       render: () => parsed.items.map((i: any) => `${i.qty}× ${i.label}`).join(', ') });
+        break;
+    }
+    return (
+      <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 space-y-2">
+        <p className="text-xs font-semibold text-amber-700 uppercase tracking-wider">Booked Service Details</p>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1.5 text-xs">
+          {rows.map(r => (
+            <div key={r.label} className="flex justify-between items-center gap-3">
+              <span className="text-gray-500 shrink-0">{r.label}</span>
+              <span className="text-gray-800 font-medium text-right">{r.render()}</span>
+            </div>
+          ))}
+        </div>
+        <p className="text-[11px] text-amber-600/80 pt-1">
+          Most service details are locked once booked. Need to swap the package entirely? Cancel and rebook, or contact support.
+        </p>
+      </div>
+    );
   }
 
   function update(key: string, val: any) {
@@ -1430,6 +1705,8 @@ function Field({ label, value, onChange, type = 'text', placeholder, textarea }:
       <label className="text-xs font-medium text-gray-600 mb-1 block">{label}</label>
       {textarea ? (
         <textarea value={value} onChange={e => onChange(e.target.value)} className={cls} rows={2} placeholder={placeholder} />
+      ) : type === 'date' ? (
+        <DateField value={value} onChange={e => onChange(e.target.value)} className={cls} placeholder={placeholder} />
       ) : (
         <input type={type} value={value} onChange={e => onChange(e.target.value)} className={cls} placeholder={placeholder} />
       )}

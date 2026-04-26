@@ -2342,6 +2342,18 @@ export const api = {
       headers: { Authorization: `Bearer ${token}` },
     }),
 
+  startChefBookingJob: (id: string, otp: string, token: string) =>
+    apiFetch<any>(`/api/v1/chef-bookings/${id}/start-job?otp=${encodeURIComponent(otp)}`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}` },
+    }),
+
+  startEventBookingJob: (id: string, otp: string, token: string) =>
+    apiFetch<any>(`/api/v1/chef-events/${id}/start-job?otp=${encodeURIComponent(otp)}`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}` },
+    }),
+
   getChefBookingById: (id: string) =>
     apiFetch<any>(`/api/v1/chef-bookings/${id}`),
 

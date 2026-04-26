@@ -5,6 +5,7 @@ import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { api } from '@/lib/api';
 import { formatPaise } from '@/lib/utils';
+import PeopleAlsoBooked from '@/components/PeopleAlsoBooked';
 import type { ChatMessage } from '@/types';
 
 type TabKey = 'ingredients' | 'chef' | 'team' | 'otp' | 'pay' | 'rating';
@@ -234,7 +235,7 @@ export default function ChefBookingDetailPage() {
             )}
             {tab === 'chef'        && <ChefTab chef={chef} booking={booking} />}
             {tab === 'team'        && <TeamTab booking={booking} bookingKind={bookingKind} token={token} />}
-            {tab === 'otp'         && <OtpTab booking={booking} />}
+            {tab === 'otp'         && <OtpTab booking={booking} chef={chef} />}
             {tab === 'pay'         && <PayTab
                                         booking={booking}
                                         bookingKind={bookingKind}
@@ -303,6 +304,8 @@ export default function ChefBookingDetailPage() {
           )}
         </div>
       </div>
+
+      <PeopleAlsoBooked />
     </div>
   );
 }
@@ -479,10 +482,12 @@ function ChefTab({ chef, booking }: { chef: any; booking: any }) {
 }
 
 /* ────── Tab: Start-Job OTP ────── */
-function OtpTab({ booking }: { booking: any }) {
+function OtpTab({ booking, chef }: { booking: any; chef: any }) {
   const [copied, setCopied] = useState(false);
   const otp = booking.startJobOtp;
   const jobStarted = booking.jobStartedAt;
+  const chefPhone: string = chef?.phone || booking.chefPhone || '';
+  const chefName: string = chef?.name || booking.chefName || 'your chef';
 
   function copy() {
     if (!otp) return;
@@ -490,6 +495,19 @@ function OtpTab({ booking }: { booking: any }) {
     setCopied(true);
     setTimeout(() => setCopied(false), 1500);
   }
+
+  // wa.me requires digits only, no '+' or spaces. Indian numbers may arrive as '+91xxx' or '91xxx' or '9xxx' (10-digit).
+  const waPhone = chefPhone.replace(/\D/g, '').replace(/^0+/, '');
+  const waNumber = waPhone.length === 10 ? `91${waPhone}` : waPhone;
+  const shareMsg = otp
+    ? `Hi ${chefName}, my Safar Cook start-job OTP is *${otp}*. Please enter this when you arrive to begin the job. Booking ref: ${booking.bookingRef ?? ''}.`
+    : '';
+  const waLink = otp && waNumber
+    ? `https://wa.me/${waNumber}?text=${encodeURIComponent(shareMsg)}`
+    : '';
+  const smsLink = otp && chefPhone
+    ? `sms:${chefPhone}?body=${encodeURIComponent(shareMsg)}`
+    : '';
 
   if (jobStarted) {
     return (
@@ -502,26 +520,68 @@ function OtpTab({ booking }: { booking: any }) {
   }
 
   if (!otp) {
-    return <p className="text-sm text-gray-500 text-center py-8">OTP will be generated once the booking is confirmed.</p>;
+    const status: string = booking.status || '';
+    let reason = 'OTP will be generated once the chef accepts your booking.';
+    if (status === 'PENDING_PAYMENT')         reason = 'Pay the advance first — your OTP is issued the moment the chef confirms after payment.';
+    else if (status === 'PENDING')            reason = 'Waiting for the chef to accept your booking. Your start-job OTP appears here as soon as they do.';
+    else if (status === 'INQUIRY')            reason = 'Chef is reviewing your event details and will send a quote. OTP appears after you pay the advance and they confirm.';
+    else if (status === 'QUOTED')             reason = 'Quote received — pay the 60% advance to lock in the date. OTP appears as soon as the chef confirms after payment.';
+    else if (status === 'CANCELLED')          reason = 'This booking was cancelled, so no OTP will be issued.';
+    return (
+      <div className="text-center py-10 max-w-sm mx-auto">
+        <div className="inline-flex items-center justify-center w-14 h-14 rounded-full bg-amber-100 text-amber-600 text-2xl mb-3">⏳</div>
+        <h3 className="text-base font-bold text-gray-900 mb-1">Not yet</h3>
+        <p className="text-sm text-gray-500">{reason}</p>
+      </div>
+    );
   }
 
   return (
     <div className="text-center py-6">
       <p className="text-xs uppercase tracking-widest text-gray-500 font-bold mb-2">Start-Job OTP</p>
-      <p className="text-sm text-gray-600 mb-5">Share this with your chef when they arrive.<br />They'll enter it to begin the job.</p>
-      <div className="inline-flex items-center gap-3 mb-4">
+      <p className="text-sm text-gray-600 mb-5">Share this with {chefName} when they arrive.<br />They'll enter it to begin the job.</p>
+      <div className="inline-flex items-center gap-3 mb-5">
         <div className="text-6xl font-black tracking-[0.3em] text-orange-600 font-mono bg-orange-50 px-6 py-4 rounded-2xl border-2 border-orange-200">
           {otp}
         </div>
       </div>
-      <div>
+      <div className="flex flex-wrap items-center justify-center gap-2">
         <button
           onClick={copy}
-          className="bg-gray-900 text-white text-sm font-semibold px-5 py-2.5 rounded-xl hover:bg-gray-800 transition"
+          className="bg-gray-900 text-white text-sm font-semibold px-4 py-2.5 rounded-xl hover:bg-gray-800 transition"
         >
-          {copied ? 'Copied ✓' : 'Copy OTP'}
+          {copied ? 'Copied ✓' : '📋 Copy'}
         </button>
+        {waLink && (
+          <a
+            href={waLink}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="bg-green-500 text-white text-sm font-semibold px-4 py-2.5 rounded-xl hover:bg-green-600 transition"
+          >
+            💬 WhatsApp
+          </a>
+        )}
+        {smsLink && (
+          <a
+            href={smsLink}
+            className="bg-blue-500 text-white text-sm font-semibold px-4 py-2.5 rounded-xl hover:bg-blue-600 transition"
+          >
+            ✉️ SMS
+          </a>
+        )}
+        {chefPhone && (
+          <a
+            href={`tel:${chefPhone}`}
+            className="border border-gray-300 text-gray-700 text-sm font-semibold px-4 py-2.5 rounded-xl hover:bg-gray-50 transition"
+          >
+            📞 Call
+          </a>
+        )}
       </div>
+      {!chefPhone && (
+        <p className="text-[11px] text-gray-400 mt-3">Chef phone unavailable — copy the OTP and share manually.</p>
+      )}
     </div>
   );
 }

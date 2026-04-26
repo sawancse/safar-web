@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { api } from '@/lib/api';
 import { formatPaise } from '@/lib/utils';
+import DateField from '@/components/DateField';
 import type { OccupancyReport } from '@/types';
 
 interface Props {
@@ -49,8 +50,7 @@ export default function HostOccupancyTab({ token }: Props) {
       <div className="bg-white border rounded-xl p-4 flex flex-wrap items-end gap-4">
         <div>
           <label className="block text-xs text-gray-500 mb-1">From</label>
-          <input
-            type="date"
+          <DateField
             value={from}
             onChange={e => setFrom(e.target.value)}
             className="border rounded-lg px-3 py-2 text-sm"
@@ -58,8 +58,7 @@ export default function HostOccupancyTab({ token }: Props) {
         </div>
         <div>
           <label className="block text-xs text-gray-500 mb-1">To</label>
-          <input
-            type="date"
+          <DateField
             value={to}
             onChange={e => setTo(e.target.value)}
             className="border rounded-lg px-3 py-2 text-sm"

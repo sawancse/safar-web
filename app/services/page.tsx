@@ -84,11 +84,14 @@ export default function ServicesPage() {
     <div className="min-h-screen bg-gray-50">
       {/* Hero */}
       <section className="bg-[#003B95] text-white">
-        <div className="max-w-7xl mx-auto px-4 py-16 md:py-24 text-center">
+        <div className="max-w-3xl mx-auto px-4 py-16 md:py-24 text-center">
           <h1 className="text-4xl md:text-5xl font-bold mb-4">Safar Services</h1>
-          <p className="text-lg md:text-xl text-white/80 max-w-2xl mx-auto">
-            Property paperwork, home loans, legal verification, interiors &mdash; and everything you need
-            for celebrations: cooks, cake, decor, pandit, music, staff. Under one roof.
+          <p className="text-base md:text-lg text-white/80 leading-relaxed">
+            Property paperwork, home loans, legal verification, interiors &mdash; and everything
+            you need for celebrations: cooks, cake, decor, pandit, music, staff.
+          </p>
+          <p className="mt-3 inline-block text-xs md:text-sm font-semibold tracking-[0.25em] uppercase text-white/70 border border-white/30 rounded-full px-4 py-1.5">
+            Under one roof
           </p>
         </div>
       </section>
@@ -135,20 +138,27 @@ export default function ServicesPage() {
         </div>
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
           {[
-            { href: '/services/cake',        label: 'Designer Cake',  emoji: '🎂', tint: 'from-rose-100 to-pink-100' },
-            { href: '/services/decor',       label: 'Event Decor',    emoji: '🌸', tint: 'from-rose-100 to-orange-100' },
-            { href: '/services/pandit',      label: 'Pandit / Puja',  emoji: '🪔', tint: 'from-amber-100 to-yellow-100' },
-            { href: '/services/live-music',  label: 'Live Singer',    emoji: '🎺', tint: 'from-amber-100 to-orange-100' },
-            { href: '/services/appliances',  label: 'Appliances',     emoji: '🍳', tint: 'from-slate-100 to-gray-200' },
-            { href: '/services/staff-hire',  label: 'Hire Staff',     emoji: '🧑‍🍳', tint: 'from-blue-100 to-sky-100' },
+            { href: '/services/cake',       label: 'Designer Cake', emoji: '🎂',  tint: 'from-rose-100 to-pink-100',     img: 'https://images.unsplash.com/photo-1578985545062-69928b1d9587?w=600&auto=format&fit=crop&q=70' },
+            { href: '/services/decor',      label: 'Event Decor',   emoji: '🌸',  tint: 'from-rose-100 to-orange-100',   img: 'https://images.unsplash.com/photo-1519741497674-611481863552?w=600&auto=format&fit=crop&q=70' },
+            { href: '/services/pandit',     label: 'Pandit / Puja', emoji: '🪔',  tint: 'from-amber-100 to-yellow-100',  img: 'https://images.unsplash.com/photo-1604580864964-0462f5d5b1a8?w=600&auto=format&fit=crop&q=70' },
+            { href: '/services/live-music', label: 'Live Singer',   emoji: '🎤',  tint: 'from-amber-100 to-orange-100',  img: 'https://images.unsplash.com/photo-1470229722913-7c0e2dbbafd3?w=600&auto=format&fit=crop&q=70' },
+            { href: '/services/appliances', label: 'Appliances',    emoji: '🍳',  tint: 'from-slate-100 to-gray-200',    img: 'https://images.unsplash.com/photo-1556910633-5099dc3971e4?w=600&auto=format&fit=crop&q=70' },
+            { href: '/services/staff-hire', label: 'Hire Staff',    emoji: '🧑‍🍳', tint: 'from-blue-100 to-sky-100',      img: 'https://images.unsplash.com/photo-1559329007-40df8a9345d8?w=600&auto=format&fit=crop&q=70' },
           ].map((c) => (
             <Link
               key={c.href}
               href={c.href}
               className="bg-white border border-gray-100 rounded-2xl overflow-hidden hover:shadow-xl transition-shadow group"
             >
-              <div className={`h-24 bg-gradient-to-br ${c.tint} flex items-center justify-center text-3xl`}>
-                {c.emoji}
+              <div className={`h-28 relative overflow-hidden bg-gradient-to-br ${c.tint} flex items-center justify-center`}>
+                <span className="absolute text-3xl opacity-40 select-none">{c.emoji}</span>
+                <img
+                  src={c.img}
+                  alt={c.label}
+                  loading="lazy"
+                  onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
+                  className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                />
               </div>
               <div className="p-3">
                 <h3 className="font-semibold text-gray-900 text-sm group-hover:text-orange-600 transition-colors">

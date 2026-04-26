@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { geocodeIndianAddress } from '@/lib/geocode';
 import MapLocationPicker from '@/components/MapLocationPicker';
 import PricingCalculator from '@/components/PricingCalculator';
+import DateField from '@/components/DateField';
 import type { ListingType } from '@/types';
 
 /* ── Constants ─────────────────────────────────────────────── */
@@ -995,7 +996,7 @@ export default function NewListingWizard() {
                 </div>
                 <div>
                   <label className="block text-xs font-semibold text-gray-600 mb-1">Available From</label>
-                  <input type="date" value={data.availableFrom} onChange={e => update({ availableFrom: e.target.value })}
+                  <DateField value={data.availableFrom} onChange={e => update({ availableFrom: e.target.value })}
                     className="w-full border rounded-xl px-3 py-2 text-sm" />
                 </div>
                 <div>

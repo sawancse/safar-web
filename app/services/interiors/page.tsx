@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { api } from '@/lib/api';
+import DateField from '@/components/DateField';
 
 function formatPaise(paise: number): string {
   return new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(paise / 100);
@@ -190,7 +191,7 @@ export default function InteriorsPage() {
                 <select value={formBudget} onChange={(e) => setFormBudget(e.target.value)} className="bg-white/20 border border-white/30 rounded-lg px-3 py-2.5 text-sm text-white [&>option]:text-gray-900">
                   {BUDGET_RANGES.map((b) => <option key={b} value={b}>{b}</option>)}
                 </select>
-                <input type="date" value={formDate} onChange={(e) => setFormDate(e.target.value)} className="bg-white/20 border border-white/30 rounded-lg px-3 py-2.5 text-sm text-white" />
+                <DateField value={formDate} onChange={(e) => setFormDate(e.target.value)} className="bg-white/20 border border-white/30 rounded-lg px-3 py-2.5 text-sm text-white" />
                 <input value={formPhone} onChange={(e) => setFormPhone(e.target.value)} className="bg-white/20 border border-white/30 rounded-lg px-3 py-2.5 text-sm text-white placeholder-orange-200" placeholder="Phone Number" />
               </div>
               {!token ? (

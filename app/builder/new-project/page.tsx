@@ -6,6 +6,7 @@ import { api } from '@/lib/api';
 import CityAutocomplete from '@/components/CityAutocomplete';
 import LocalityAutocomplete from '@/components/LocalityAutocomplete';
 import MapLocationPicker from '@/components/MapLocationPicker';
+import DateField from '@/components/DateField';
 
 const INDIAN_STATES = [
   'Andhra Pradesh', 'Arunachal Pradesh', 'Assam', 'Bihar', 'Chhattisgarh',
@@ -556,8 +557,7 @@ export default function BuilderNewProjectPage() {
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Launch Date</label>
-                <input
-                  type="date"
+                <DateField
                   value={launchDate}
                   onChange={e => setLaunchDate(e.target.value)}
                   className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400"
@@ -568,8 +568,7 @@ export default function BuilderNewProjectPage() {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Expected Possession Date</label>
-                <input
-                  type="date"
+                <DateField
                   value={possessionDate}
                   onChange={e => setPossessionDate(e.target.value)}
                   className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400"

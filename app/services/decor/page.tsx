@@ -13,7 +13,7 @@ const TESTIMONIALS = [
 ];
 
 const FAQ = [
-  { q: 'How far in advance should I book?',           a: 'For standard decor: 24 hours minimum. Wedding mandaps and large events: 5-7 days. For urgent bookings, call 9004044234.' },
+  { q: 'How far in advance should I book?',           a: 'For standard decor: 24 hours minimum. Wedding mandaps and large events: 5-7 days. For urgent bookings, call 7367034295.' },
   { q: 'What if the decorator arrives late?',         a: 'We guarantee arrival within a 30-minute window. If we\'re later, the additional setup time is free and we may offer a discount.' },
   { q: 'What are overtime charges?',                  a: 'Each decoration includes a setup window (typically 2-3 hours). If you need the decor to stay longer or want additions, overtime is charged per hour as shown on the design.' },
   { q: 'Can I customise the decoration?',             a: 'Absolutely. After booking, our decorator reaches out on WhatsApp to finalise theme colours, add-ons and personal touches.' },
@@ -241,7 +241,7 @@ export default function DecorLandingPage() {
           <Link href="/services/decor/order" className="inline-block mt-6 bg-white text-rose-600 rounded-full px-7 py-3 text-sm font-bold shadow-xl hover:bg-rose-50 transition">
             Book your decoration →
           </Link>
-          <p className="mt-4 text-xs text-white/80">Or call <a href="tel:9004044234" className="underline font-semibold">9004044234</a> for help</p>
+          <p className="mt-4 text-xs text-white/80">Or call <a href="tel:7367034295" className="underline font-semibold">7367034295</a> for help</p>
         </div>
       </section>
 

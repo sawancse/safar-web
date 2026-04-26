@@ -5,6 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { api } from '@/lib/api';
 import { formatPaise } from '@/lib/utils';
+import DateField from '@/components/DateField';
 import type { Experience, ExperienceSession, Review, ReviewStats } from '@/types';
 
 const CATEGORY_ICONS: Record<string, string> = {
@@ -316,8 +317,7 @@ export default function ExperienceDetailPage() {
             ) : (
               <div>
                 <label className="text-sm font-medium text-gray-700 block mb-1">Pick a date</label>
-                <input
-                  type="date"
+                <DateField
                   value={requestedDate}
                   min={new Date().toISOString().split('T')[0]}
                   onChange={e => setRequestedDate(e.target.value)}

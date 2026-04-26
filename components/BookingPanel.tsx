@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { formatPaise } from '@/lib/utils';
 import GuestPicker from '@/components/GuestPicker';
+import DateField from '@/components/DateField';
 import type { Listing, RoomType } from '@/types';
 import type { RoomSelection } from '@/components/RoomTypeSelector';
 
@@ -289,7 +290,7 @@ export default function BookingPanel({ listing, selectedRoomType, roomSelections
           <>
             <div className="p-3">
               <label className="block text-xs font-semibold text-gray-500 mb-1">DATE</label>
-              <input type="date" className="w-full text-sm outline-none bg-transparent"
+              <DateField className="w-full text-sm outline-none bg-transparent"
                 value={bookingDate} min={today}
                 onChange={(e) => setBookingDate(e.target.value)} />
             </div>
@@ -358,7 +359,7 @@ export default function BookingPanel({ listing, selectedRoomType, roomSelections
               <>
                 <div className="p-3">
                   <label className="block text-xs font-semibold text-gray-500 mb-1">MOVE-IN DATE</label>
-                  <input type="date" className="w-full text-sm outline-none bg-transparent"
+                  <DateField className="w-full text-sm outline-none bg-transparent"
                     value={checkIn} min={today}
                     onChange={(e) => {
                       setCheckIn(e.target.value);
@@ -415,7 +416,7 @@ export default function BookingPanel({ listing, selectedRoomType, roomSelections
               <div className="grid grid-cols-2 divide-x">
                 <div className="p-3">
                   <label className="block text-xs font-semibold text-gray-500 mb-1">CHECK-IN</label>
-                  <input type="date" className="w-full text-sm outline-none bg-transparent"
+                  <DateField className="w-full text-sm outline-none bg-transparent"
                     value={checkIn} min={today}
                     onChange={(e) => {
                       setCheckIn(e.target.value);
@@ -428,7 +429,7 @@ export default function BookingPanel({ listing, selectedRoomType, roomSelections
                 </div>
                 <div className="p-3">
                   <label className="block text-xs font-semibold text-gray-500 mb-1">CHECK-OUT</label>
-                  <input type="date" className="w-full text-sm outline-none bg-transparent"
+                  <DateField className="w-full text-sm outline-none bg-transparent"
                     value={checkOut} min={checkIn || today}
                     onChange={(e) => setCheckOut(e.target.value)} />
                 </div>

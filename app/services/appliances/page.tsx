@@ -15,9 +15,9 @@ const TESTIMONIALS = [
 const FAQ = [
   { q: 'How long can I rent?',            a: 'Minimum 1 day. Daily rate applies for every additional day. For 7+ day rentals, we offer a 15% discount — mention it in the notes when booking.' },
   { q: 'Is delivery free?',               a: 'A flat ₹300 delivery + pickup fee is added at checkout for most cities. Cities more than 25 km from our hub may have a small extra charge — we\'ll confirm before payment.' },
-  { q: 'Do you deliver LPG cylinders?',   a: 'LPG cylinders are not included. We deliver stoves with regulators + hoses. Gas refills can be arranged separately at ₹1,100/cylinder — call 9004044234.' },
+  { q: 'Do you deliver LPG cylinders?',   a: 'LPG cylinders are not included. We deliver stoves with regulators + hoses. Gas refills can be arranged separately at ₹1,100/cylinder — call 7367034295.' },
   { q: 'What if something gets damaged?', a: 'Normal wear is fine. Accidental damage is charged at actual repair cost (transparent, shared upfront). A security deposit may be asked for premium items (tandoor, commercial stoves).' },
-  { q: 'Can I extend the rental?',        a: 'Absolutely — WhatsApp us on 9004044234 at least 4 hours before pickup and we\'ll extend. Additional days are billed at the daily rate.' },
+  { q: 'Can I extend the rental?',        a: 'Absolutely — WhatsApp us on 7367034295 at least 4 hours before pickup and we\'ll extend. Additional days are billed at the daily rate.' },
 ];
 
 export default function ApplianceLandingPage() {
@@ -224,7 +224,7 @@ export default function ApplianceLandingPage() {
           <Link href="/services/appliances/order" className="inline-block mt-6 bg-white text-gray-900 rounded-full px-7 py-3 text-sm font-bold shadow-xl hover:bg-gray-100 transition">
             Start rental →
           </Link>
-          <p className="mt-4 text-xs text-white/70">Or call <a href="tel:9004044234" className="underline font-semibold">9004044234</a></p>
+          <p className="mt-4 text-xs text-white/70">Or call <a href="tel:7367034295" className="underline font-semibold">7367034295</a></p>
         </div>
       </section>
 

@@ -7,6 +7,7 @@ import { formatPaise } from '@/lib/utils';
 import RazorpayButton from '@/components/RazorpayButton';
 import CityAutocomplete from '@/components/CityAutocomplete';
 import LocalityAutocomplete from '@/components/LocalityAutocomplete';
+import DateField from '@/components/DateField';
 
 const APPLIANCE_OPTIONS = [
   'Gas stove', 'Oven', 'Microwave', 'Tandoor', 'OTG',
@@ -30,6 +31,14 @@ function crockeryOptionsFor(guests: number) {
     'Tea/coffee cups',
     'Casseroles',
   ];
+}
+
+function formatCuisines(s?: string | null): string {
+  if (!s) return '';
+  return s.split(',')
+    .map(c => c.trim().replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, l => l.toUpperCase()))
+    .filter(Boolean)
+    .join(', ');
 }
 
 function ChipPicker({ title, options, selected, onChange, hint }: {
@@ -121,11 +130,18 @@ export default function BookCookPage() {
     if (!chef) return 0;
     const guests = guestsCount || 1;
     const meals = numberOfMeals || 1;
+    // Per-plate pricing only applies when a paid menu is selected (event-style billing).
     if (menuId && menus.length > 0) {
       const menu = menus.find(m => m.id === menuId);
       if (menu) return menu.pricePerPlatePaise * guests * meals;
     }
-    if (chef.dailyRatePaise) return chef.dailyRatePaise * guests * meals;
+    // EVENT billing without a menu still scales with guests (catering quote).
+    if (serviceType === 'EVENT' && chef.dailyRatePaise) {
+      return chef.dailyRatePaise * guests * meals;
+    }
+    // DAILY household cooking is a flat day-rate — the cook cooks for the household,
+    // not per plate. Headcount is informational, not a multiplier.
+    if (chef.dailyRatePaise) return chef.dailyRatePaise * meals;
     return 0;
   }
 
@@ -235,10 +251,12 @@ export default function BookCookPage() {
       <div className="max-w-2xl mx-auto px-4 py-8">
         <h1 className="text-2xl font-bold text-gray-900 mb-2">Pay Advance to Confirm</h1>
         <div className="flex items-center gap-3 mb-6 p-3 bg-orange-50 rounded-xl">
-          <span className="text-3xl">&#x1F468;&#x200D;&#x1F373;</span>
-          <div>
-            <p className="font-semibold">{chef.name}</p>
-            <p className="text-xs text-gray-500">{chef.cuisines} - {chef.city}</p>
+          <span className="text-3xl shrink-0">&#x1F468;&#x200D;&#x1F373;</span>
+          <div className="flex-1 min-w-0">
+            <p className="font-semibold truncate">{chef.name}</p>
+            <p className="text-xs text-gray-500 truncate" title={`${formatCuisines(chef.cuisines)} · ${chef.city}`}>
+              {formatCuisines(chef.cuisines)} · {chef.city}
+            </p>
           </div>
         </div>
 
@@ -310,10 +328,12 @@ export default function BookCookPage() {
     <div className="max-w-2xl mx-auto px-4 py-8">
       <h1 className="text-2xl font-bold text-gray-900 mb-2">{typeLabel}</h1>
       <div className="flex items-center gap-3 mb-6 p-3 bg-orange-50 rounded-xl">
-        <span className="text-3xl">&#x1F468;&#x200D;&#x1F373;</span>
-        <div>
-          <p className="font-semibold">{chef.name}</p>
-          <p className="text-xs text-gray-500">{chef.cuisines} - {chef.city}</p>
+        <span className="text-3xl shrink-0">&#x1F468;&#x200D;&#x1F373;</span>
+        <div className="flex-1 min-w-0">
+          <p className="font-semibold truncate">{chef.name}</p>
+          <p className="text-xs text-gray-500 truncate" title={`${formatCuisines(chef.cuisines)} · ${chef.city}`}>
+            {formatCuisines(chef.cuisines)} · {chef.city}
+          </p>
         </div>
       </div>
 
@@ -349,7 +369,7 @@ export default function BookCookPage() {
         <div className="grid grid-cols-2 gap-4">
           <div>
             <label className="block text-xs font-medium text-gray-600 mb-1">{serviceType === 'MONTHLY' ? 'Start Date' : serviceType === 'EVENT' ? 'Event Date' : 'Service Date'} *</label>
-            <input type="date" required value={serviceType === 'MONTHLY' ? startDate : serviceDate}
+            <DateField required value={serviceType === 'MONTHLY' ? startDate : serviceDate}
               onChange={e => serviceType === 'MONTHLY' ? setStartDate(e.target.value) : setServiceDate(e.target.value)}
               className="w-full border rounded-lg px-3 py-2 text-sm" />
           </div>
@@ -378,11 +398,25 @@ export default function BookCookPage() {
 
         {/* Guests */}
         <div className="grid grid-cols-2 gap-4">
-          <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1">{serviceType === 'EVENT' ? 'Guest Count' : 'Guests'} *</label>
-            <input type="number" min={1} value={guestsCount} onChange={e => setGuestsCount(Number(e.target.value))}
-              className="w-full border rounded-lg px-3 py-2 text-sm" />
-          </div>
+          {serviceType === 'DAILY' ? (
+            <div>
+              <label className="block text-xs font-medium text-gray-600 mb-1">Household size *</label>
+              <select value={guestsCount} onChange={e => setGuestsCount(Number(e.target.value))}
+                className="w-full border rounded-lg px-3 py-2 text-sm">
+                <option value={2}>1–2 people</option>
+                <option value={4}>3–4 people</option>
+                <option value={6}>5–6 people</option>
+                <option value={8}>7–8 people</option>
+              </select>
+              <p className="text-[10px] text-gray-400 mt-1">Flat daily cook charge — household size does not multiply the bill.</p>
+            </div>
+          ) : (
+            <div>
+              <label className="block text-xs font-medium text-gray-600 mb-1">{serviceType === 'EVENT' ? 'Guest Count' : 'Guests'} *</label>
+              <input type="number" min={1} value={guestsCount} onChange={e => setGuestsCount(Number(e.target.value))}
+                className="w-full border rounded-lg px-3 py-2 text-sm" />
+            </div>
+          )}
           {serviceType === 'EVENT' && (
             <div>
               <label className="block text-xs font-medium text-gray-600 mb-1">Duration (hours)</label>

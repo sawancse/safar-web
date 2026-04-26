@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { api } from '@/lib/api';
+import DateField from '@/components/DateField';
 
 function formatPaise(paise: number): string {
   return new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(paise / 100);
@@ -321,7 +322,7 @@ export default function LegalCaseDetailPage() {
               <div className="flex flex-col sm:flex-row gap-4 items-end">
                 <div className="flex-1">
                   <label className="block text-sm font-medium text-gray-700 mb-1">Date</label>
-                  <input type="date" value={consultDate} onChange={(e) => setConsultDate(e.target.value)}
+                  <DateField value={consultDate} onChange={(e) => setConsultDate(e.target.value)}
                     className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm" />
                 </div>
                 <div className="flex-1">

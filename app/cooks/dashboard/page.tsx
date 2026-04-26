@@ -28,6 +28,59 @@ const BADGE_STYLES: Record<string, string> = {
   VERIFIED_PRO: 'bg-gradient-to-r from-green-500 to-emerald-500 text-white',
 };
 
+// Occasion codes are stored as SHOUT_SNAKE_CASE in the DB. Some need bespoke
+// capitalisation (e.g. "Shadi ka Ghar" with lowercase "ka"); the rest fall
+// back to title case so anything new shows up looking sensible.
+const OCCASION_LABELS: Record<string, string> = {
+  SHADI_KA_GHAR: 'Shadi ka Ghar',
+  KITTY_PARTY:   'Kitty Party',
+  HOUSEWARMING:  'House-warming',
+  BABY_SHOWER:   'Baby Shower',
+  COCKTAIL:      'Cocktail Night',
+  BBQ:           'BBQ Party',
+  CORPORATE:     'Corporate Event',
+  POOJA:         'Pooja / Puja',
+  BIRTHDAY:      'Birthday Party',
+  ANNIVERSARY:   'Anniversary',
+  WEDDING:       'Wedding',
+  FESTIVAL:      'Festival',
+  NAVRATRI:      'Navratri',
+  RECEPTION:     'Reception',
+  ENGAGEMENT:    'Engagement',
+  FAREWELL:      'Farewell',
+  OTHER:         'Other Event',
+};
+function formatOccasion(code?: string): string {
+  if (!code) return '';
+  if (OCCASION_LABELS[code]) return OCCASION_LABELS[code];
+  return code.toLowerCase().split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+}
+
+// Service-only event bookings (singer / decor / cake / pandit / staff / appliances)
+// stash the actual service name inside menuDescription.type. Without this lookup
+// the chef-side rows only show the occasion code (e.g. "SHADI_KA_GHAR") and the
+// chef has no way to tell what was actually booked.
+function eventServiceLabel(e: any): string {
+  if (e?.menuDescription) {
+    try {
+      const md = JSON.parse(e.menuDescription);
+      switch (md.type) {
+        case 'LIVE_MUSIC':       return md.genreLabel ? `Live Singer · ${md.genreLabel}` : 'Live Singer';
+        case 'EVENT_DECOR':      return md.decorLabel ? `Event Decor · ${md.decorLabel}` : 'Event Decor';
+        case 'DESIGNER_CAKE':    return md.cakeLabel  ? `Designer Cake · ${md.cakeLabel}` : 'Designer Cake';
+        case 'PANDIT_PUJA':      return md.pujaLabel  ? `Pandit · ${md.pujaLabel}`        : 'Pandit / Puja';
+        case 'STAFF_HIRE': {
+          const n = md.count || 1;
+          const role = md.roleLabel || 'Staff';
+          return `${n} × ${role}${n > 1 ? 's' : ''}`;
+        }
+        case 'APPLIANCE_RENTAL': return 'Appliance Rental';
+      }
+    } catch { /* fall through */ }
+  }
+  return e?.eventType ? formatOccasion(e.eventType) : 'Event';
+}
+
 type ViewState = 'loading' | 'not-logged-in' | 'not-chef' | 'suspended' | 'error' | 'ready';
 
 export default function ChefDashboardPage() {
@@ -56,6 +109,10 @@ export default function ChefDashboardPage() {
   const [eventStaffView, setEventStaffView] = useState<Record<string, any[]>>({});
   const [loadingEventStaff, setLoadingEventStaff] = useState<string | null>(null);
   const [quoteModal, setQuoteModal] = useState<string | null>(null);
+  const [startJobModal, setStartJobModal] = useState<{ id: string; kind: 'chef' | 'event'; ref?: string; customer?: string } | null>(null);
+  const [startJobOtp, setStartJobOtp] = useState('');
+  const [startJobErr, setStartJobErr] = useState('');
+  const [startJobBusy, setStartJobBusy] = useState(false);
   const [quoteAmount, setQuoteAmount] = useState('');
   const [editMode, setEditMode] = useState(false);
   const [savingProfile, setSavingProfile] = useState(false);
@@ -148,6 +205,32 @@ export default function ChefDashboardPage() {
       const updated = await api.completeEvent(id, token());
       setEvents(prev => prev.map(e => e.id === id ? updated : e));
     } catch (e: any) { alert(e.message || 'Failed to complete'); }
+  }
+
+  function openStartJob(kind: 'chef' | 'event', row: any) {
+    setStartJobModal({ id: row.id, kind, ref: row.bookingRef, customer: row.customerName });
+    setStartJobOtp('');
+    setStartJobErr('');
+  }
+
+  async function handleStartJob() {
+    if (!startJobModal) return;
+    const otp = startJobOtp.trim();
+    if (!/^\d{4,6}$/.test(otp)) { setStartJobErr('Enter the 4-digit OTP from the customer.'); return; }
+    setStartJobBusy(true);
+    setStartJobErr('');
+    try {
+      if (startJobModal.kind === 'chef') {
+        const updated = await api.startChefBookingJob(startJobModal.id, otp, token());
+        setBookings(prev => prev.map(b => b.id === startJobModal.id ? updated : b));
+      } else {
+        const updated = await api.startEventBookingJob(startJobModal.id, otp, token());
+        setEvents(prev => prev.map(e => e.id === startJobModal.id ? updated : e));
+      }
+      setStartJobModal(null);
+    } catch (e: any) {
+      setStartJobErr(e?.message || 'Wrong OTP — ask the customer to read it from the OTP tab.');
+    } finally { setStartJobBusy(false); }
   }
 
   async function handleToggleAvailability() {
@@ -476,7 +559,7 @@ export default function ChefDashboardPage() {
                 ))}
                 {inquiryEvents.map(e => (
                   <ActionCard key={e.id} type="event"
-                    title={`${e.customerName || 'Customer'} — ${e.eventType}`}
+                    title={`${e.customerName || 'Customer'} · ${eventServiceLabel(e)}`}
                     subtitle={`${formatDate(e.eventDate)} · ${e.guestCount} guests · ${e.city}${e.customerPhone ? ' · ' + e.customerPhone : ''}`}
                     note={formatEventMenu(e.menuDescription) || e.cuisinePreferences}
                     amount={e.totalAmountPaise}
@@ -573,6 +656,10 @@ export default function ChefDashboardPage() {
                   )}
                   {(b.status === 'CONFIRMED' || b.status === 'IN_PROGRESS') && (
                     <>
+                      {!b.jobStartedAt && b.startJobOtp && (
+                        <button onClick={() => openStartJob('chef', b)}
+                          className="text-xs bg-orange-500 hover:bg-orange-600 text-white px-4 py-1.5 rounded-lg font-medium transition">▶ Start Job (OTP)</button>
+                      )}
                       <button onClick={() => handleComplete(b.id)}
                         className="text-xs bg-green-500 hover:bg-green-600 text-white px-4 py-1.5 rounded-lg font-medium transition">Mark Complete</button>
                       <button onClick={() => shareLocation(b.id)}
@@ -605,14 +692,14 @@ export default function ChefDashboardPage() {
               <div key={e.id} className="bg-white border rounded-2xl p-5 hover:shadow-sm transition">
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-1">
+                    <div className="flex items-center gap-2 mb-1 flex-wrap">
                       <p className="font-semibold text-gray-900">{e.customerName || 'Customer'}</p>
-                      <span className="text-xs text-gray-400">— {e.eventType}</span>
+                      <span className="text-xs text-orange-600 font-medium">· {eventServiceLabel(e)}</span>
                       <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${STATUS_COLORS[e.status] || 'bg-gray-100'}`}>
                         {e.status?.replace(/_/g, ' ')}
                       </span>
                     </div>
-                    <p className="text-xs text-gray-500">{e.bookingRef} · {formatDateTime(e.eventDate, e.eventTime)} · {e.durationHours}h</p>
+                    <p className="text-xs text-gray-500">{e.bookingRef} · {formatDateTime(e.eventDate, e.eventTime)} · {e.durationHours}h{e.eventType ? ` · ${formatOccasion(e.eventType)}` : ''}</p>
                     <p className="text-xs text-gray-500">{e.guestCount} guests | {e.venueAddress}, {e.city}</p>
                     {e.cuisinePreferences && <p className="text-xs text-gray-500">Cuisine: {e.cuisinePreferences}</p>}
                     {e.menuDescription && (() => {
@@ -691,8 +778,14 @@ export default function ChefDashboardPage() {
                   )}
                   {e.status === 'QUOTED' && <span className="text-xs text-blue-600 font-medium">Quote sent — waiting for customer</span>}
                   {(e.status === 'ADVANCE_PAID' || e.status === 'IN_PROGRESS') && (
-                    <button onClick={() => handleCompleteEvent(e.id)}
-                      className="text-xs bg-green-500 hover:bg-green-600 text-white px-4 py-1.5 rounded-lg font-medium transition">Mark Complete</button>
+                    <>
+                      {!e.jobStartedAt && e.startJobOtp && (
+                        <button onClick={() => openStartJob('event', e)}
+                          className="text-xs bg-orange-500 hover:bg-orange-600 text-white px-4 py-1.5 rounded-lg font-medium transition">▶ Start Job (OTP)</button>
+                      )}
+                      <button onClick={() => handleCompleteEvent(e.id)}
+                        className="text-xs bg-green-500 hover:bg-green-600 text-white px-4 py-1.5 rounded-lg font-medium transition">Mark Complete</button>
+                    </>
                   )}
                   {e.status === 'COMPLETED' && <span className="text-xs text-green-600 font-medium">Completed ✓</span>}
                   {e.staffRolesJson && (e.status === 'QUOTED' || e.status === 'ADVANCE_PAID' || e.status === 'IN_PROGRESS') && (() => {
@@ -1223,6 +1316,40 @@ export default function ChefDashboardPage() {
       </div>
 
       {/* ── Quote Modal ──────────────────────────────────────────── */}
+      {/* ── Start-Job OTP Modal ────────────────────────────────── */}
+      {startJobModal && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4"
+             onClick={() => !startJobBusy && setStartJobModal(null)}>
+          <div className="bg-white rounded-2xl p-6 max-w-sm w-full shadow-xl" onClick={e => e.stopPropagation()}>
+            <h3 className="text-lg font-bold mb-1">Start Job</h3>
+            <p className="text-xs text-gray-500 mb-4">
+              Ask {startJobModal.customer || 'the customer'} for the 4-digit OTP shown in their <span className="font-medium">Start OTP</span> tab.
+              {startJobModal.ref && <span className="block text-[10px] text-gray-400 mt-0.5">Booking {startJobModal.ref}</span>}
+            </p>
+            <input
+              type="text"
+              inputMode="numeric"
+              autoFocus
+              maxLength={6}
+              value={startJobOtp}
+              onChange={e => { setStartJobOtp(e.target.value.replace(/\D/g, '')); setStartJobErr(''); }}
+              onKeyDown={e => { if (e.key === 'Enter' && /^\d{4,6}$/.test(startJobOtp)) handleStartJob(); }}
+              className="w-full border-2 border-orange-200 rounded-xl px-4 py-3 text-3xl font-bold tracking-[0.4em] text-center font-mono focus:border-orange-400 outline-none mb-2"
+              placeholder="••••"
+            />
+            {startJobErr && <p className="text-xs text-red-600 mb-2">{startJobErr}</p>}
+            <div className="flex gap-3 mt-3">
+              <button onClick={() => setStartJobModal(null)} disabled={startJobBusy}
+                className="flex-1 border rounded-xl py-2.5 text-sm font-medium hover:bg-gray-50 transition disabled:opacity-40">Cancel</button>
+              <button onClick={handleStartJob} disabled={startJobBusy || !/^\d{4,6}$/.test(startJobOtp)}
+                className="flex-1 bg-orange-500 hover:bg-orange-600 text-white rounded-xl py-2.5 text-sm font-semibold transition disabled:opacity-40">
+                {startJobBusy ? 'Starting…' : 'Start Job'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {quoteModal && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={() => setQuoteModal(null)}>
           <div className="bg-white rounded-2xl p-6 max-w-sm w-full shadow-xl" onClick={e => e.stopPropagation()}>

@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { api } from '@/lib/api';
 import CityAutocomplete from '@/components/CityAutocomplete';
+import DateField from '@/components/DateField';
 import type { Listing } from '@/types';
 
 interface Props {
@@ -289,7 +290,7 @@ export default function EditListingModal({ listing, onClose, onSaved, token }: P
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Available From</label>
-                  <input type="date" value={availableFrom} onChange={e => setAvailableFrom(e.target.value)}
+                  <DateField value={availableFrom} onChange={e => setAvailableFrom(e.target.value)}
                     className="w-full border rounded-lg px-3 py-2 text-sm" />
                 </div>
                 <div>

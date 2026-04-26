@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { api } from '@/lib/api';
+import DateField from '@/components/DateField';
 import type { UserProfile, CoTraveler, SavedPaymentMethod } from '@/types';
 
 type SidebarKey = 'personal' | 'security' | 'travelers' | 'display' | 'payments' | 'privacy';
@@ -452,7 +453,7 @@ export default function AccountPage() {
                       <p className="text-sm font-medium text-gray-500 mb-1">Date of birth</p>
                       {editingField === 'dob' ? (
                         <div className="space-y-3 mt-2">
-                          <input type="date" value={editDob} onChange={(e) => setEditDob(e.target.value)} className="w-full border rounded-lg px-3 py-2 text-sm outline-none focus:border-orange-500" max={new Date().toISOString().split('T')[0]} />
+                          <DateField value={editDob} onChange={(e) => setEditDob(e.target.value)} className="w-full border rounded-lg px-3 py-2 text-sm outline-none focus:border-orange-500" max={new Date().toISOString().split('T')[0]} />
                           <div className="flex gap-2">
                             <button onClick={() => saveField('dob')} disabled={saving} className="bg-orange-500 text-white text-sm font-medium px-5 py-2 rounded-lg hover:bg-orange-600 transition disabled:opacity-50">{saving ? 'Saving...' : 'Save'}</button>
                             <button onClick={() => setEditingField(null)} className="text-sm text-gray-500 px-4 py-2 hover:text-gray-700">Cancel</button>
@@ -577,7 +578,7 @@ export default function AccountPage() {
                             </div>
                             <div>
                               <label className="block text-xs text-gray-500 mb-1">Expiry date</label>
-                              <input type="date" value={editPassportExpiry} onChange={(e) => setEditPassportExpiry(e.target.value)} className="w-full border rounded-lg px-3 py-2 text-sm outline-none focus:border-orange-500" min={new Date().toISOString().split('T')[0]} />
+                              <DateField value={editPassportExpiry} onChange={(e) => setEditPassportExpiry(e.target.value)} className="w-full border rounded-lg px-3 py-2 text-sm outline-none focus:border-orange-500" min={new Date().toISOString().split('T')[0]} />
                             </div>
                           </div>
                           <div className="flex gap-2">
@@ -904,8 +905,7 @@ export default function AccountPage() {
                     <p className="text-sm font-medium text-gray-700 mb-2">Date of birth</p>
                     <div>
                       <label className="block text-xs text-gray-500 mb-1">Date of birth <span className="text-red-500">*</span></label>
-                      <input
-                        type="date"
+                      <DateField
                         value={travDob}
                         onChange={(e) => setTravDob(e.target.value)}
                         className="w-full border rounded-lg px-3 py-2 text-sm outline-none focus:border-orange-500"

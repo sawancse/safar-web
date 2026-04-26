@@ -81,7 +81,7 @@ export default function PanditLandingPage() {
             </div>
             <div className="relative aspect-square rounded-3xl overflow-hidden shadow-2xl hidden md:block">
               <img
-                src="https://images.unsplash.com/photo-1609152867693-e7fd58b18b93?w=1000&auto=format&fit=crop"
+                src="https://images.unsplash.com/photo-1604580864964-0462f5d5b1a8?w=1000&auto=format&fit=crop"
                 alt="Pandit conducting puja"
                 className="w-full h-full object-cover"
               />
@@ -245,7 +245,7 @@ export default function PanditLandingPage() {
           <Link href="/services/pandit/order" className="inline-block mt-6 bg-white text-orange-600 rounded-full px-7 py-3 text-sm font-bold shadow-xl hover:bg-orange-50 transition">
             Book puja →
           </Link>
-          <p className="mt-4 text-xs text-white/80">Or call <a href="tel:9004044234" className="underline font-semibold">9004044234</a> for help</p>
+          <p className="mt-4 text-xs text-white/80">Or call <a href="tel:7367034295" className="underline font-semibold">7367034295</a> for help</p>
         </div>
       </section>
 

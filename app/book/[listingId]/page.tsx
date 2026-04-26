@@ -8,6 +8,7 @@ import { formatPaise } from '@/lib/utils';
 import type { Listing, Booking, RoomType, RoomTypeInclusion } from '@/types';
 import RoomTypeSelector, { type RoomSelection } from '@/components/RoomTypeSelector';
 import GuestListForm, { type GuestInfo } from '@/components/GuestListForm';
+import DateField from '@/components/DateField';
 
 function fmtDate(iso: string) {
   if (!iso) return '—';
@@ -597,7 +598,7 @@ export default function BookPage() {
                     <div className="grid grid-cols-2 gap-2">
                       <div>
                         <label className="block text-xs text-gray-500 mb-1">Move-in date</label>
-                        <input type="date" className="w-full border rounded-lg px-2.5 py-2 text-sm outline-none focus:border-orange-500"
+                        <DateField className="w-full border rounded-lg px-2.5 py-2 text-sm outline-none focus:border-orange-500"
                           value={checkIn} min={today}
                           onChange={(e) => {
                             setCheckIn(e.target.value);
@@ -627,7 +628,7 @@ export default function BookPage() {
                     <div className="grid grid-cols-2 gap-2">
                       <div>
                         <label className="block text-xs text-gray-500 mb-1">Check-in</label>
-                        <input type="date" className="w-full border rounded-lg px-2.5 py-2 text-sm outline-none focus:border-orange-500"
+                        <DateField className="w-full border rounded-lg px-2.5 py-2 text-sm outline-none focus:border-orange-500"
                           value={checkIn} min={today}
                           onChange={(e) => {
                             setCheckIn(e.target.value);
@@ -639,7 +640,7 @@ export default function BookPage() {
                       </div>
                       <div>
                         <label className="block text-xs text-gray-500 mb-1">Check-out</label>
-                        <input type="date" className="w-full border rounded-lg px-2.5 py-2 text-sm outline-none focus:border-orange-500"
+                        <DateField className="w-full border rounded-lg px-2.5 py-2 text-sm outline-none focus:border-orange-500"
                           value={checkOut} min={checkIn || today}
                           onChange={(e) => setCheckOut(e.target.value)} />
                       </div>

@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { api } from '@/lib/api';
+import DateField from '@/components/DateField';
 
 /* ── Types ─────────────────────────────────────────────────── */
 
@@ -664,8 +665,7 @@ export default function HostSalesTab({ token }: { token: string }) {
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Visit Date *</label>
-                  <input
-                    type="date"
+                  <DateField
                     value={visitDate}
                     min={new Date().toISOString().split('T')[0]}
                     onChange={e => setVisitDate(e.target.value)}

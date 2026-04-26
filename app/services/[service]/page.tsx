@@ -225,7 +225,7 @@ export default function GenericServicePage() {
           <Link href={bookHref} className="inline-block mt-6 bg-white text-gray-900 rounded-full px-7 py-3 text-sm font-bold shadow-xl hover:bg-gray-50 transition">
             Book {svc.label} →
           </Link>
-          <p className="mt-4 text-xs text-white/80">Or call <a href="tel:9004044234" className="underline font-semibold">9004044234</a> for help</p>
+          <p className="mt-4 text-xs text-white/80">Or call <a href="tel:7367034295" className="underline font-semibold">7367034295</a> for help</p>
         </div>
       </section>
 

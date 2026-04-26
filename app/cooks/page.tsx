@@ -19,18 +19,18 @@ const SERVICE_CARDS = [
 ];
 
 const OCCASIONS = [
-  { key: 'BIRTHDAY', label: 'Birthday Party', icon: '🎂', bg: 'from-pink-100 to-rose-50', ring: 'hover:ring-pink-300' },
-  { key: 'WEDDING', label: 'Wedding', icon: '💍', bg: 'from-purple-100 to-violet-50', ring: 'hover:ring-purple-300' },
-  { key: 'HOUSEWARMING', label: 'House-warming', icon: '🏡', bg: 'from-blue-100 to-sky-50', ring: 'hover:ring-blue-300' },
-  { key: 'KITTY_PARTY', label: 'Kitty Party', icon: '🎉', bg: 'from-yellow-100 to-amber-50', ring: 'hover:ring-yellow-300' },
-  { key: 'CORPORATE', label: 'Corporate Event', icon: '💼', bg: 'from-slate-100 to-gray-50', ring: 'hover:ring-slate-300' },
-  { key: 'ANNIVERSARY', label: 'Anniversary', icon: '💝', bg: 'from-red-100 to-rose-50', ring: 'hover:ring-red-300' },
-  { key: 'FESTIVAL', label: 'Festival', icon: '🪔', bg: 'from-orange-100 to-amber-50', ring: 'hover:ring-orange-300' },
-  { key: 'BABY_SHOWER', label: 'Baby Shower', icon: '👶', bg: 'from-cyan-100 to-teal-50', ring: 'hover:ring-cyan-300' },
-  { key: 'POOJA', label: 'Pooja / Puja', icon: '🙏', bg: 'from-amber-100 to-yellow-50', ring: 'hover:ring-amber-300' },
-  { key: 'COCKTAIL', label: 'Cocktail Night', icon: '🍹', bg: 'from-indigo-100 to-violet-50', ring: 'hover:ring-indigo-300' },
-  { key: 'BBQ', label: 'BBQ Party', icon: '🔥', bg: 'from-orange-100 to-red-50', ring: 'hover:ring-orange-300' },
-  { key: 'NAVRATRI', label: 'Navratri', icon: '🕉️', bg: 'from-emerald-100 to-green-50', ring: 'hover:ring-emerald-300' },
+  { key: 'BIRTHDAY',     label: 'Birthday Party',  icon: '🎂',  bg: 'from-pink-100 to-rose-50',     ring: 'hover:ring-pink-300',     img: 'https://images.unsplash.com/photo-1530103862676-de8c9debad1d?w=200&auto=format&fit=crop&q=70' },
+  { key: 'WEDDING',      label: 'Wedding',         icon: '💍',  bg: 'from-purple-100 to-violet-50', ring: 'hover:ring-purple-300',   img: 'https://images.unsplash.com/photo-1519225421980-715cb0215aed?w=200&auto=format&fit=crop&q=70' },
+  { key: 'HOUSEWARMING', label: 'House-warming',   icon: '🏡',  bg: 'from-blue-100 to-sky-50',      ring: 'hover:ring-blue-300',     img: 'https://images.unsplash.com/photo-1543362906-acfc16c67564?w=200&auto=format&fit=crop&q=70' },
+  { key: 'KITTY_PARTY',  label: 'Kitty Party',     icon: '🎉',  bg: 'from-yellow-100 to-amber-50',  ring: 'hover:ring-yellow-300',   img: 'https://images.unsplash.com/photo-1514362545857-3bc16c4c7d1b?w=200&auto=format&fit=crop&q=70' },
+  { key: 'CORPORATE',    label: 'Corporate Event', icon: '💼',  bg: 'from-slate-100 to-gray-50',    ring: 'hover:ring-slate-300',    img: 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=200&auto=format&fit=crop&q=70' },
+  { key: 'ANNIVERSARY',  label: 'Anniversary',     icon: '💝',  bg: 'from-red-100 to-rose-50',      ring: 'hover:ring-red-300',      img: 'https://images.unsplash.com/photo-1519741497674-611481863552?w=200&auto=format&fit=crop&q=70' },
+  { key: 'FESTIVAL',     label: 'Festival',        icon: '🪔',  bg: 'from-orange-100 to-amber-50',  ring: 'hover:ring-orange-300',   img: 'https://images.unsplash.com/photo-1606830733744-0ad778449672?w=200&auto=format&fit=crop&q=70' },
+  { key: 'BABY_SHOWER',  label: 'Baby Shower',     icon: '👶',  bg: 'from-cyan-100 to-teal-50',     ring: 'hover:ring-cyan-300',     img: 'https://images.unsplash.com/photo-1515816052601-210d5501d471?w=200&auto=format&fit=crop&q=70' },
+  { key: 'POOJA',        label: 'Pooja / Puja',    icon: '🙏',  bg: 'from-amber-100 to-yellow-50',  ring: 'hover:ring-amber-300',    img: 'https://images.unsplash.com/photo-1605979257913-1704eb7b6246?w=200&auto=format&fit=crop&q=70' },
+  { key: 'COCKTAIL',     label: 'Cocktail Night',  icon: '🍹',  bg: 'from-indigo-100 to-violet-50', ring: 'hover:ring-indigo-300',   img: 'https://images.unsplash.com/photo-1516280440614-37939bbacd81?w=200&auto=format&fit=crop&q=70' },
+  { key: 'BBQ',          label: 'BBQ Party',       icon: '🔥',  bg: 'from-orange-100 to-red-50',    ring: 'hover:ring-orange-300',   img: 'https://images.unsplash.com/photo-1532619675605-1ede6c2ed2b0?w=200&auto=format&fit=crop&q=70' },
+  { key: 'NAVRATRI',     label: 'Navratri',        icon: '🕉️', bg: 'from-emerald-100 to-green-50', ring: 'hover:ring-emerald-300',  img: 'https://images.unsplash.com/photo-1607013251379-e6eecfffe234?w=200&auto=format&fit=crop&q=70' },
 ];
 
 const CITIES = [
@@ -141,8 +141,15 @@ export default function CooksPage() {
           {(showAllOccasions ? OCCASIONS : OCCASIONS.slice(0, 6)).map(o => (
             <Link key={o.key} href={`/cooks/events?eventType=${o.key}`}
               className={`flex flex-col items-center p-5 rounded-2xl border border-gray-100 bg-white hover:shadow-lg ${o.ring} hover:ring-2 transition-all duration-200 text-center group`}>
-              <div className={`w-14 h-14 rounded-full bg-gradient-to-br ${o.bg} flex items-center justify-center mb-3 group-hover:scale-110 transition-transform duration-200 shadow-sm`}>
-                <span className="text-2xl">{o.icon}</span>
+              <div className={`relative w-14 h-14 rounded-full bg-gradient-to-br ${o.bg} flex items-center justify-center mb-3 group-hover:scale-110 transition-transform duration-200 shadow-sm overflow-hidden`}>
+                <span className="absolute text-2xl opacity-50 select-none">{o.icon}</span>
+                <img
+                  src={o.img}
+                  alt={o.label}
+                  loading="lazy"
+                  onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
+                  className="absolute inset-0 w-full h-full object-cover"
+                />
               </div>
               <span className="text-xs font-semibold text-gray-800 leading-tight">{o.label}</span>
             </Link>

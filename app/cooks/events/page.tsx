@@ -6,24 +6,25 @@ import { api } from '@/lib/api';
 import { formatPaise } from '@/lib/utils';
 import CityAutocomplete from '@/components/CityAutocomplete';
 import LocalityAutocomplete from '@/components/LocalityAutocomplete';
+import DateField from '@/components/DateField';
 
 const EVENT_TYPES = [
-  { value: 'BIRTHDAY', label: 'Birthday Party', icon: '🎂' },
-  { value: 'WEDDING', label: 'Wedding', icon: '💍' },
-  { value: 'ANNIVERSARY', label: 'Anniversary', icon: '💝' },
-  { value: 'HOUSEWARMING', label: 'House-warming', icon: '🏠' },
-  { value: 'KITTY_PARTY', label: 'Kitty Party', icon: '🎉' },
-  { value: 'CORPORATE', label: 'Corporate', icon: '💼' },
-  { value: 'BABY_SHOWER', label: 'Baby Shower', icon: '👶' },
-  { value: 'COCKTAIL', label: 'Cocktail Night', icon: '🍹' },
-  { value: 'POOJA', label: 'Pooja / Puja', icon: '🙏' },
-  { value: 'BBQ', label: 'BBQ Party', icon: '🔥' },
-  { value: 'NAVRATRI', label: 'Navratri', icon: '🕉️' },
-  { value: 'FESTIVAL', label: 'Festival', icon: '🪔' },
-  { value: 'RECEPTION', label: 'Reception', icon: '🥂' },
-  { value: 'ENGAGEMENT', label: 'Engagement', icon: '💎' },
-  { value: 'FAREWELL', label: 'Farewell', icon: '👋' },
-  { value: 'OTHER', label: 'Other Event', icon: '🎊' },
+  { value: 'BIRTHDAY',     label: 'Birthday Party', icon: '🎂',  img: 'https://images.unsplash.com/photo-1530103862676-de8c9debad1d?w=240&auto=format&fit=crop&q=70' },
+  { value: 'WEDDING',      label: 'Wedding',        icon: '💍',  img: 'https://images.unsplash.com/photo-1519225421980-715cb0215aed?w=240&auto=format&fit=crop&q=70' },
+  { value: 'ANNIVERSARY',  label: 'Anniversary',    icon: '💝',  img: 'https://images.unsplash.com/photo-1519741497674-611481863552?w=240&auto=format&fit=crop&q=70' },
+  { value: 'HOUSEWARMING', label: 'House-warming',  icon: '🏠',  img: 'https://images.unsplash.com/photo-1543362906-acfc16c67564?w=240&auto=format&fit=crop&q=70' },
+  { value: 'KITTY_PARTY',  label: 'Kitty Party',    icon: '🎉',  img: 'https://images.unsplash.com/photo-1514362545857-3bc16c4c7d1b?w=240&auto=format&fit=crop&q=70' },
+  { value: 'CORPORATE',    label: 'Corporate',      icon: '💼',  img: 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=240&auto=format&fit=crop&q=70' },
+  { value: 'BABY_SHOWER',  label: 'Baby Shower',    icon: '👶',  img: 'https://images.unsplash.com/photo-1515816052601-210d5501d471?w=240&auto=format&fit=crop&q=70' },
+  { value: 'COCKTAIL',     label: 'Cocktail Night', icon: '🍹',  img: 'https://images.unsplash.com/photo-1516280440614-37939bbacd81?w=240&auto=format&fit=crop&q=70' },
+  { value: 'POOJA',        label: 'Pooja / Puja',   icon: '🙏',  img: 'https://images.unsplash.com/photo-1605979257913-1704eb7b6246?w=240&auto=format&fit=crop&q=70' },
+  { value: 'BBQ',          label: 'BBQ Party',      icon: '🔥',  img: 'https://images.unsplash.com/photo-1532619675605-1ede6c2ed2b0?w=240&auto=format&fit=crop&q=70' },
+  { value: 'NAVRATRI',     label: 'Navratri',       icon: '🕉️', img: 'https://images.unsplash.com/photo-1607013251379-e6eecfffe234?w=240&auto=format&fit=crop&q=70' },
+  { value: 'FESTIVAL',     label: 'Festival',       icon: '🪔',  img: 'https://images.unsplash.com/photo-1606830733744-0ad778449672?w=240&auto=format&fit=crop&q=70' },
+  { value: 'RECEPTION',    label: 'Reception',      icon: '🥂',  img: 'https://images.unsplash.com/photo-1606800052052-a08af7148866?w=240&auto=format&fit=crop&q=70' },
+  { value: 'ENGAGEMENT',   label: 'Engagement',     icon: '💎',  img: 'https://images.unsplash.com/photo-1503104834685-7205e8607eb9?w=240&auto=format&fit=crop&q=70' },
+  { value: 'FAREWELL',     label: 'Farewell',       icon: '👋',  img: 'https://images.unsplash.com/photo-1519167758481-83f550bb49b3?w=240&auto=format&fit=crop&q=70' },
+  { value: 'OTHER',        label: 'Other Event',    icon: '🎊',  img: 'https://images.unsplash.com/photo-1527529482837-4698179dc6ce?w=240&auto=format&fit=crop&q=70' },
 ];
 
 const CUISINE_OPTIONS = [
@@ -501,9 +502,18 @@ export default function EventBookingPage() {
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                     {EVENT_TYPES.map(et => (
                       <button key={et.value} type="button" onClick={() => setEventType(et.value)}
-                        className={`p-3 rounded-xl border text-center text-sm transition
+                        className={`p-2 rounded-xl border text-center text-sm transition overflow-hidden
                           ${eventType === et.value ? 'border-orange-500 bg-orange-50 text-orange-700 shadow-sm' : 'border-gray-200 hover:border-orange-300 text-gray-600'}`}>
-                        <div className="text-2xl mb-1">{et.icon}</div>
+                        <div className="relative w-full aspect-[4/3] rounded-lg overflow-hidden bg-gradient-to-br from-orange-50 to-amber-50 mb-1.5 flex items-center justify-center">
+                          <span className="absolute text-2xl opacity-40 select-none">{et.icon}</span>
+                          <img
+                            src={et.img}
+                            alt={et.label}
+                            loading="lazy"
+                            onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
+                            className="absolute inset-0 w-full h-full object-cover"
+                          />
+                        </div>
                         <span className="text-xs font-medium">{et.label}</span>
                       </button>
                     ))}
@@ -513,7 +523,7 @@ export default function EventBookingPage() {
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
                     <div>
                       <label className="block text-xs font-medium text-gray-600 mb-1">Event Date</label>
-                      <input type="date" required value={eventDate} onChange={e => setEventDate(e.target.value)}
+                      <DateField required value={eventDate} onChange={e => setEventDate(e.target.value)}
                         min={new Date().toISOString().split('T')[0]}
                         className="w-full border rounded-lg px-3 py-2.5 text-sm" />
                     </div>
@@ -1038,7 +1048,7 @@ export default function EventBookingPage() {
                     )}
                   </div>
 
-                  {(selectedCounters.size > 0 || selectedAddons.size > 0 || totalStaffCount > 0) && (
+                  {(selectedCounters.size > 0 || selectedAddons.size > 0 || totalStaffCount > 0 || selectedServices.size > 0) && (
                     <div>
                       <h3 className="text-sm font-semibold text-gray-700 mb-2">Selected Add-ons</h3>
                       <div className="flex flex-wrap gap-2">
@@ -1055,7 +1065,14 @@ export default function EventBookingPage() {
                             {r.icon} {staffRoleCounts[r.key]} {r.label.toLowerCase()}{(staffRoleCounts[r.key] || 0) > 1 ? 's' : ''}
                           </span>
                         ))}
+                        {[...selectedServices].map(k => {
+                          const svc = EVENT_SERVICES.find(x => x.key === k);
+                          return svc && <span key={k} className="text-xs bg-emerald-50 text-emerald-700 px-3 py-1 rounded-full">{svc.icon} {svc.label} <span className="text-emerald-500/70">· {svc.range}</span></span>;
+                        })}
                       </div>
+                      {selectedServices.size > 0 && (
+                        <p className="text-[11px] text-gray-400 mt-2">Partner services are estimates — chef will confirm the final vendor quote before you pay the balance.</p>
+                      )}
                     </div>
                   )}
 

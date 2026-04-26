@@ -233,7 +233,7 @@ export default function LiveMusicLandingPage() {
           <Link href="/services/live-music/order" className="inline-block mt-6 bg-white text-amber-600 rounded-full px-7 py-3 text-sm font-bold shadow-xl hover:bg-amber-50 transition">
             Check availability →
           </Link>
-          <p className="mt-4 text-xs text-white/80">Or call <a href="tel:9004044234" className="underline font-semibold">9004044234</a> for help</p>
+          <p className="mt-4 text-xs text-white/80">Or call <a href="tel:7367034295" className="underline font-semibold">7367034295</a> for help</p>
         </div>
       </section>
 

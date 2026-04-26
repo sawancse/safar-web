@@ -5,6 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import dynamic from 'next/dynamic';
 import { api } from '@/lib/api';
+import DateField from '@/components/DateField';
 
 /* ── Leaflet map (dynamic, SSR off) ── */
 const LeafletMap = dynamic(() => import('./LeafletMap').catch(() => () => null), { ssr: false });
@@ -1961,9 +1962,8 @@ export default function ProjectDetailPage() {
                 </div>
                 <div>
                   <label className="block text-xs font-medium text-gray-500 mb-1">Preferred Date *</label>
-                  <input
+                  <DateField
                     required
-                    type="date"
                     min={new Date().toISOString().split('T')[0]}
                     value={visitDate}
                     onChange={e => setVisitDate(e.target.value)}

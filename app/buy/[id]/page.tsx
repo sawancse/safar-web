@@ -4,6 +4,7 @@ import { useEffect, useState, useMemo } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { api } from '@/lib/api';
+import DateField from '@/components/DateField';
 
 /* ── Price formatter for sale prices (paise → Lakh/Cr) ── */
 function formatSalePrice(paise: number): string {
@@ -1159,8 +1160,7 @@ export default function BuyPropertyDetailPage() {
                   </div>
                   <div>
                     <label className="block text-xs text-slate-500 mb-1">Preferred Visit Date (optional)</label>
-                    <input
-                      type="date"
+                    <DateField
                       value={inquiryVisitDate}
                       onChange={(e) => setInquiryVisitDate(e.target.value)}
                       className="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500"
@@ -1222,8 +1222,7 @@ export default function BuyPropertyDetailPage() {
                   </div>
                   <div>
                     <label className="block text-xs text-slate-500 mb-1">Visit Date</label>
-                    <input
-                      type="date"
+                    <DateField
                       required
                       value={visitDate}
                       onChange={(e) => setVisitDate(e.target.value)}

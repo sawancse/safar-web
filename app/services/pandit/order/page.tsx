@@ -3,6 +3,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
+import DateField from '@/components/DateField';
+import MapLocationPicker from '@/components/MapLocationPicker';
 import { api } from '@/lib/api';
 import { formatPaise } from '@/lib/utils';
 import { PUJAS, OCCASIONS, ARRIVAL_SLOTS, LANGUAGES, formatSlot, pujasForOccasion } from '../catalog';
@@ -34,6 +36,16 @@ export default function PanditOrderPage() {
   const [address, setAddress] = useState('');
   const [city, setCity] = useState('');
   const [pincode, setPincode] = useState('');
+  const [venueLat, setVenueLat] = useState(0);
+  const [venueLng, setVenueLng] = useState(0);
+
+  function handleMapPick(loc: { lat: number; lng: number; address?: string; city?: string; pincode?: string }) {
+    setVenueLat(loc.lat);
+    setVenueLng(loc.lng);
+    if (loc.address) setAddress(loc.address);
+    if (loc.city)    setCity(loc.city);
+    if (loc.pincode) setPincode(loc.pincode);
+  }
   const [customerName, setCustomerName] = useState('');
   const [customerPhone, setCustomerPhone] = useState('');
   const [customerEmail, setCustomerEmail] = useState('');
@@ -52,6 +64,20 @@ export default function PanditOrderPage() {
     const p = PUJAS.find(x => x.key === pujaKey);
     if (p && !p.tags.includes(occasion)) setPujaKey('');
   }, [occasion, pujaKey]);
+
+  // Prefill contact + address from the signed-in user's profile so they don't have to retype it.
+  useEffect(() => {
+    const token = localStorage.getItem('access_token');
+    if (!token) return;
+    api.getMyProfile(token).then((p: any) => {
+      if (p?.name)    setCustomerName(prev  => prev || p.name);
+      if (p?.phone)   setCustomerPhone(prev => prev || p.phone);
+      if (p?.email)   setCustomerEmail(prev => prev || p.email);
+      if (p?.address) setAddress(prev       => prev || p.address);
+    }).catch(() => { /* anonymous browse — leave fields empty */ });
+  }, []);
+
+  const tomorrowIso = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().split('T')[0];
 
   const availablePujas = useMemo(() => pujasForOccasion(occasion), [occasion]);
   const selectedPuja = PUJAS.find(p => p.key === pujaKey) || null;
@@ -195,9 +221,9 @@ export default function PanditOrderPage() {
               {/* Date */}
               <div>
                 <label className="block text-sm font-semibold text-gray-900 mb-1.5">Select Date</label>
-                <input type="date" required value={eventDate} onChange={e => setEventDate(e.target.value)}
-                       min={new Date(Date.now() + 24*60*60*1000).toISOString().split('T')[0]}
-                       className="w-full border rounded-lg px-3 py-2.5 text-sm bg-gray-900 text-white" />
+                <DateField required value={eventDate} onChange={e => setEventDate(e.target.value)}
+                           min={tomorrowIso}
+                           className="w-full border rounded-lg px-3 py-2.5 text-sm bg-gray-900 text-white" />
                 <p className="text-[10px] text-gray-400 mt-1">Earliest: tomorrow (24-hr lead time)</p>
               </div>
 
@@ -403,6 +429,12 @@ export default function PanditOrderPage() {
               <div className="bg-white rounded-xl border p-5 space-y-3">
                 <h3 className="font-semibold text-gray-900">Puja venue</h3>
                 <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">Pin venue on map</label>
+                  <MapLocationPicker lat={venueLat} lng={venueLng} onLocationChange={handleMapPick}
+                                     className="h-56 w-full rounded-xl overflow-hidden border" />
+                  <p className="text-[10px] text-gray-400 mt-1">Search, drop a pin or use GPS — address fields auto-fill.</p>
+                </div>
+                <div>
                   <label className="block text-xs font-medium text-gray-600 mb-1">Address *</label>
                   <textarea required value={address} onChange={e => setAddress(e.target.value)}
                             rows={2} placeholder="Flat, building, street, area"
@@ -495,7 +527,7 @@ export default function PanditOrderPage() {
               </button>
 
               <p className="text-[10px] text-gray-400 mt-2 text-center">
-                Need help? Call <a href="tel:9004044234" className="text-blue-600">9004044234</a>
+                Need help? Call <a href="tel:7367034295" className="text-blue-600">7367034295</a>
               </p>
             </div>
           </div>

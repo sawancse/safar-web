@@ -14,7 +14,7 @@ const TESTIMONIALS = [
 ];
 
 const FAQ = [
-  { q: 'How far in advance do I need to order?',       a: 'Minimum 24 hours for standard designs. Premium fondant / wedding tiers need 48-72 hours. Last-minute orders — call 9004044234.' },
+  { q: 'How far in advance do I need to order?',       a: 'Minimum 24 hours for standard designs. Premium fondant / wedding tiers need 48-72 hours. Last-minute orders — call 7367034295.' },
   { q: 'Do you deliver pan-India?',                    a: 'We deliver in 20 cities including Bengaluru, Mumbai, Delhi NCR, Hyderabad, Chennai, Pune and more. Pincode availability is checked at checkout.' },
   { q: 'Can I customise a cake beyond what\'s shown?', a: 'Absolutely. After placing the order, our baker will reach out on WhatsApp within 2 hours to discuss custom designs, colours and themes.' },
   { q: 'What about eggless and sugar-free options?',   a: 'Every design is available eggless (+10%). Sugar-free is available on select flavours — mention it in the message field and we\'ll confirm.' },
@@ -228,7 +228,7 @@ export default function DesignerCakeLandingPage() {
           <Link href="/services/cake/order" className="inline-block mt-6 bg-white text-rose-600 rounded-full px-7 py-3 text-sm font-bold shadow-xl hover:bg-rose-50 transition">
             Book your cake →
           </Link>
-          <p className="mt-4 text-xs text-white/80">Or call <a href="tel:9004044234" className="underline font-semibold">9004044234</a> for help</p>
+          <p className="mt-4 text-xs text-white/80">Or call <a href="tel:7367034295" className="underline font-semibold">7367034295</a> for help</p>
         </div>
       </section>
 

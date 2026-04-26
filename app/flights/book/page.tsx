@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { api } from '@/lib/api';
 import { formatPaise } from '@/lib/utils';
+import DateField from '@/components/DateField';
 
 interface PassengerForm {
   title: string;
@@ -206,8 +207,7 @@ export default function FlightBookPage() {
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-600 mb-1">Date of Birth *</label>
-                    <input
-                      type="date"
+                    <DateField
                       value={p.dateOfBirth}
                       onChange={(e) => updatePassenger(idx, 'dateOfBirth', e.target.value)}
                       className="w-full border border-gray-300 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#003B95]"
@@ -265,8 +265,7 @@ export default function FlightBookPage() {
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-gray-600 mb-1">Passport Expiry *</label>
-                      <input
-                        type="date"
+                      <DateField
                         value={p.passportExpiry}
                         onChange={(e) => updatePassenger(idx, 'passportExpiry', e.target.value)}
                         className="w-full border border-gray-300 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#003B95]"

@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { api } from '@/lib/api';
 import LocalityAutocomplete from '@/components/LocalityAutocomplete';
+import DateField from '@/components/DateField';
 const SHARING_TYPES = ['PRIVATE', 'TWO_SHARING', 'THREE_SHARING', 'FOUR_SHARING', 'DORMITORY'];
 const GENDER_OPTIONS = ['MALE_ONLY', 'FEMALE_ONLY', 'COED'];
 const CITIES = ['Mumbai', 'Delhi', 'Bangalore', 'Chennai', 'Hyderabad', 'Pune', 'Kolkata', 'Goa', 'Jaipur'];
@@ -123,7 +124,7 @@ export default function LookingForPage() {
               </div>
               <div>
                 <label className="text-sm text-gray-600 block mb-1">Move-in Date</label>
-                <input type="date" value={form.moveInDate} onChange={e => setForm({ ...form, moveInDate: e.target.value })}
+                <DateField value={form.moveInDate} onChange={e => setForm({ ...form, moveInDate: e.target.value })}
                   className="w-full border rounded-lg px-3 py-2" />
               </div>
               <div>
