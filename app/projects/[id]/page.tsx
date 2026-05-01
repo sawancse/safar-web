@@ -107,7 +107,8 @@ interface UnitType {
   id: string;
   projectId?: string;
   name: string;
-  bhk: number;
+  unitKind?: 'UNIT' | 'PLOT';
+  bhk?: number;
   carpetAreaSqft?: number;
   builtUpAreaSqft?: number;
   superBuiltUpAreaSqft?: number;
@@ -120,6 +121,12 @@ interface UnitType {
   bathrooms?: number;
   balconies?: number;
   furnishing?: string;
+  // Plot-only fields
+  plotAreaSqft?: number;
+  plotLengthFt?: number;
+  plotBreadthFt?: number;
+  cornerPlot?: boolean;
+  facing?: string;
   floorPlanUrl?: string;
   unitLayoutUrl?: string;
   photos?: string[];
@@ -1030,46 +1037,59 @@ export default function ProjectDetailPage() {
             )}
 
             {/* ── Price Calculator ── */}
-            {unitTypes.length > 0 && (
+            {unitTypes.length > 0 && (() => {
+              const calcUnit = unitTypes.find(u => u.id === calcUnitTypeId);
+              const isPlot = calcUnit?.unitKind === 'PLOT';
+              return (
               <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
                 <h2 className="text-lg font-semibold text-gray-900 mb-4">Price Calculator</h2>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
+                <div className={`grid grid-cols-1 ${isPlot ? 'sm:grid-cols-1' : 'sm:grid-cols-3'} gap-4 mb-4`}>
                   <div>
-                    <label className="block text-xs font-medium text-gray-500 mb-1">Unit Type</label>
+                    <label className="block text-xs font-medium text-gray-500 mb-1">
+                      {isPlot ? 'Plot Configuration' : 'Unit Type'}
+                    </label>
                     <select
                       value={calcUnitTypeId}
                       onChange={e => setCalcUnitTypeId(e.target.value)}
                       className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-orange-400"
                     >
-                      {unitTypes.map(u => (
-                        <option key={u.id} value={u.id}>{u.name} ({u.bhk} BHK - {u.carpetAreaSqft || u.builtUpAreaSqft || u.superBuiltUpAreaSqft || '-'} sqft)</option>
-                      ))}
+                      {unitTypes.map(u => {
+                        const plot = u.unitKind === 'PLOT';
+                        const meta = plot
+                          ? `${u.plotAreaSqft || '-'} sqft${u.facing ? ` · ${u.facing}-facing` : ''}${u.cornerPlot ? ' · corner' : ''}`
+                          : `${u.bhk} BHK · ${u.carpetAreaSqft || u.builtUpAreaSqft || u.superBuiltUpAreaSqft || '-'} sqft`;
+                        return <option key={u.id} value={u.id}>{u.name} ({meta})</option>;
+                      })}
                     </select>
                   </div>
-                  <div>
-                    <label className="block text-xs font-medium text-gray-500 mb-1">Floor Number</label>
-                    <input
-                      type="number"
-                      min="1"
-                      value={calcFloor}
-                      onChange={e => setCalcFloor(e.target.value)}
-                      className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-orange-400"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-medium text-gray-500 mb-1">Preferred Facing Premium</label>
-                    <div className="flex items-center gap-2 mt-2">
-                      <label className="flex items-center gap-2 cursor-pointer">
-                        <input
-                          type="checkbox"
-                          checked={calcPreferredFacing}
-                          onChange={e => setCalcPreferredFacing(e.target.checked)}
-                          className="accent-orange-500 w-4 h-4"
-                        />
-                        <span className="text-sm text-gray-700">Add facing premium</span>
-                      </label>
+                  {!isPlot && (
+                    <div>
+                      <label className="block text-xs font-medium text-gray-500 mb-1">Floor Number</label>
+                      <input
+                        type="number"
+                        min="1"
+                        value={calcFloor}
+                        onChange={e => setCalcFloor(e.target.value)}
+                        className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-orange-400"
+                      />
                     </div>
-                  </div>
+                  )}
+                  {!isPlot && (
+                    <div>
+                      <label className="block text-xs font-medium text-gray-500 mb-1">Preferred Facing Premium</label>
+                      <div className="flex items-center gap-2 mt-2">
+                        <label className="flex items-center gap-2 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={calcPreferredFacing}
+                            onChange={e => setCalcPreferredFacing(e.target.checked)}
+                            className="accent-orange-500 w-4 h-4"
+                          />
+                          <span className="text-sm text-gray-700">Add facing premium</span>
+                        </label>
+                      </div>
+                    </div>
+                  )}
                 </div>
                 <button
                   onClick={handleCalculatePrice}
@@ -1087,14 +1107,24 @@ export default function ProjectDetailPage() {
                         <span className="text-gray-600">Base Price</span>
                         <span className="font-medium">{formatSalePrice(priceBreakdown.basePricePaise)}</span>
                       </div>
-                      <div className="flex justify-between">
-                        <span className="text-gray-600">Floor Rise Premium</span>
-                        <span className="font-medium">{formatINR(priceBreakdown.floorRisePaise)}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-gray-600">Facing Premium</span>
-                        <span className="font-medium">{formatINR(priceBreakdown.facingPremiumPaise)}</span>
-                      </div>
+                      {!isPlot && (
+                        <div className="flex justify-between">
+                          <span className="text-gray-600">Floor Rise Premium</span>
+                          <span className="font-medium">{formatINR(priceBreakdown.floorRisePaise)}</span>
+                        </div>
+                      )}
+                      {!isPlot && (
+                        <div className="flex justify-between">
+                          <span className="text-gray-600">Facing Premium</span>
+                          <span className="font-medium">{formatINR(priceBreakdown.facingPremiumPaise)}</span>
+                        </div>
+                      )}
+                      {isPlot && calcUnit?.cornerPlot && (
+                        <div className="flex justify-between">
+                          <span className="text-gray-600">Corner Plot</span>
+                          <span className="font-medium text-emerald-600">included</span>
+                        </div>
+                      )}
                       <div className="border-t border-orange-200 pt-2 flex justify-between">
                         <span className="text-gray-900 font-semibold">Total Price</span>
                         <span className="text-lg font-bold text-orange-600">{formatSalePrice(priceBreakdown.totalPricePaise)}</span>
@@ -1111,7 +1141,8 @@ export default function ProjectDetailPage() {
                   </div>
                 )}
               </div>
-            )}
+              );
+            })()}
 
             {/* ── EMI Calculator (Feature 1) ── */}
             {unitTypes.length > 0 && (

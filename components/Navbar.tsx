@@ -252,6 +252,9 @@ export default function Navbar() {
               Switch to hosting
             </Link>
           )}
+          <Link href="/become-a-partner" className="text-sm font-medium text-white/80 hover:text-white transition">
+            Become a partner
+          </Link>
           {!isLoggedIn && (
             <Link href="/host" className="text-sm font-medium text-white/80 hover:text-white transition">
               List your property

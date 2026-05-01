@@ -8,16 +8,24 @@ import { formatPaise } from '@/lib/utils';
 import PeopleAlsoBooked from '@/components/PeopleAlsoBooked';
 import type { ChatMessage } from '@/types';
 
-type TabKey = 'ingredients' | 'chef' | 'team' | 'otp' | 'pay' | 'rating';
+type TabKey = 'ingredients' | 'provider' | 'team' | 'otp' | 'pay' | 'rating';
 
 const TABS: { key: TabKey; label: string; icon: string }[] = [
   { key: 'ingredients', label: 'Ingredients', icon: '🛒' },
-  { key: 'chef',        label: 'Chef',        icon: '👨‍🍳' },
+  { key: 'provider',    label: 'Provider',    icon: '🤝' },
   { key: 'team',        label: 'Your Team',   icon: '🧑‍🍳' },
   { key: 'otp',         label: 'Start OTP',   icon: '🔑' },
   { key: 'pay',         label: 'Pay Balance', icon: '💳' },
   { key: 'rating',      label: 'Rate',        icon: '⭐' },
 ];
+
+// Legacy deep-links from emails/old screens land with ?event=chef. Map them
+// to the renamed 'provider' tab so those links still work.
+function normalizeTab(raw: string | null): TabKey {
+  if (raw === 'chef') return 'provider';
+  const valid: TabKey[] = ['ingredients', 'provider', 'team', 'otp', 'pay', 'rating'];
+  return valid.includes(raw as TabKey) ? (raw as TabKey) : 'ingredients';
+}
 
 const STATUS_COLORS: Record<string, { label: string; color: string }> = {
   PENDING_PAYMENT: { label: 'Awaiting Payment', color: 'bg-yellow-100 text-yellow-700' },
@@ -39,7 +47,7 @@ export default function ChefBookingDetailPage() {
   const router = useRouter();
   const search = useSearchParams();
   const bookingId = params.id as string;
-  const eventParam = (search.get('event') as TabKey | null) || 'ingredients';
+  const eventParam = normalizeTab(search.get('event'));
 
   const [booking, setBooking] = useState<any>(null);
   const [bookingKind, setBookingKind] = useState<'chef' | 'event' | null>(null);
@@ -233,7 +241,7 @@ export default function ChefBookingDetailPage() {
                 servicesJson={booking.servicesJson}
               />
             )}
-            {tab === 'chef'        && <ChefTab chef={chef} booking={booking} />}
+            {tab === 'provider'    && <ChefTab chef={chef} booking={booking} />}
             {tab === 'team'        && <TeamTab booking={booking} bookingKind={bookingKind} token={token} />}
             {tab === 'otp'         && <OtpTab booking={booking} chef={chef} />}
             {tab === 'pay'         && <PayTab
@@ -544,7 +552,7 @@ function IngredientsTab({ menuItems, shoppingList, guests, menuName, menuDescrip
 
       <Section title="Ingredients" icon="🛒">
         {categories.length === 0 ? (
-          <p className="text-sm text-gray-400">Shopping list unavailable. The chef will handle procurement.</p>
+          <p className="text-sm text-gray-400">Shopping list unavailable. The cook will handle procurement.</p>
         ) : (
           <div className="space-y-4">
             <p className="text-xs text-gray-500">Estimated for {shoppingList?.guestCount || guests} guests</p>
@@ -663,11 +671,11 @@ function OtpTab({ booking, chef }: { booking: any; chef: any }) {
 
   if (!otp) {
     const status: string = booking.status || '';
-    let reason = 'OTP will be generated once the chef accepts your booking.';
-    if (status === 'PENDING_PAYMENT')         reason = 'Pay the advance first — your OTP is issued the moment the chef confirms after payment.';
-    else if (status === 'PENDING')            reason = 'Waiting for the chef to accept your booking. Your start-job OTP appears here as soon as they do.';
-    else if (status === 'INQUIRY')            reason = 'Chef is reviewing your event details and will send a quote. OTP appears after you pay the advance and they confirm.';
-    else if (status === 'QUOTED')             reason = 'Quote received — pay the 60% advance to lock in the date. OTP appears as soon as the chef confirms after payment.';
+    let reason = 'OTP will be generated once the cook accepts your booking.';
+    if (status === 'PENDING_PAYMENT')         reason = 'Pay the advance first — your OTP is issued the moment the cook confirms after payment.';
+    else if (status === 'PENDING')            reason = 'Waiting for the cook to accept your booking. Your start-job OTP appears here as soon as they do.';
+    else if (status === 'INQUIRY')            reason = 'Cook is reviewing your event details and will send a quote. OTP appears after you pay the advance and they confirm.';
+    else if (status === 'QUOTED')             reason = 'Quote received — pay the 60% advance to lock in the date. OTP appears as soon as the cook confirms after payment.';
     else if (status === 'CANCELLED')          reason = 'This booking was cancelled, so no OTP will be issued.';
     return (
       <div className="text-center py-10 max-w-sm mx-auto">

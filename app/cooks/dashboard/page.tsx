@@ -355,7 +355,7 @@ export default function ChefDashboardPage() {
           <span className="text-4xl">👨‍🍳</span>
         </div>
         <h2 className="text-2xl font-bold text-gray-900 mb-3">Become a Safar Cook</h2>
-        <p className="text-gray-500 mb-2">You haven't registered as a chef yet.</p>
+        <p className="text-gray-500 mb-2">You haven't registered as a cook yet.</p>
         <p className="text-sm text-gray-400 mb-8">Join hundreds of home cooks and professional chefs earning on Safar. Set your own hours, menu, and pricing.</p>
         <div className="flex flex-col sm:flex-row gap-3 justify-center">
           <Link href="/cooks/register"

@@ -47,12 +47,13 @@ export default function BuilderSearchPage() {
   const [bhk, setBhk] = useState<number[]>([]);
   const [priceRange, setPriceRange] = useState('');
   const [reraOnly, setReraOnly] = useState(false);
+  const [projectType, setProjectType] = useState(searchParams.get('type') || ''); // '', 'APARTMENT_TOWNSHIP', 'PLOTTED_DEVELOPMENT', 'VILLA_COMMUNITY'
   const [sort, setSort] = useState('relevance');
   const [page, setPage] = useState(0);
 
   useEffect(() => {
     search();
-  }, [state, city, bhk, priceRange, reraOnly, sort, page]);
+  }, [state, city, bhk, priceRange, reraOnly, sort, page, projectType]);
 
   async function search() {
     setLoading(true);
@@ -63,6 +64,7 @@ export default function BuilderSearchPage() {
       if (city) params.city = city;
       if (bhk.length) params.bhk = bhk;
       if (reraOnly) params.reraVerified = true;
+      if (projectType) params.projectType = projectType;
 
       if (priceRange) {
         const [min, max] = priceRange.split('-').map(Number);
@@ -122,6 +124,25 @@ export default function BuilderSearchPage() {
           <div className="w-64 shrink-0 hidden lg:block">
             <div className="bg-white rounded-xl border p-5 sticky top-20 space-y-5">
               <h3 className="font-semibold text-gray-900 text-sm">Filters</h3>
+
+              {/* Project Type */}
+              <div>
+                <label className="text-xs font-medium text-gray-500 mb-1.5 block">Project Type</label>
+                <div className="flex flex-wrap gap-1.5">
+                  {[
+                    { key: '',                    label: 'All',       icon: '🏙️' },
+                    { key: 'APARTMENT_TOWNSHIP',  label: 'Apartment', icon: '🏢' },
+                    { key: 'PLOTTED_DEVELOPMENT', label: 'Plots',     icon: '🗺️' },
+                    { key: 'VILLA_COMMUNITY',     label: 'Villas',    icon: '🏡' },
+                  ].map(t => (
+                    <button key={t.key || 'all'} onClick={() => { setProjectType(t.key); setPage(0); }}
+                      className={`px-2.5 py-1.5 rounded-lg text-xs font-medium border transition flex items-center gap-1
+                        ${projectType === t.key ? 'bg-orange-500 text-white border-orange-500' : 'border-gray-200 text-gray-600 hover:bg-gray-50'}`}>
+                      <span>{t.icon}</span>{t.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
 
               {/* State */}
               <div>

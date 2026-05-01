@@ -673,7 +673,7 @@ export default function ChefProfilePage() {
                 <div className="text-center py-10 text-gray-400">
                   <p className="text-3xl mb-2">📋</p>
                   <p className="text-sm">No ingredient data available for this menu yet.</p>
-                  <p className="text-xs text-gray-400 mt-1">The chef hasn't added ingredient details.</p>
+                  <p className="text-xs text-gray-400 mt-1">The cook hasn't added ingredient details.</p>
                 </div>
               ) : (
                 <div className="space-y-5">

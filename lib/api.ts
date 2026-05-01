@@ -2392,6 +2392,23 @@ export const api = {
       headers: { Authorization: `Bearer ${token}` },
     }),
 
+  // ── V28: self-service vendor (pandit/cake/decor/singer/staff) ──
+  getMyVendorBookings: (token: string) =>
+    apiFetch<any[]>('/api/v1/chef-events/vendor/my', {
+      headers: { Authorization: `Bearer ${token}` },
+    }),
+
+  getVendorOpenInquiries: (token: string) =>
+    apiFetch<any[]>('/api/v1/chef-events/vendor/inquiries', {
+      headers: { Authorization: `Bearer ${token}` },
+    }),
+
+  claimEventBooking: (eventId: string, token: string) =>
+    apiFetch<any>(`/api/v1/chef-events/${eventId}/claim`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}` },
+    }),
+
   getChefIncomingSubscriptions: (token: string) =>
     apiFetch<any[]>('/api/v1/chef-subscriptions/chef', {
       headers: { Authorization: `Bearer ${token}` },

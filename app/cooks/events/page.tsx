@@ -833,7 +833,7 @@ export default function EventBookingPage() {
                       <div className="flex items-center justify-between">
                         <div>
                           <p className="text-sm font-semibold text-orange-800">{totalSelectedDishes()} dishes selected for {guestCount} guests</p>
-                          <p className="text-xs text-orange-600 mt-0.5">Included in the ₹{Math.round(perPlatePaise / 100).toLocaleString('en-IN')}/plate price — dishes help the chef plan.</p>
+                          <p className="text-xs text-orange-600 mt-0.5">Included in the ₹{Math.round(perPlatePaise / 100).toLocaleString('en-IN')}/plate price — dishes help the cook plan.</p>
                         </div>
                       </div>
                     </div>
@@ -1158,7 +1158,7 @@ export default function EventBookingPage() {
                 </div>
               </div>
               <p className="text-[10px] text-gray-400 mt-3">
-                Final price will be confirmed by the chef based on your requirements.
+                Final price will be confirmed by the cook based on your requirements.
               </p>
 
               {chefName && (

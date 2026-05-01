@@ -33,6 +33,17 @@ const PROJECT_STATUSES = [
   { value: 'READY_TO_MOVE', label: 'Ready to Move' },
 ];
 
+const PROJECT_TYPES = [
+  { value: 'APARTMENT_TOWNSHIP',  label: 'Apartment / Township', icon: '🏢',
+    desc: 'Flats, towers, gated apartment community' },
+  { value: 'PLOTTED_DEVELOPMENT', label: 'Plotted Development',  icon: '🗺️',
+    desc: 'Bare plots in a layout — sell by sqft, no built unit' },
+  { value: 'VILLA_COMMUNITY',     label: 'Villa Community',      icon: '🏡',
+    desc: 'Independent villas / row houses (built units, lower density)' },
+];
+
+const FACINGS = ['E', 'W', 'N', 'S', 'NE', 'NW', 'SE', 'SW'];
+
 const FURNISHING_OPTIONS = [
   { value: 'UNFURNISHED', label: 'Unfurnished' },
   { value: 'SEMI_FURNISHED', label: 'Semi-Furnished' },
@@ -50,7 +61,9 @@ const STEP_LABELS = [
 
 interface UnitTypeForm {
   id: string;
+  unitKind: 'UNIT' | 'PLOT';
   name: string;
+  // UNIT (apartment/villa) fields
   bhk: string;
   superBuiltUpAreaSqft: string;
   carpetAreaSqft: string;
@@ -61,6 +74,14 @@ interface UnitTypeForm {
   bathrooms: string;
   balconies: string;
   furnishing: string;
+  // PLOT fields
+  plotAreaSqft: string;
+  plotLengthFt: string;
+  plotBreadthFt: string;
+  cornerPlot: boolean;
+  facing: string;
+  pricePerSqftPaise: string;
+  // Media
   floorPlanFile: File | null;
   floorPlanPreview: string;
 }
@@ -71,20 +92,27 @@ interface PaymentPlan {
   description: string;
 }
 
-function createEmptyUnit(): UnitTypeForm {
+function createEmptyUnit(kind: 'UNIT' | 'PLOT' = 'UNIT'): UnitTypeForm {
   return {
     id: crypto.randomUUID(),
+    unitKind: kind,
     name: '',
-    bhk: '2',
+    bhk: kind === 'UNIT' ? '2' : '',
     superBuiltUpAreaSqft: '',
     carpetAreaSqft: '',
     basePricePaise: '',
     floorRisePaise: '',
     facingPremiumPaise: '',
     totalUnits: '',
-    bathrooms: '2',
-    balconies: '1',
+    bathrooms: kind === 'UNIT' ? '2' : '',
+    balconies: kind === 'UNIT' ? '1' : '',
     furnishing: 'UNFURNISHED',
+    plotAreaSqft: '',
+    plotLengthFt: '',
+    plotBreadthFt: '',
+    cornerPlot: false,
+    facing: '',
+    pricePerSqftPaise: '',
     floorPlanFile: null,
     floorPlanPreview: '',
   };
@@ -106,6 +134,7 @@ export default function BuilderNewProjectPage() {
   const [reraId, setReraId] = useState('');
 
   /* Step 1: Project Info */
+  const [projectType, setProjectType] = useState<'APARTMENT_TOWNSHIP' | 'PLOTTED_DEVELOPMENT' | 'VILLA_COMMUNITY'>('APARTMENT_TOWNSHIP');
   const [projectName, setProjectName] = useState('');
   const [tagline, setTagline] = useState('');
   const [description, setDescription] = useState('');
@@ -154,6 +183,7 @@ export default function BuilderNewProjectPage() {
       setBuilderName(p.builderName || '');
       setBuilderLogoPreview(p.builderLogoUrl || '');
       setReraId(p.reraId || '');
+      if (p.projectType) setProjectType(p.projectType);
       setProjectName(p.projectName || '');
       setTagline(p.tagline || '');
       setDescription(p.description || '');
@@ -182,22 +212,39 @@ export default function BuilderNewProjectPage() {
       if (p.unitTypes?.length) {
         const serverIds = new Set<string>(p.unitTypes.map((u: any) => u.id).filter(Boolean));
         setExistingUnitTypeIds(serverIds);
-        setUnitTypes(p.unitTypes.map((u: any) => ({
-          id: u.id || crypto.randomUUID(),
-          name: u.name || '',
-          bhk: u.bhk?.toString() || '2',
-          superBuiltUpAreaSqft: u.superBuiltUpAreaSqft?.toString() || '',
-          carpetAreaSqft: u.carpetAreaSqft?.toString() || '',
-          basePricePaise: u.basePricePaise ? (u.basePricePaise / 100).toString() : '',
-          floorRisePaise: u.floorRisePaise ? (u.floorRisePaise / 100).toString() : '',
-          facingPremiumPaise: u.facingPremiumPaise ? (u.facingPremiumPaise / 100).toString() : '',
-          totalUnits: u.totalUnits?.toString() || '',
-          bathrooms: u.bathrooms?.toString() || '2',
-          balconies: u.balconies?.toString() || '1',
-          furnishing: u.furnishing || 'UNFURNISHED',
-          floorPlanFile: null,
-          floorPlanPreview: u.floorPlanUrl || '',
-        })));
+        setUnitTypes(p.unitTypes.map((u: any) => {
+          // Infer kind: trust server value if present; fall back to project type;
+          // last resort — if BHK is null/0 and plotAreaSqft is set, it's a PLOT.
+          const kind: 'UNIT' | 'PLOT' = u.unitKind === 'PLOT' ? 'PLOT'
+            : u.unitKind === 'UNIT' ? 'UNIT'
+            : (p.projectType === 'PLOTTED_DEVELOPMENT') ? 'PLOT'
+            : (u.plotAreaSqft && !u.bhk) ? 'PLOT'
+            : 'UNIT';
+          return {
+            id: u.id || crypto.randomUUID(),
+            unitKind: kind,
+            name: u.name || '',
+            bhk: u.bhk?.toString() || (kind === 'UNIT' ? '2' : ''),
+            superBuiltUpAreaSqft: u.superBuiltUpAreaSqft?.toString() || '',
+            carpetAreaSqft: u.carpetAreaSqft?.toString() || '',
+            basePricePaise: u.basePricePaise ? (u.basePricePaise / 100).toString() : '',
+            floorRisePaise: u.floorRisePaise ? (u.floorRisePaise / 100).toString() : '',
+            facingPremiumPaise: u.facingPremiumPaise ? (u.facingPremiumPaise / 100).toString() : '',
+            totalUnits: u.totalUnits?.toString() || '',
+            bathrooms: u.bathrooms?.toString() || (kind === 'UNIT' ? '2' : ''),
+            balconies: u.balconies?.toString() || (kind === 'UNIT' ? '1' : ''),
+            furnishing: u.furnishing || 'UNFURNISHED',
+            // Plot fields — server returns these for PLOT rows
+            plotAreaSqft: u.plotAreaSqft?.toString() || '',
+            plotLengthFt: u.plotLengthFt?.toString() || '',
+            plotBreadthFt: u.plotBreadthFt?.toString() || '',
+            cornerPlot: !!u.cornerPlot,
+            facing: u.facing || '',
+            pricePerSqftPaise: u.pricePerSqftPaise ? (u.pricePerSqftPaise / 100).toString() : '',
+            floorPlanFile: null,
+            floorPlanPreview: u.floorPlanUrl || '',
+          };
+        }));
       }
     }).catch(() => {
       alert('Failed to load project');
@@ -263,7 +310,8 @@ export default function BuilderNewProjectPage() {
   }
 
   function addUnitType() {
-    setUnitTypes(prev => [...prev, createEmptyUnit()]);
+    const kind = projectType === 'PLOTTED_DEVELOPMENT' ? 'PLOT' : 'UNIT';
+    setUnitTypes(prev => [...prev, createEmptyUnit(kind)]);
   }
 
   function removeUnitType(id: string) {
@@ -288,15 +336,56 @@ export default function BuilderNewProjectPage() {
   }
 
   function canProceed(): boolean {
-    switch (step) {
-      case 0: return builderName.trim().length > 0;
-      case 1: return projectName.trim().length > 0 && !!projectStatus;
-      case 2: return city.trim().length > 0;
-      case 3: return unitTypes.every(u => u.name.trim() && u.superBuiltUpAreaSqft && u.basePricePaise && u.totalUnits);
-      case 4: return true;
-      case 5: return true;
-      default: return true;
+    return validateStep(step).length === 0;
+  }
+
+  /**
+   * Per-step validation. Returns a list of human-readable errors. Empty list
+   * = step is valid. PLOT and UNIT rows have different required fields, so
+   * step 3 walks each row and applies the right rules.
+   */
+  function validateStep(s: number): string[] {
+    const errors: string[] = [];
+    switch (s) {
+      case 0:
+        if (!builderName.trim()) errors.push('Builder name is required');
+        break;
+      case 1:
+        if (!projectType) errors.push('Pick a project type (Apartment / Plotted / Villa)');
+        if (!projectName.trim()) errors.push('Project name is required');
+        if (!projectStatus) errors.push('Project status is required');
+        break;
+      case 2:
+        if (!city.trim()) errors.push('City is required');
+        break;
+      case 3:
+        if (unitTypes.length === 0) {
+          errors.push('Add at least one ' + (projectType === 'PLOTTED_DEVELOPMENT' ? 'plot configuration' : 'unit type'));
+          break;
+        }
+        unitTypes.forEach((u, i) => {
+          const label = projectType === 'PLOTTED_DEVELOPMENT'
+            ? `Plot config #${i + 1}` : `Unit type #${i + 1}`;
+          if (!u.name.trim()) errors.push(`${label}: name is required`);
+          if (u.unitKind === 'PLOT') {
+            if (!u.plotAreaSqft || Number(u.plotAreaSqft) <= 0)
+              errors.push(`${label}: plot area (sqft) is required`);
+            const hasPerSqft = u.pricePerSqftPaise && Number(u.pricePerSqftPaise) > 0;
+            const hasTotal   = u.basePricePaise && Number(u.basePricePaise) > 0;
+            if (!hasPerSqft && !hasTotal)
+              errors.push(`${label}: enter price per sqft (or total price)`);
+          } else {
+            if (!u.superBuiltUpAreaSqft || Number(u.superBuiltUpAreaSqft) <= 0)
+              errors.push(`${label}: super built-up area is required`);
+            if (!u.basePricePaise || Number(u.basePricePaise) <= 0)
+              errors.push(`${label}: base price is required`);
+            if (!u.totalUnits || Number(u.totalUnits) <= 0)
+              errors.push(`${label}: total units is required`);
+          }
+        });
+        break;
     }
+    return errors;
   }
 
   async function handleSubmit() {
@@ -343,6 +432,7 @@ export default function BuilderNewProjectPage() {
       const projectData: any = {
         builderName,
         builderLogoUrl: uploadedLogoUrl || undefined,
+        projectType,
         reraId: reraId || undefined,
         projectName,
         tagline: tagline || undefined,
@@ -389,8 +479,23 @@ export default function BuilderNewProjectPage() {
         // Skip existing unit types that haven't changed
         if (isEdit && existingUnitTypeIds.has(unit.id)) continue;
 
-        const unitData: any = {
+        const isPlot = unit.unitKind === 'PLOT';
+        const unitData: any = isPlot ? {
           name: unit.name,
+          unitKind: 'PLOT',
+          plotAreaSqft: Number(unit.plotAreaSqft),
+          plotLengthFt: unit.plotLengthFt ? Number(unit.plotLengthFt) : undefined,
+          plotBreadthFt: unit.plotBreadthFt ? Number(unit.plotBreadthFt) : undefined,
+          cornerPlot: !!unit.cornerPlot,
+          facing: unit.facing || undefined,
+          pricePerSqftPaise: unit.pricePerSqftPaise ? Math.round(Number(unit.pricePerSqftPaise) * 100) : undefined,
+          // basePricePaise is computed server-side from perSqft × area; send if user typed total
+          basePricePaise: unit.basePricePaise ? Math.round(Number(unit.basePricePaise) * 100) : undefined,
+          totalUnits: unit.totalUnits ? Number(unit.totalUnits) : undefined,
+          floorPlanUrl: unit.floorPlanPreview || undefined,
+        } : {
+          name: unit.name,
+          unitKind: 'UNIT',
           bhk: Number(unit.bhk),
           superBuiltUpAreaSqft: Number(unit.superBuiltUpAreaSqft),
           carpetAreaSqft: unit.carpetAreaSqft ? Number(unit.carpetAreaSqft) : undefined,
@@ -429,7 +534,10 @@ export default function BuilderNewProjectPage() {
         <div className="max-w-4xl mx-auto px-4 py-4 flex items-center justify-between">
           <div>
             <h1 className="text-xl font-bold text-gray-900">{isEdit ? 'Edit Project' : 'Create New Project'}</h1>
-            <p className="text-sm text-gray-500">{STEP_LABELS[step]} (Step {step + 1} of {STEP_LABELS.length})</p>
+            <p className="text-sm text-gray-500">
+              {step === 3 && projectType === 'PLOTTED_DEVELOPMENT' ? 'Plot Configurations' : STEP_LABELS[step]}
+              {' '}(Step {step + 1} of {STEP_LABELS.length})
+            </p>
           </div>
           <button onClick={() => router.back()} className="text-gray-400 hover:text-gray-600 text-sm">Cancel</button>
         </div>
@@ -508,6 +616,36 @@ export default function BuilderNewProjectPage() {
         {step === 1 && (
           <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100 space-y-5">
             <h2 className="text-lg font-semibold text-gray-900 mb-2">Project Information</h2>
+
+            {/* Project type — drives the unit-types step (apartments vs plots) */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">What kind of project? *</label>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                {PROJECT_TYPES.map(t => {
+                  const active = projectType === t.value;
+                  return (
+                    <button
+                      key={t.value}
+                      type="button"
+                      onClick={() => {
+                        setProjectType(t.value as any);
+                        // Re-seed unit rows with the correct kind so step 3 starts clean
+                        const newKind = t.value === 'PLOTTED_DEVELOPMENT' ? 'PLOT' : 'UNIT';
+                        setUnitTypes(prev => prev.length === 1 && !prev[0].name
+                          ? [createEmptyUnit(newKind)]
+                          : prev);
+                      }}
+                      className={`text-left p-3 rounded-xl border-2 transition ${
+                        active ? 'border-orange-500 bg-orange-50' : 'border-gray-200 hover:border-gray-300'
+                      }`}>
+                      <div className="text-xl mb-1">{t.icon}</div>
+                      <div className="text-sm font-semibold text-gray-900">{t.label}</div>
+                      <div className="text-[11px] text-gray-500 leading-snug mt-1">{t.desc}</div>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Project Name *</label>
@@ -710,7 +848,9 @@ export default function BuilderNewProjectPage() {
         {step === 3 && (
           <div className="space-y-4">
             <div className="flex items-center justify-between">
-              <h2 className="text-lg font-semibold text-gray-900">Unit Types</h2>
+              <h2 className="text-lg font-semibold text-gray-900">
+                {projectType === 'PLOTTED_DEVELOPMENT' ? 'Plot Configurations' : 'Unit Types'}
+              </h2>
               <button
                 onClick={addUnitType}
                 className="text-sm font-medium text-orange-500 hover:text-orange-600 flex items-center gap-1"
@@ -718,30 +858,124 @@ export default function BuilderNewProjectPage() {
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
                 </svg>
-                Add Unit Type
+                {projectType === 'PLOTTED_DEVELOPMENT' ? 'Add Plot Configuration' : 'Add Unit Type'}
               </button>
             </div>
 
             {unitTypes.map((unit, idx) => (
               <div key={unit.id} className="bg-white rounded-xl p-6 shadow-sm border border-gray-100 space-y-4">
                 <div className="flex items-center justify-between">
-                  <h3 className="font-semibold text-gray-800">Unit Type #{idx + 1}</h3>
+                  <h3 className="font-semibold text-gray-800">
+                    {unit.unitKind === 'PLOT' ? `Plot Configuration #${idx + 1}` : `Unit Type #${idx + 1}`}
+                  </h3>
                   {unitTypes.length > 1 && (
                     <button onClick={() => removeUnitType(unit.id)} className="text-red-400 hover:text-red-600 text-sm">Remove</button>
                   )}
                 </div>
 
+                {/* Name + plot/unit fields branch by unitKind */}
+                <div>
+                  <label className="block text-xs font-medium text-gray-500 mb-1">
+                    {unit.unitKind === 'PLOT' ? 'Plot Configuration Name *' : 'Unit Name *'}
+                  </label>
+                  <input
+                    type="text"
+                    value={unit.name}
+                    onChange={e => updateUnit(unit.id, 'name', e.target.value)}
+                    placeholder={unit.unitKind === 'PLOT' ? 'e.g. 30×40 East-Facing' : 'e.g. Type A - 2 BHK'}
+                    className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400"
+                  />
+                </div>
+
+                {/* ── PLOT CONFIGURATION BLOCK ── */}
+                {unit.unitKind === 'PLOT' && (
+                  <>
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                      <div>
+                        <label className="block text-xs font-medium text-gray-500 mb-1">Plot Area (sqft) *</label>
+                        <input type="number" value={unit.plotAreaSqft}
+                          onChange={e => updateUnit(unit.id, 'plotAreaSqft', e.target.value)}
+                          placeholder="e.g. 1200"
+                          className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-gray-500 mb-1">Length (ft)</label>
+                        <input type="number" value={unit.plotLengthFt}
+                          onChange={e => updateUnit(unit.id, 'plotLengthFt', e.target.value)}
+                          placeholder="e.g. 30"
+                          className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-gray-500 mb-1">Breadth (ft)</label>
+                        <input type="number" value={unit.plotBreadthFt}
+                          onChange={e => updateUnit(unit.id, 'plotBreadthFt', e.target.value)}
+                          placeholder="e.g. 40"
+                          className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-gray-500 mb-1">Facing</label>
+                        <select value={unit.facing}
+                          onChange={e => updateUnit(unit.id, 'facing', e.target.value)}
+                          className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400"
+                        >
+                          <option value="">—</option>
+                          {FACINGS.map(f => <option key={f} value={f}>{f}</option>)}
+                        </select>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                      <div>
+                        <label className="block text-xs font-medium text-gray-500 mb-1">Price per sqft (₹) *</label>
+                        <input type="number" value={unit.pricePerSqftPaise}
+                          onChange={e => {
+                            updateUnit(unit.id, 'pricePerSqftPaise', e.target.value);
+                            // Auto-compute total when both are present
+                            const area = Number(unit.plotAreaSqft);
+                            const perSqft = Number(e.target.value);
+                            if (area > 0 && perSqft > 0) {
+                              updateUnit(unit.id, 'basePricePaise', String(area * perSqft));
+                            }
+                          }}
+                          placeholder="e.g. 6500 (= ₹6,500/sqft)"
+                          className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-gray-500 mb-1">Total Price (₹)</label>
+                        <input type="number" value={unit.basePricePaise}
+                          onChange={e => updateUnit(unit.id, 'basePricePaise', e.target.value)}
+                          placeholder="auto-computed"
+                          className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm bg-gray-50 focus:outline-none focus:ring-2 focus:ring-orange-400"
+                        />
+                        <p className="text-[10px] text-gray-400 mt-1">Auto-fills as price/sqft × area; you can override.</p>
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-gray-500 mb-1">Total Plots Available</label>
+                        <input type="number" value={unit.totalUnits}
+                          onChange={e => updateUnit(unit.id, 'totalUnits', e.target.value)}
+                          placeholder="e.g. 24"
+                          className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400"
+                        />
+                      </div>
+                    </div>
+
+                    <label className="inline-flex items-center gap-2 text-sm text-gray-700">
+                      <input type="checkbox" checked={unit.cornerPlot}
+                        onChange={e => updateUnit(unit.id, 'cornerPlot', e.target.checked)}
+                        className="rounded text-orange-500 focus:ring-orange-400"
+                      />
+                      Corner plot (typically commands a 5–10% premium)
+                    </label>
+                  </>
+                )}
+
+                {/* ── APARTMENT/VILLA UNIT BLOCK ── */}
+                {unit.unitKind === 'UNIT' && (
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                  <div>
-                    <label className="block text-xs font-medium text-gray-500 mb-1">Unit Name *</label>
-                    <input
-                      type="text"
-                      value={unit.name}
-                      onChange={e => updateUnit(unit.id, 'name', e.target.value)}
-                      placeholder="e.g. Type A - 2 BHK"
-                      className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400"
-                    />
-                  </div>
                   <div>
                     <label className="block text-xs font-medium text-gray-500 mb-1">BHK *</label>
                     <select
@@ -764,9 +998,6 @@ export default function BuilderNewProjectPage() {
                       className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400"
                     />
                   </div>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                   <div>
                     <label className="block text-xs font-medium text-gray-500 mb-1">Carpet Area (sqft)</label>
                     <input
@@ -776,6 +1007,15 @@ export default function BuilderNewProjectPage() {
                       placeholder="e.g. 950"
                       className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400"
                     />
+                  </div>
+                </div>
+                )}
+
+                {unit.unitKind === 'UNIT' && (<>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                  <div className="hidden">
+                    {/* Carpet area duplicate — already shown in BHK row above for UNIT. Kept for state binding compat. */}
+                    <input value={unit.carpetAreaSqft} onChange={e => updateUnit(unit.id, 'carpetAreaSqft', e.target.value)} />
                   </div>
                   <div>
                     <label className="block text-xs font-medium text-gray-500 mb-1">Base Price (₹) *</label>
@@ -869,6 +1109,7 @@ export default function BuilderNewProjectPage() {
                     )}
                   </div>
                 </div>
+                </>)}
               </div>
             ))}
           </div>
@@ -1067,7 +1308,7 @@ export default function BuilderNewProjectPage() {
                 <div><span className="text-gray-500">Project:</span> <span className="font-medium">{projectName || '-'}</span></div>
                 <div><span className="text-gray-500">City:</span> <span className="font-medium">{city || '-'}</span></div>
                 <div><span className="text-gray-500">Status:</span> <span className="font-medium">{projectStatus?.replace(/_/g, ' ') || '-'}</span></div>
-                <div><span className="text-gray-500">Unit Types:</span> <span className="font-medium">{unitTypes.filter(u => u.name.trim()).length}</span></div>
+                <div><span className="text-gray-500">{projectType === 'PLOTTED_DEVELOPMENT' ? 'Plot Configurations' : 'Unit Types'}:</span> <span className="font-medium">{unitTypes.filter(u => u.name.trim()).length}</span></div>
                 <div><span className="text-gray-500">Amenities:</span> <span className="font-medium">{selectedAmenities.length}</span></div>
                 <div><span className="text-gray-500">Photos:</span> <span className="font-medium">{photoPreviews.length}</span></div>
                 <div><span className="text-gray-500">RERA:</span> <span className="font-medium">{reraId || 'Not provided'}</span></div>
@@ -1077,6 +1318,19 @@ export default function BuilderNewProjectPage() {
         )}
 
         {/* ── Navigation Buttons ── */}
+        {/* Inline validation errors for current step */}
+        {validateStep(step).length > 0 && (
+          <div className="mt-6 bg-red-50 border border-red-200 rounded-xl px-4 py-3">
+            <p className="text-xs font-semibold text-red-700 mb-1">Fix the following before continuing:</p>
+            <ul className="text-xs text-red-600 list-disc list-inside space-y-0.5">
+              {validateStep(step).slice(0, 6).map((e, i) => <li key={i}>{e}</li>)}
+              {validateStep(step).length > 6 && (
+                <li className="text-red-500 italic">…and {validateStep(step).length - 6} more</li>
+              )}
+            </ul>
+          </div>
+        )}
+
         <div className="flex items-center justify-between mt-8">
           <button
             onClick={() => setStep(prev => Math.max(0, prev - 1))}

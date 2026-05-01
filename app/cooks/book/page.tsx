@@ -506,7 +506,7 @@ export default function BookCookPage() {
             options={APPLIANCE_OPTIONS}
             selected={appliances}
             onChange={setAppliances}
-            hint="Helps the chef know what's ready to use."
+            hint="Helps the cook know what's ready to use."
           />
         )}
         {serviceType === 'DAILY' && (

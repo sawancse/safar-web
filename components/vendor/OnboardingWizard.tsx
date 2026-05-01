@@ -305,6 +305,10 @@ function FieldRow({
         </div>
       )}
 
+      {field.type === 'image' && (
+        <ImageField value={value} onChange={setValue} placeholder={field.placeholder} />
+      )}
+
       {field.helpText && <p className="text-xs text-gray-500 mt-1">{field.helpText}</p>}
     </div>
   );
@@ -375,6 +379,64 @@ function KycDocField({
       <p className="text-[11px] text-gray-400 mt-2">
         V1: paste S3 URL after uploading via media-service. V2 will add a direct file picker.
       </p>
+    </div>
+  );
+}
+
+function ImageField({ value, onChange, placeholder }: {
+  value?: string; onChange: (url: string) => void; placeholder?: string;
+}) {
+  const [busy, setBusy] = useState(false);
+  const [err, setErr]   = useState<string | null>(null);
+
+  async function pick(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith('image/')) { setErr('Please pick an image file'); return; }
+    if (file.size > 10 * 1024 * 1024)    { setErr('Image must be under 10 MB');  return; }
+    setErr(null);
+    setBusy(true);
+    try {
+      const t = (typeof window !== 'undefined' ? localStorage.getItem('access_token') : '') || '';
+      const url = await api.uploadGenericFile(file, 'vendor-onboarding', t);
+      onChange(url);
+    } catch (e: any) {
+      setErr(e?.message || 'Upload failed');
+    } finally {
+      setBusy(false);
+      e.target.value = '';
+    }
+  }
+
+  return (
+    <div>
+      {value ? (
+        <div className="flex items-center gap-3">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={value} alt="Hero" className="w-24 h-24 object-cover rounded-lg border" />
+          <div className="flex-1 min-w-0">
+            <p className="text-xs text-gray-500 truncate">{value}</p>
+            <div className="mt-1 flex gap-2">
+              <label className="cursor-pointer text-xs font-semibold text-orange-600 hover:underline">
+                Replace
+                <input type="file" accept="image/*" className="hidden" onChange={pick} disabled={busy} />
+              </label>
+              <button type="button" onClick={() => onChange('')}
+                className="text-xs font-semibold text-gray-500 hover:text-red-600">
+                Remove
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : (
+        <label className="flex flex-col items-center justify-center cursor-pointer border-2 border-dashed border-gray-300 rounded-xl px-4 py-8 hover:border-orange-400 hover:bg-orange-50/40 transition">
+          <span className="text-2xl mb-1">📷</span>
+          <span className="text-sm font-semibold text-gray-700">{busy ? 'Uploading…' : 'Browse a photo'}</span>
+          <span className="text-[11px] text-gray-500 mt-1">{placeholder || 'JPG / PNG, under 10 MB'}</span>
+          <input type="file" accept="image/*" className="hidden" onChange={pick} disabled={busy} />
+        </label>
+      )}
+      {err && <p className="text-xs text-red-500 mt-1">{err}</p>}
     </div>
   );
 }

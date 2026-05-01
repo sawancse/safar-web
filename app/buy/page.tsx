@@ -232,10 +232,31 @@ export default function BuyPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  /* Tab from URL */
-  const urlTab = searchParams.get('tab') as TabKey | null;
+  /* Tab from URL — supports `?tab=plots` (canonical) and `?type=plot` /
+   * `?type=land` / `?type=villa` / `?type=farm` (deep-link aliases that map
+   * to the right tab without forcing callers to know the internal tab key). */
+  const urlTab  = searchParams.get('tab') as TabKey | null;
+  const urlType = (searchParams.get('type') || '').toLowerCase();
+  const TYPE_ALIAS: Record<string, TabKey> = {
+    plot:       'plots',
+    plots:      'plots',
+    land:       'plots',
+    villa:      'villa',
+    villas:     'villa',
+    house:      'villa',
+    farm:       'farmland',
+    farmland:   'farmland',
+    agriculture:'farmland',
+    commercial: 'commercial',
+    resale:     'resale',
+    project:    'projects',
+    projects:   'projects',
+  };
+  const aliasedTab = TYPE_ALIAS[urlType];
   const [activeTab, setActiveTab] = useState<TabKey>(
-    urlTab && TAB_OPTIONS.some(t => t.key === urlTab) ? urlTab : 'all'
+    urlTab && TAB_OPTIONS.some(t => t.key === urlTab) ? urlTab
+    : aliasedTab ? aliasedTab
+    : 'all'
   );
 
   /* Filters */
@@ -330,8 +351,31 @@ export default function BuyPage() {
         const res = await api.searchBuilderProjects(buildBuilderParams(pageNum));
         (res?.content || []).forEach((d: BuilderProject) => mixed.push({ type: 'builder', data: d }));
         total = res?.totalHits || res?.totalElements || 0;
+      } else if (activeTab === 'plots' || activeTab === 'farmland' || activeTab === 'villa') {
+        // Plots / Farmland / Villas — fetch both sale properties (individual sellers)
+        // AND builder projects (plotted developments / villa communities) so the
+        // tab shows the full inventory in this category.
+        const projectTypeFilter = activeTab === 'plots' ? 'PLOTTED_DEVELOPMENT'
+                                : activeTab === 'villa' ? 'VILLA_COMMUNITY'
+                                : null;
+        const [saleRes, builderRes] = await Promise.all([
+          api.searchSaleProperties(buildSaleParams(pageNum)),
+          projectTypeFilter
+            ? api.searchBuilderProjects({ ...buildBuilderParams(pageNum), projectType: projectTypeFilter }).catch(() => null)
+            : Promise.resolve(null),
+        ]);
+        const sales = (saleRes?.content || []).map((d: SaleProperty) => ({ type: 'sale' as const, data: d }));
+        const builders = (builderRes?.content || [])
+          .map((d: BuilderProject) => ({ type: 'builder' as const, data: d }));
+        // Interleave so buyers see both seller and builder options together
+        const maxLen = Math.max(sales.length, builders.length);
+        for (let i = 0; i < maxLen; i++) {
+          if (i < builders.length) mixed.push(builders[i]);
+          if (i < sales.length) mixed.push(sales[i]);
+        }
+        total = (saleRes?.totalHits || saleRes?.totalElements || 0) + builders.length;
       } else {
-        // resale or plots
+        // resale or commercial
         const res = await api.searchSaleProperties(buildSaleParams(pageNum));
         (res?.content || []).forEach((d: SaleProperty) => mixed.push({ type: 'sale', data: d }));
         total = res?.totalHits || res?.totalElements || 0;

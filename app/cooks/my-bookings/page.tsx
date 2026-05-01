@@ -137,7 +137,7 @@ export default function MyChefBookingsPage() {
         }
       } catch { /* fall through */ }
     }
-    return 'the chef';
+    return 'the cook';
   }
   const sentenceCase = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 
@@ -413,7 +413,10 @@ export default function MyChefBookingsPage() {
                 <div key={b.id} className="border rounded-xl p-4">
                   <div className="flex items-start justify-between">
                     <div>
-                      <p className="font-semibold text-gray-900">{b.chefName || 'Cook'}</p>
+                      <Link href={`/cooks/my-bookings/${b.id}`} className="font-semibold text-gray-900 hover:text-orange-600 transition inline-flex items-center gap-1">
+                        {b.chefName || 'Cook'}
+                        <span className="text-xs text-orange-500">→</span>
+                      </Link>
                       <p className="text-xs text-gray-500">Ref: {b.bookingRef} · {formatDateTime(b.serviceDate, b.serviceTime)}</p>
                       <p className="text-xs text-gray-500">{b.mealType} | {b.guestsCount} guests | {b.address}</p>
                       {b.createdAt && <p className="text-[11px] text-gray-400 mt-0.5">Booked on {formatBookedOn(b.createdAt)}</p>}
@@ -619,7 +622,10 @@ export default function MyChefBookingsPage() {
                 <div key={e.id} className="border rounded-xl p-4">
                   <div className="flex items-start justify-between">
                     <div>
-                      <p className="font-semibold text-gray-900">{eventHeading(e)}</p>
+                      <Link href={`/cooks/my-bookings/${e.id}`} className="font-semibold text-gray-900 hover:text-orange-600 transition inline-flex items-center gap-1">
+                        {eventHeading(e)}
+                        <span className="text-xs text-orange-500">→</span>
+                      </Link>
                       <p className="text-xs text-gray-500">Ref: {e.bookingRef} · {formatDateTime(e.eventDate, e.eventTime)}{e.eventType ? ` · ${formatOccasion(e.eventType)}` : ''}</p>
                       <p className="text-xs text-gray-500">{e.guestCount} guests | {e.venueAddress}</p>
                       {e.createdAt && <p className="text-[11px] text-gray-400 mt-0.5">Booked on {formatBookedOn(e.createdAt)}</p>}
@@ -895,7 +901,7 @@ export default function MyChefBookingsPage() {
                     options={APPLIANCE_OPTIONS}
                     selected={editForm.appliances || []}
                     onChange={(v) => setEditForm({...editForm, appliances: v})}
-                    hint="Helps the chef know what's ready to use."
+                    hint="Helps the cook know what's ready to use."
                   />
                   <Chips
                     label="Crockery available for serving"

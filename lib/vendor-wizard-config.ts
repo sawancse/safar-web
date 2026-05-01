@@ -16,7 +16,7 @@
  */
 
 export type WizardFieldType =
-  | 'text' | 'textarea' | 'number' | 'select' | 'multiselect' | 'boolean' | 'kyc-doc';
+  | 'text' | 'textarea' | 'number' | 'select' | 'multiselect' | 'boolean' | 'kyc-doc' | 'image';
 
 export type WizardField = {
   key: string;
@@ -55,7 +55,7 @@ const COMMON_BUSINESS_FIELDS: WizardField[] = [
   { key: 'tagline',       label: 'Tagline (one line)',      type: 'text',     placeholder: 'Bespoke wedding cakes since 2018' },
   { key: 'aboutMd',       label: 'About / story',           type: 'textarea', helpText: 'Tell customers what makes you unique. Markdown supported.' },
   { key: 'foundedYear',   label: 'Founded year',            type: 'number' },
-  { key: 'heroImageUrl',  label: 'Hero photo URL',          type: 'text',     helpText: 'Upload to media-service first, paste S3 URL here. (V1 — image picker comes V2.)' },
+  { key: 'heroImageUrl',  label: 'Hero photo',              type: 'image',    helpText: 'Browse a photo from your device — we\'ll upload it for you.' },
 ];
 
 const COMMON_COVERAGE_FIELDS: WizardField[] = [
