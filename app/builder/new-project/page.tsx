@@ -131,6 +131,7 @@ export default function BuilderNewProjectPage() {
   const [builderName, setBuilderName] = useState('');
   const [builderLogoFile, setBuilderLogoFile] = useState<File | null>(null);
   const [builderLogoPreview, setBuilderLogoPreview] = useState('');
+  const [builderPhone, setBuilderPhone] = useState('');
   const [reraId, setReraId] = useState('');
 
   /* Step 1: Project Info */
@@ -182,6 +183,7 @@ export default function BuilderNewProjectPage() {
     api.getBuilderProject(editId).then((p: any) => {
       setBuilderName(p.builderName || '');
       setBuilderLogoPreview(p.builderLogoUrl || '');
+      setBuilderPhone(p.builderPhone || '');
       setReraId(p.reraId || '');
       if (p.projectType) setProjectType(p.projectType);
       setProjectName(p.projectName || '');
@@ -192,7 +194,14 @@ export default function BuilderNewProjectPage() {
       setPossessionDate(p.possessionDate || '');
       setTotalTowers(p.totalTowers?.toString() || '');
       setTotalFloors(p.totalFloors?.toString() || '');
-      setLandAreaAcres(p.landAreaAcres?.toString() || '');
+      // Backend stores land area in sqft (canonical with other area columns).
+      // Wizard captures it in acres for builder convenience — convert on hydrate.
+      // 1 acre = 43,560 sqft.
+      setLandAreaAcres(
+        p.landAreaSqft
+          ? (p.landAreaSqft / 43560).toFixed(2).replace(/\.00$/, '')
+          : ''
+      );
       setCity(p.city || '');
       setState(p.state || '');
       setLocality(p.locality || '');
@@ -349,6 +358,11 @@ export default function BuilderNewProjectPage() {
     switch (s) {
       case 0:
         if (!builderName.trim()) errors.push('Builder name is required');
+        if (builderPhone.trim()) {
+          // Optional, but if provided must be a valid 10-digit India number
+          const digits = builderPhone.replace(/\D/g, '').replace(/^91/, '').replace(/^0+/, '');
+          if (digits.length !== 10) errors.push('WhatsApp / phone must be a 10-digit India number');
+        }
         break;
       case 1:
         if (!projectType) errors.push('Pick a project type (Apartment / Plotted / Villa)');
@@ -432,6 +446,7 @@ export default function BuilderNewProjectPage() {
       const projectData: any = {
         builderName,
         builderLogoUrl: uploadedLogoUrl || undefined,
+        builderPhone: builderPhone.trim() || undefined,
         projectType,
         reraId: reraId || undefined,
         projectName,
@@ -442,7 +457,11 @@ export default function BuilderNewProjectPage() {
         possessionDate: possessionDate || undefined,
         totalTowers: totalTowers ? Number(totalTowers) : undefined,
         totalFloors: totalFloors ? Number(totalFloors) : undefined,
-        landAreaAcres: landAreaAcres ? Number(landAreaAcres) : undefined,
+        // Submit as landAreaSqft (matches backend DTO). Wizard captures acres,
+        // we convert: 1 acre = 43,560 sqft.
+        landAreaSqft: landAreaAcres
+          ? Math.round(Number(landAreaAcres) * 43560)
+          : undefined,
         city,
         state: state || undefined,
         locality: locality || undefined,
@@ -596,6 +615,20 @@ export default function BuilderNewProjectPage() {
                   <input id="builder-logo-input" type="file" accept="image/*" onChange={handleLogoChange} className="hidden" />
                 </div>
               </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">WhatsApp / Phone</label>
+              <input
+                type="tel"
+                value={builderPhone}
+                onChange={e => setBuilderPhone(e.target.value)}
+                placeholder="10-digit India mobile, e.g. 9876543210"
+                inputMode="numeric"
+                maxLength={15}
+                className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400"
+              />
+              <p className="text-xs text-gray-400 mt-1">Buyers see a "WhatsApp Builder" button on your project page that opens a chat with this number.</p>
             </div>
 
             <div>
@@ -1289,7 +1322,7 @@ export default function BuilderNewProjectPage() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Walkthrough Video URL</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Virtual Tour Video URL</label>
                 <input
                   type="url"
                   value={walkthroughUrl}
@@ -1297,6 +1330,7 @@ export default function BuilderNewProjectPage() {
                   placeholder="https://youtube.com/watch?v=..."
                   className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400"
                 />
+                <p className="text-xs text-gray-500 mt-1">Paste a YouTube link — buyers see this on your project page as the &quot;Virtual Tour&quot; section.</p>
               </div>
             </div>
 
