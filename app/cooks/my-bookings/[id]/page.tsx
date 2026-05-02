@@ -65,6 +65,11 @@ export default function ChefBookingDetailPage() {
   const [sending, setSending] = useState(false);
   const [conversationId, setConversationId] = useState<string | null>(null);
   const [showSecondary, setShowSecondary] = useState(false);
+  // For event bookings assigned to a self-service vendor (pandit/decor/cake/
+  // singer/staff), booking.chefId is null because the vendor is a PartnerVendor
+  // row, not a ChefProfile. Resolve the vendor's userId from the active vendor
+  // assignment so chat has someone to send to.
+  const [vendorUserId, setVendorUserId] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // Keep tab in sync with ?event= and vice versa
@@ -130,17 +135,30 @@ export default function ChefBookingDetailPage() {
         const list = res?.content ?? res ?? [];
         setMessages(Array.isArray(list) ? list : []);
       }
+
+      // If this is an event booking assigned to a vendor (no chefId), grab
+      // the vendor's userId so chat knows who to send to.
+      if (kind === 'event' && !bk.chefId) {
+        try {
+          const v = await api.getEventActiveVendor(bookingId, t);
+          if (v?.vendorUserId) setVendorUserId(v.vendorUserId);
+        } catch { /* no vendor yet — chat just shows the empty state */ }
+      }
     } finally { setLoading(false); }
   }
 
   async function handleSend() {
     if (!newMessage.trim() || !token || sending) return;
+    const recipientId = booking?.chefId || vendorUserId || '';
+    if (!recipientId) {
+      alert('No provider assigned to this booking yet — chat unavailable.');
+      return;
+    }
     setSending(true);
     try {
-      const chefId = booking?.chefId || '';
       await api.sendMessage({
         listingId: bookingId,
-        recipientId: chefId,
+        recipientId,
         bookingId: bookingId,
         content: newMessage.trim(),
       }, token);
