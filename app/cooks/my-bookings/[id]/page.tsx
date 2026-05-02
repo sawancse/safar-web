@@ -199,6 +199,7 @@ export default function ChefBookingDetailPage() {
           <TrackingPanel
             bookingId={bookingId}
             booking={booking}
+            bookingKind={bookingKind}
             chef={chef}
             onBookingUpdated={(bk) => setBooking((prev: any) => ({ ...prev, ...bk }))}
           />
@@ -208,10 +209,21 @@ export default function ChefBookingDetailPage() {
         <VendorChip bookingId={bookingId} token={token} />
 
 
-        {/* Tabs */}
+        {/* Tabs — Pay/Rate/OTP-content are customer-only actions. When a vendor
+            opens this page, hide Pay/Rate entirely (they have no business here)
+            and keep OTP visible only as a 🔒 placeholder (handled inside OtpTab). */}
+        {(() => {
+          const isCustomerViewer = !!userId && booking.customerId && userId === booking.customerId;
+          const visibleTabs = TABS.filter(t => isCustomerViewer || (t.key !== 'pay' && t.key !== 'rating'));
+          // If user landed on a hidden tab via deep-link, snap back to ingredients
+          if (!visibleTabs.find(t => t.key === tab)) {
+            // Defer to next tick to avoid setState during render
+            setTimeout(() => setTab('ingredients'), 0);
+          }
+          return (
         <div className="bg-white rounded-xl border overflow-hidden mb-6">
           <div className="flex overflow-x-auto border-b">
-            {TABS.map(t => {
+            {visibleTabs.map(t => {
               const active = tab === t.key;
               return (
                 <button
@@ -243,7 +255,7 @@ export default function ChefBookingDetailPage() {
             )}
             {tab === 'provider'    && <ChefTab chef={chef} booking={booking} />}
             {tab === 'team'        && <TeamTab booking={booking} bookingKind={bookingKind} token={token} />}
-            {tab === 'otp'         && <OtpTab booking={booking} chef={chef} />}
+            {tab === 'otp'         && <OtpTab booking={booking} chef={chef} userId={userId} />}
             {tab === 'pay'         && <PayTab
                                         booking={booking}
                                         bookingKind={bookingKind}
@@ -261,6 +273,8 @@ export default function ChefBookingDetailPage() {
                                       />}
           </div>
         </div>
+          );
+        })()}
 
         {/* Collapsible chat panel (map now lives in the TrackingPanel above) */}
         <div className="bg-white rounded-xl border">
@@ -632,12 +646,30 @@ function ChefTab({ chef, booking }: { chef: any; booking: any }) {
 }
 
 /* ────── Tab: Start-Job OTP ────── */
-function OtpTab({ booking, chef }: { booking: any; chef: any }) {
+function OtpTab({ booking, chef, userId }: { booking: any; chef: any; userId: string }) {
   const [copied, setCopied] = useState(false);
   const otp = booking.startJobOtp;
   const jobStarted = booking.jobStartedAt;
   const chefPhone: string = chef?.phone || booking.chefPhone || '';
   const chefName: string = chef?.name || booking.chefName || 'your chef';
+
+  // The OTP exists to prove the provider is physically with the customer.
+  // If the viewer is NOT the customer (i.e., the vendor opened this page),
+  // we MUST hide the OTP — otherwise they could enter it from anywhere and
+  // defeat the purpose. Vendors enter OTP via their own dashboard input.
+  const isCustomer = !!userId && booking.customerId && userId === booking.customerId;
+  if (!isCustomer && !jobStarted) {
+    return (
+      <div className="text-center py-10 max-w-sm mx-auto">
+        <div className="inline-flex items-center justify-center w-14 h-14 rounded-full bg-gray-100 text-gray-500 text-2xl mb-3">🔒</div>
+        <h3 className="text-base font-semibold text-gray-800 mb-1">OTP visible to the customer only</h3>
+        <p className="text-sm text-gray-500">
+          When you arrive on site, ask the customer for the start-job OTP and enter it on
+          your <Link href="/vendor/dashboard" className="text-orange-500 hover:underline">vendor dashboard</Link> to start the job.
+        </p>
+      </div>
+    );
+  }
 
   function copy() {
     if (!otp) return;
@@ -868,8 +900,8 @@ function RatingTab({ booking, bookingKind, token, onRefresh }: {
 
 type TrackingStage = 'confirmed' | 'enroute' | 'arrived' | 'started' | 'done';
 
-function TrackingPanel({ bookingId, booking, chef, onBookingUpdated }: {
-  bookingId: string; booking: any; chef: any; onBookingUpdated: (bk: any) => void;
+function TrackingPanel({ bookingId, booking, bookingKind, chef, onBookingUpdated }: {
+  bookingId: string; booking: any; bookingKind: 'chef' | 'event' | null; chef: any; onBookingUpdated: (bk: any) => void;
 }) {
   const [tracking, setTracking] = useState<any>(booking);
   const [tick, setTick] = useState(0);
@@ -880,21 +912,26 @@ function TrackingPanel({ bookingId, booking, chef, onBookingUpdated }: {
     return () => clearInterval(t);
   }, []);
 
-  // Active polling while the booking is en route / in progress
+  // Active polling while the booking is en route / in progress.
+  // Chef bookings use the dedicated /chef-bookings/{id}/tracking endpoint;
+  // event bookings re-fetch the full booking (chef_lat/chef_lng live there
+  // directly after V29 — vendor's pushed location lands on the same row).
   useEffect(() => {
     const isLive = booking.status === 'CONFIRMED' || booking.status === 'ADVANCE_PAID' || booking.status === 'IN_PROGRESS';
     if (!isLive) return;
     let cancelled = false;
     const poll = async () => {
       try {
-        const t = await api.getBookingTracking(bookingId);
+        const t = bookingKind === 'event'
+          ? await api.getEventBookingById(bookingId)
+          : await api.getBookingTracking(bookingId);
         if (!cancelled && t) { setTracking((prev: any) => ({ ...prev, ...t })); onBookingUpdated(t); }
       } catch {}
     };
     poll();
     const id = setInterval(poll, 15_000);
     return () => { cancelled = true; clearInterval(id); };
-  }, [bookingId, booking.status]);
+  }, [bookingId, booking.status, bookingKind]);
 
   const chefLat = tracking.chefLat;
   const chefLng = tracking.chefLng;
@@ -921,12 +958,46 @@ function TrackingPanel({ bookingId, booking, chef, onBookingUpdated }: {
   const chefPhone = chef?.phone || booking.chefPhone;
   const directionsHref = hasLoc ? `https://www.google.com/maps/dir/?api=1&destination=${chefLat},${chefLng}` : null;
 
+  // Service-aware label so pandit/decor/cake bookings don't say "Your chef".
+  // Prefers the actual provider name when known; otherwise picks a noun that
+  // matches the service type from menuDescription.
+  const providerLabel: string = chef?.name || (() => {
+    if (booking?.menuDescription) {
+      try {
+        const md = JSON.parse(booking.menuDescription);
+        switch (md?.type) {
+          case 'PANDIT_PUJA':      return 'The pandit';
+          case 'EVENT_DECOR':      return 'The decorator';
+          case 'DESIGNER_CAKE':    return 'The baker';
+          case 'LIVE_MUSIC':       return 'The performer';
+          case 'STAFF_HIRE':       return 'The team';
+          case 'APPLIANCE_RENTAL': return 'The team';
+        }
+      } catch { /* ignore */ }
+    }
+    return 'Your cook';
+  })();
+
+  // When the job is in progress but location isn't being pushed (vendor never
+  // tapped Share Location, or paused it), give the customer something more
+  // useful than the generic "shortly" line.
+  const inProgressNoLoc = booking.status === 'IN_PROGRESS' && !hasLoc;
   const subtitle =
-    current === 'done'     ? 'Thank you for booking with Safar Cooks.' :
-    current === 'started'  ? `${chef?.name || 'Your chef'} has started the job.` :
-    current === 'arrived'  ? `${chef?.name || 'Your chef'} has arrived. Share the start-job OTP from the OTP tab.` :
-    current === 'enroute'  ? `${chef?.name || 'Your chef'} is on the way${eta ? ` · ETA ${eta} min` : ''}.` :
-                             `${chef?.name || 'Your chef'} will share location shortly.`;
+    current === 'done'     ? 'Thank you for booking with Safar.' :
+    current === 'started'  ? (hasLoc
+                                ? `${providerLabel} has started the job.`
+                                : `${providerLabel} has started the job. Tap “Nudge for live location” if you'd like to track them.`) :
+    current === 'arrived'  ? `${providerLabel} has arrived. Share the start-job OTP from the OTP tab.` :
+    current === 'enroute'  ? `${providerLabel} is on the way${eta ? ` · ETA ${eta} min` : ''}.` :
+                             `${providerLabel} will share location shortly.`;
+
+  // WhatsApp nudge — uses the vendor card's phone if we have it.
+  const vendorPhone: string | null = chef?.phone || booking.chefPhone || null;
+  const nudgeWa = vendorPhone
+    ? `https://wa.me/${vendorPhone.replace(/\D/g, '').replace(/^0+/, '').replace(/^(?!91)/, '91')}?text=${encodeURIComponent(
+        `Hi, please share your live location on Safar for booking ${booking.bookingRef ?? ''} so I can track your arrival.`
+      )}`
+    : null;
 
   return (
     <div className="bg-white border rounded-2xl overflow-hidden mb-5 shadow-sm">
@@ -990,8 +1061,18 @@ function TrackingPanel({ bookingId, booking, chef, onBookingUpdated }: {
                 referrerPolicy="no-referrer-when-downgrade"
               />
             ) : (
-              <div className="h-64 flex items-center justify-center text-gray-400 text-sm bg-gray-50">
-                Waiting for chef to share location
+              <div className="h-64 flex flex-col items-center justify-center gap-3 text-gray-400 text-sm bg-gray-50 px-4 text-center">
+                <div>Waiting for {providerLabel.toLowerCase()} to share location</div>
+                {inProgressNoLoc && nudgeWa && (
+                  <a
+                    href={nudgeWa}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="bg-green-500 text-white text-xs font-semibold px-3 py-2 rounded-lg hover:bg-green-600 transition"
+                  >
+                    💬 Nudge for live location
+                  </a>
+                )}
               </div>
             )}
           </div>

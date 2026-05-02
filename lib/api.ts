@@ -2409,6 +2409,29 @@ export const api = {
       headers: { Authorization: `Bearer ${token}` },
     }),
 
+  // V29 — vendor pushes their geolocation + ETA to a booking they're assigned to.
+  updateVendorEventLocation: (eventId: string, lat: number, lng: number, etaMinutes: number | null, token: string) => {
+    const qs = `lat=${lat}&lng=${lng}${etaMinutes != null ? `&etaMinutes=${etaMinutes}` : ''}`;
+    return apiFetch<any>(`/api/v1/chef-events/${eventId}/location?${qs}`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}` },
+    });
+  },
+
+  // V29 — vendor starts the job by entering the OTP customer shared.
+  startEventJobAsVendor: (eventId: string, otp: string, token: string) =>
+    apiFetch<any>(`/api/v1/chef-events/${eventId}/start-job-as-vendor?otp=${encodeURIComponent(otp)}`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}` },
+    }),
+
+  // V29 — vendor marks the booking complete after job is done.
+  completeEventAsVendor: (eventId: string, token: string) =>
+    apiFetch<any>(`/api/v1/chef-events/${eventId}/complete-as-vendor`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}` },
+    }),
+
   getChefIncomingSubscriptions: (token: string) =>
     apiFetch<any[]>('/api/v1/chef-subscriptions/chef', {
       headers: { Authorization: `Bearer ${token}` },

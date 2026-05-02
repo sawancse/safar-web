@@ -91,6 +91,14 @@ export default function VendorDashboardPage() {
   const [error, setError] = useState<string | null>(null);
   const [claimingId, setClaimingId] = useState<string | null>(null);
   const [claimMsg, setClaimMsg] = useState<string | null>(null);
+  // V29 — active geolocation watch per booking. Map<bookingId, watchId>
+  const [sharingMap, setSharingMap] = useState<Record<string, number>>({});
+  const [shareMsg, setShareMsg] = useState<string | null>(null);
+  // OTP modal — null when closed; carries the booking being started
+  const [otpModal, setOtpModal] = useState<Booking | null>(null);
+  const [otpInput, setOtpInput] = useState('');
+  const [otpSubmitting, setOtpSubmitting] = useState(false);
+  const [otpError, setOtpError] = useState<string | null>(null);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -109,6 +117,86 @@ export default function VendorDashboardPage() {
     }).catch((e: any) => setError(e?.message || 'Failed to load dashboard'))
       .finally(() => setLoading(false));
   }, [router]);
+
+  function toggleShareLocation(bookingId: string) {
+    const token = localStorage.getItem('access_token');
+    if (!token) return;
+
+    // Already sharing? Stop the watch + show feedback.
+    const existingWatchId = sharingMap[bookingId];
+    if (existingWatchId !== undefined) {
+      navigator.geolocation.clearWatch(existingWatchId);
+      setSharingMap(prev => {
+        const next = { ...prev };
+        delete next[bookingId];
+        return next;
+      });
+      setShareMsg('📍 Stopped sharing location');
+      setTimeout(() => setShareMsg(null), 3000);
+      return;
+    }
+
+    if (!navigator.geolocation) {
+      setShareMsg('✗ Geolocation not supported on this device');
+      return;
+    }
+
+    const watchId = navigator.geolocation.watchPosition(
+      async (pos) => {
+        try {
+          await api.updateVendorEventLocation(
+            bookingId, pos.coords.latitude, pos.coords.longitude, null, token);
+        } catch (e: any) {
+          console.warn('Location push failed:', e?.message);
+        }
+      },
+      (err) => {
+        setShareMsg(`✗ Location error: ${err.message}`);
+        setSharingMap(prev => {
+          const next = { ...prev };
+          delete next[bookingId];
+          return next;
+        });
+      },
+      { enableHighAccuracy: true, maximumAge: 10_000, timeout: 30_000 }
+    );
+    setSharingMap(prev => ({ ...prev, [bookingId]: watchId }));
+    setShareMsg('📍 Sharing live location — customer can now see you on the map');
+    setTimeout(() => setShareMsg(null), 4000);
+  }
+
+  // Stop any active watches when the user navigates away
+  useEffect(() => {
+    return () => {
+      Object.values(sharingMap).forEach(id => navigator.geolocation.clearWatch(id));
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  async function submitStartJob() {
+    if (!otpModal) return;
+    const token = localStorage.getItem('access_token');
+    if (!token) return;
+    if (!/^\d{4,6}$/.test(otpInput.trim())) {
+      setOtpError('Enter the 4-6 digit OTP the customer shared');
+      return;
+    }
+    setOtpSubmitting(true);
+    setOtpError(null);
+    try {
+      const updated: any = await api.startEventJobAsVendor(otpModal.id, otpInput.trim(), token);
+      // Reflect new status in the list
+      setBookings(prev => prev.map(b => b.id === otpModal.id ? { ...b, ...updated } : b));
+      setOtpModal(null);
+      setOtpInput('');
+      setShareMsg('▶ Job started — customer will see status update');
+      setTimeout(() => setShareMsg(null), 4000);
+    } catch (e: any) {
+      setOtpError(e?.message || 'Could not start job — check OTP and try again');
+    } finally {
+      setOtpSubmitting(false);
+    }
+  }
 
   async function claim(eventId: string) {
     const token = localStorage.getItem('access_token');
@@ -176,6 +264,13 @@ export default function VendorDashboardPage() {
         }`}>{claimMsg}</div>
       )}
 
+      {shareMsg && (
+        <div className={`mb-4 rounded-lg px-3 py-2 text-sm ${
+          shareMsg.startsWith('✗') ? 'bg-red-50 border border-red-200 text-red-700'
+                                    : 'bg-blue-50 border border-blue-200 text-blue-700'
+        }`}>{shareMsg}</div>
+      )}
+
       {error && (
         <div className="bg-red-50 border border-red-200 text-red-700 text-sm rounded-lg px-3 py-2 mb-3">
           {error}
@@ -219,32 +314,67 @@ export default function VendorDashboardPage() {
             </div>
           ) : bookings.map(b => {
             const meta = bookingServiceMeta(b);
+            const sharing = sharingMap[b.id] !== undefined;
+            // Only show share-location button for active bookings (vendor on the way / on site)
+            const canShare = ['CONFIRMED', 'ADVANCE_PAID', 'IN_PROGRESS'].includes(b.status);
+            // Start Job allowed when customer has paid advance / confirmed but vendor hasn't started yet
+            const canStart = ['CONFIRMED', 'ADVANCE_PAID'].includes(b.status) && !(b as any).jobStartedAt;
             return (
-              <Link
-                key={b.id}
-                href={`/cooks/my-bookings/${b.id}`}
-                className="bg-white border border-gray-200 rounded-xl p-4 flex items-start gap-3 hover:border-orange-300 hover:shadow-sm transition">
-                <span className="text-2xl shrink-0">{meta.emoji}</span>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <p className="font-semibold text-gray-900 truncate">{meta.label}</p>
-                    <span className="text-[11px] px-2 py-0.5 rounded-full bg-gray-100 text-gray-700 font-medium">
-                      {b.status}
-                    </span>
+              <div key={b.id} className="bg-white border border-gray-200 rounded-xl p-4">
+                <div className="flex items-start gap-3">
+                  <span className="text-2xl shrink-0">{meta.emoji}</span>
+                  <Link href={`/vendor/bookings/${b.id}`} className="flex-1 min-w-0 hover:opacity-80 transition">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <p className="font-semibold text-gray-900 truncate">{meta.label}</p>
+                      <span className="text-[11px] px-2 py-0.5 rounded-full bg-gray-100 text-gray-700 font-medium">
+                        {b.status}
+                      </span>
+                    </div>
+                    <p className="text-xs text-gray-500 mt-0.5">
+                      Ref: {b.bookingRef} · {b.eventDate} {b.eventTime ?? ''}
+                      {b.eventType ? ` · ${b.eventType}` : ''}
+                    </p>
+                    <p className="text-xs text-gray-500">
+                      {b.guestCount ? `${b.guestCount} guests · ` : ''}{b.city ?? ''}
+                    </p>
+                  </Link>
+                  <div className="text-right shrink-0">
+                    <p className="text-sm font-bold text-gray-900">{formatPaise(b.totalAmountPaise)}</p>
+                    <Link href={`/vendor/bookings/${b.id}`} className="text-[11px] text-orange-500 mt-1 inline-block">View →</Link>
                   </div>
-                  <p className="text-xs text-gray-500 mt-0.5">
-                    Ref: {b.bookingRef} · {b.eventDate} {b.eventTime ?? ''}
-                    {b.eventType ? ` · ${b.eventType}` : ''}
-                  </p>
-                  <p className="text-xs text-gray-500">
-                    {b.guestCount ? `${b.guestCount} guests · ` : ''}{b.city ?? ''}
-                  </p>
                 </div>
-                <div className="text-right shrink-0">
-                  <p className="text-sm font-bold text-gray-900">{formatPaise(b.totalAmountPaise)}</p>
-                  <p className="text-[11px] text-orange-500 mt-1">View →</p>
-                </div>
-              </Link>
+                {(canShare || canStart) && (
+                  <div className="mt-3 pt-3 border-t border-gray-100 flex items-center justify-between gap-2 flex-wrap">
+                    <p className="text-[11px] text-gray-500 min-w-0 flex-1">
+                      {canStart
+                        ? 'On site? Get the OTP from the customer to start the job.'
+                        : sharing
+                          ? 'Live location is being shared with the customer'
+                          : 'Customer is waiting to see your location'}
+                    </p>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      {canShare && (
+                        <button
+                          onClick={() => toggleShareLocation(b.id)}
+                          className={`text-xs font-semibold px-3 py-1.5 rounded-lg transition ${
+                            sharing
+                              ? 'bg-red-500 text-white hover:bg-red-600'
+                              : 'bg-emerald-500 text-white hover:bg-emerald-600'
+                          }`}>
+                          {sharing ? '⏹ Stop sharing' : '📍 Share Live Location'}
+                        </button>
+                      )}
+                      {canStart && (
+                        <button
+                          onClick={() => { setOtpModal(b); setOtpInput(''); setOtpError(null); }}
+                          className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-orange-500 text-white hover:bg-orange-600">
+                          ▶ Start Job
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
             );
           })}
         </div>
@@ -368,6 +498,49 @@ export default function VendorDashboardPage() {
           );
         })}
       </div>
+      )}
+
+      {/* OTP entry modal */}
+      {otpModal && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4"
+             onClick={() => !otpSubmitting && setOtpModal(null)}>
+          <div className="bg-white rounded-2xl max-w-sm w-full p-6 shadow-2xl" onClick={e => e.stopPropagation()}>
+            <h3 className="text-lg font-bold text-gray-900 mb-1">Start Job</h3>
+            <p className="text-xs text-gray-500 mb-4">
+              {otpModal.bookingRef} · {otpModal.eventDate}
+            </p>
+            <p className="text-sm text-gray-700 mb-3">
+              Enter the start-job OTP the customer shared with you. Once started, the booking moves to <strong>In Progress</strong>.
+            </p>
+            <input
+              type="text"
+              inputMode="numeric"
+              maxLength={6}
+              value={otpInput}
+              onChange={e => { setOtpInput(e.target.value.replace(/\D/g, '')); setOtpError(null); }}
+              placeholder="4-6 digit OTP"
+              className="w-full text-center text-2xl font-mono font-bold tracking-[0.5em] border-2 border-gray-200 rounded-xl px-3 py-3 focus:outline-none focus:border-orange-500"
+              autoFocus
+            />
+            {otpError && (
+              <p className="text-xs text-red-600 mt-2">{otpError}</p>
+            )}
+            <div className="flex gap-2 mt-5">
+              <button
+                onClick={() => setOtpModal(null)}
+                disabled={otpSubmitting}
+                className="flex-1 px-4 py-2.5 rounded-xl border border-gray-200 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50">
+                Cancel
+              </button>
+              <button
+                onClick={submitStartJob}
+                disabled={otpSubmitting || otpInput.length < 4}
+                className="flex-1 px-4 py-2.5 rounded-xl bg-orange-500 hover:bg-orange-600 text-white text-sm font-semibold disabled:opacity-50">
+                {otpSubmitting ? 'Starting…' : '▶ Start Job'}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

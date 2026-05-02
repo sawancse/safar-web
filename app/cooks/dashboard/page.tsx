@@ -166,8 +166,18 @@ export default function ChefDashboardPage() {
         api.listMyStaff(token, { activeOnly: false }).then(s => setStaff(s || [])).catch(() => {});
         setViewState('ready');
       })
-      .catch((err) => {
+      .catch(async (err) => {
         if (err?.message?.includes('not found') || err?.status === 404) {
+          // Not a cook — but the user may be a self-service vendor (Pandit,
+          // Decorator, Cake, Singer, Staff Hire). Check before showing the
+          // "Become a Cook" CTA, otherwise pandits land on the wrong onboarding.
+          try {
+            const listings: any[] = await api.getMyServiceListings(token);
+            if (listings && listings.length > 0) {
+              router.replace('/vendor/dashboard');
+              return;
+            }
+          } catch { /* fall through to not-chef */ }
           setViewState('not-chef');
         } else {
           setErrorMsg(err?.message || 'Failed to load chef profile');

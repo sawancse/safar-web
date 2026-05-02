@@ -101,7 +101,8 @@ export default function Navbar() {
     { href: '/dashboard/miles', icon: '\u{1F381}', label: 'Rewards & Wallet' },
     { href: '/dashboard/reviews', icon: '\u{2B50}', label: 'Reviews' },
     { href: '/cooks/my-bookings', icon: '\u{1F468}\u{200D}\u{1F373}', label: 'My Service Bookings' },
-    { href: '/cooks/dashboard', icon: '\u{1F4CA}', label: 'Service Dashboard' },
+    { href: '/cooks/dashboard', icon: '\u{1F4CA}', label: 'Cook Dashboard' },
+    { href: '/vendor/dashboard', icon: '\u{1F91D}', label: 'Vendor Dashboard' },
     { href: '/dashboard/saved', icon: '\u{2764}\u{FE0F}', label: 'Saved' },
   ];
 
@@ -544,6 +545,12 @@ export default function Navbar() {
                 <span className="w-5 text-center">{'\u{1F3D7}'}</span> New Projects
               </Link>
               <div className="border-t my-2" />
+              <Link href="/become-a-partner" className="flex items-center gap-3 py-2.5 text-gray-700 hover:text-orange-500" onClick={() => setMenuOpen(false)}>
+                <span className="w-5 text-center">{'\u{1F91D}'}</span> Become a partner
+              </Link>
+              <Link href="/host" className="flex items-center gap-3 py-2.5 text-gray-700 hover:text-orange-500" onClick={() => setMenuOpen(false)}>
+                <span className="w-5 text-center">{'\u{1F3E0}'}</span> List your property
+              </Link>
               <Link href="/auth" className="flex items-center gap-3 py-2.5 text-orange-500 font-semibold" onClick={() => setMenuOpen(false)}>
                 <span className="w-5 text-center">{'\u{1F511}'}</span> {t('nav.login')}
               </Link>
