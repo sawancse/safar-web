@@ -84,7 +84,9 @@ export default function ChefBookingDetailPage() {
 
   useEffect(() => {
     const t = localStorage.getItem('access_token') ?? '';
-    const uid = localStorage.getItem('userId') ?? '';
+    // auth flow writes localStorage['user_id'] (snake_case); legacy callers
+    // sometimes wrote 'userId' (camel) — accept either to avoid silent mismatches.
+    const uid = localStorage.getItem('user_id') ?? localStorage.getItem('userId') ?? '';
     if (!t) { router.push('/auth?redirect=/cooks/my-bookings/' + bookingId); return; }
     setToken(t);
     setUserId(uid);
@@ -663,13 +665,38 @@ function ChefTab({ chef, booking }: { chef: any; booking: any }) {
   );
 }
 
+/**
+ * Map the menuDescription.type discriminator to a human partner noun used
+ * across the OTP tab — keeps the copy correct whether the booking is for a
+ * cook, pandit, cake designer, decor, singer, staff, or appliance rental.
+ */
+function partnerNounFromBooking(booking: any): string {
+  try {
+    const md = booking?.menuDescription ? JSON.parse(booking.menuDescription) : null;
+    const t = md?.type as string | undefined;
+    switch (t) {
+      case 'PANDIT_PUJA':      return 'pandit';
+      case 'CAKE_DESIGNER':
+      case 'DESIGNER_CAKE':    return 'cake designer';
+      case 'EVENT_DECOR':      return 'decor partner';
+      case 'LIVE_MUSIC':       return 'performer';
+      case 'STAFF_HIRE':       return 'staffing partner';
+      case 'APPLIANCE_RENTAL': return 'rental partner';
+      case 'COOK':
+      case 'CHEF':             return 'cook';
+      default:                  return 'cook';
+    }
+  } catch { return 'cook'; }
+}
+
 /* ────── Tab: Start-Job OTP ────── */
 function OtpTab({ booking, chef, userId }: { booking: any; chef: any; userId: string }) {
   const [copied, setCopied] = useState(false);
   const otp = booking.startJobOtp;
   const jobStarted = booking.jobStartedAt;
-  const chefPhone: string = chef?.phone || booking.chefPhone || '';
-  const chefName: string = chef?.name || booking.chefName || 'your chef';
+  const partner = partnerNounFromBooking(booking);
+  const partnerPhone: string = chef?.phone || booking.chefPhone || booking.vendorPhone || '';
+  const partnerName: string = chef?.name || booking.chefName || booking.vendorBusinessName || `your ${partner}`;
 
   // The OTP exists to prove the provider is physically with the customer.
   // If the viewer is NOT the customer (i.e., the vendor opened this page),
@@ -697,16 +724,16 @@ function OtpTab({ booking, chef, userId }: { booking: any; chef: any; userId: st
   }
 
   // wa.me requires digits only, no '+' or spaces. Indian numbers may arrive as '+91xxx' or '91xxx' or '9xxx' (10-digit).
-  const waPhone = chefPhone.replace(/\D/g, '').replace(/^0+/, '');
+  const waPhone = partnerPhone.replace(/\D/g, '').replace(/^0+/, '');
   const waNumber = waPhone.length === 10 ? `91${waPhone}` : waPhone;
   const shareMsg = otp
-    ? `Hi ${chefName}, my Safar Cook start-job OTP is *${otp}*. Please enter this when you arrive to begin the job. Booking ref: ${booking.bookingRef ?? ''}.`
+    ? `Hi ${partnerName}, my Safar start-job OTP is *${otp}*. Please enter this when you arrive to begin the job. Booking ref: ${booking.bookingRef ?? ''}.`
     : '';
   const waLink = otp && waNumber
     ? `https://wa.me/${waNumber}?text=${encodeURIComponent(shareMsg)}`
     : '';
-  const smsLink = otp && chefPhone
-    ? `sms:${chefPhone}?body=${encodeURIComponent(shareMsg)}`
+  const smsLink = otp && partnerPhone
+    ? `sms:${partnerPhone}?body=${encodeURIComponent(shareMsg)}`
     : '';
 
   if (jobStarted) {
@@ -714,18 +741,19 @@ function OtpTab({ booking, chef, userId }: { booking: any; chef: any; userId: st
       <div className="text-center py-10">
         <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-green-100 text-green-600 text-3xl mb-3">✓</div>
         <h3 className="text-lg font-bold text-gray-900 mb-1">Job started</h3>
-        <p className="text-sm text-gray-500">Chef began work at {new Date(jobStarted).toLocaleString('en-IN')}</p>
+        <p className="text-sm text-gray-500">{partnerName} began work at {new Date(jobStarted).toLocaleString('en-IN')}</p>
       </div>
     );
   }
 
   if (!otp) {
     const status: string = booking.status || '';
-    let reason = 'OTP will be generated once the cook accepts your booking.';
-    if (status === 'PENDING_PAYMENT')         reason = 'Pay the advance first — your OTP is issued the moment the cook confirms after payment.';
-    else if (status === 'PENDING')            reason = 'Waiting for the cook to accept your booking. Your start-job OTP appears here as soon as they do.';
-    else if (status === 'INQUIRY')            reason = 'Cook is reviewing your event details and will send a quote. OTP appears after you pay the advance and they confirm.';
-    else if (status === 'QUOTED')             reason = 'Quote received — pay the 60% advance to lock in the date. OTP appears as soon as the cook confirms after payment.';
+    let reason = `OTP will be generated once the ${partner} accepts your booking.`;
+    if (status === 'PENDING_PAYMENT')         reason = `Pay the advance first — your OTP is issued the moment the ${partner} confirms after payment.`;
+    else if (status === 'PENDING')            reason = `Waiting for the ${partner} to accept your booking. Your start-job OTP appears here as soon as they do.`;
+    else if (status === 'INQUIRY')            reason = `${partner.charAt(0).toUpperCase() + partner.slice(1)} is reviewing your event details and will send a quote. OTP appears after you pay the advance and they confirm.`;
+    else if (status === 'QUOTED')             reason = `Quote received — pay the 60% advance to lock in the date. OTP appears as soon as the ${partner} confirms after payment.`;
+    else if (status === 'CONFIRMED')          reason = 'Generating your start-job OTP — refresh in a moment. If it doesn\'t appear, contact support.';
     else if (status === 'CANCELLED')          reason = 'This booking was cancelled, so no OTP will be issued.';
     return (
       <div className="text-center py-10 max-w-sm mx-auto">
@@ -739,7 +767,7 @@ function OtpTab({ booking, chef, userId }: { booking: any; chef: any; userId: st
   return (
     <div className="text-center py-6">
       <p className="text-xs uppercase tracking-widest text-gray-500 font-bold mb-2">Start-Job OTP</p>
-      <p className="text-sm text-gray-600 mb-5">Share this with {chefName} when they arrive.<br />They'll enter it to begin the job.</p>
+      <p className="text-sm text-gray-600 mb-5">Share this with {partnerName} when they arrive.<br />They'll enter it to begin the job.</p>
       <div className="inline-flex items-center gap-3 mb-5">
         <div className="text-6xl font-black tracking-[0.3em] text-orange-600 font-mono bg-orange-50 px-6 py-4 rounded-2xl border-2 border-orange-200">
           {otp}
@@ -770,17 +798,17 @@ function OtpTab({ booking, chef, userId }: { booking: any; chef: any; userId: st
             ✉️ SMS
           </a>
         )}
-        {chefPhone && (
+        {partnerPhone && (
           <a
-            href={`tel:${chefPhone}`}
+            href={`tel:${partnerPhone}`}
             className="border border-gray-300 text-gray-700 text-sm font-semibold px-4 py-2.5 rounded-xl hover:bg-gray-50 transition"
           >
             📞 Call
           </a>
         )}
       </div>
-      {!chefPhone && (
-        <p className="text-[11px] text-gray-400 mt-3">Chef phone unavailable — copy the OTP and share manually.</p>
+      {!partnerPhone && (
+        <p className="text-[11px] text-gray-400 mt-3">{partnerName.charAt(0).toUpperCase() + partnerName.slice(1)} phone unavailable — copy the OTP and share manually.</p>
       )}
     </div>
   );
@@ -799,12 +827,51 @@ function PayTab({ booking, bookingKind, token, totalPaise, advancePaise, balance
     if (!bookingKind || submitting) return;
     setSubmitting(true);
     try {
-      if (bookingKind === 'chef') await api.payChefBookingBalance(bookingId, token);
-      else                        await api.payEventBookingBalance(bookingId, token);
-      onRefresh();
+      // Open Razorpay first, then mark our row paid only after checkout
+      // success — otherwise we'd flip balancePaidAt with no money transferred.
+      const order = await api.createPaymentOrder(bookingId, balancePaise, token);
+      if (!(window as any).Razorpay) {
+        await new Promise<void>((resolve, reject) => {
+          const s = document.createElement('script');
+          s.src = 'https://checkout.razorpay.com/v1/checkout.js';
+          s.onload = () => resolve();
+          s.onerror = () => reject(new Error('Failed to load Razorpay'));
+          document.body.appendChild(s);
+        });
+      }
+      const ref = booking.bookingRef ?? bookingId.slice(0, 8);
+      const rzp = new (window as any).Razorpay({
+        key: order.razorpayKeyId,
+        amount: order.amountPaise,
+        currency: 'INR',
+        name: 'Safar',
+        description: `Balance — ${ref}`,
+        order_id: order.razorpayOrderId,
+        handler: async (resp: any) => {
+          try {
+            if (bookingKind === 'chef') {
+              await api.payChefBookingBalance(bookingId, resp.razorpay_order_id, resp.razorpay_payment_id, token);
+            } else {
+              await api.payEventBookingBalance(bookingId, resp.razorpay_order_id, resp.razorpay_payment_id, token);
+            }
+            onRefresh();
+          } catch (e: any) {
+            alert(e.message || 'Payment received but our records did not update — please contact support.');
+          } finally { setSubmitting(false); }
+        },
+        prefill: { name: booking.customerName, contact: booking.customerPhone, email: booking.customerEmail },
+        theme: { color: '#22c55e' },
+        modal: { ondismiss: () => setSubmitting(false) },
+      });
+      rzp.on('payment.failed', (r: any) => {
+        alert(r.error?.description || 'Payment failed');
+        setSubmitting(false);
+      });
+      rzp.open();
     } catch (e: any) {
-      alert(e.message || 'Payment failed');
-    } finally { setSubmitting(false); }
+      alert(e.message || 'Could not start payment');
+      setSubmitting(false);
+    }
   }
 
   if (paid) {
@@ -878,8 +945,36 @@ function RatingTab({ booking, bookingKind, token, onRefresh }: {
     );
   }
 
-  if (booking.status !== 'COMPLETED') {
-    return <p className="text-sm text-gray-500 text-center py-10">Rating unlocks after the booking is completed.</p>;
+  // Rating unlocks (mirrors backend EventBookingService.rateEvent):
+  //   1. status === 'COMPLETED' (partner marked the job done)
+  //   2. status in ['ADVANCE_PAID', 'IN_PROGRESS'] AND event date is today/past
+  //      — partners frequently forget to mark complete, so customers can
+  //      review the day after the event without chasing the partner.
+  const eventDateRaw: string | undefined = booking.eventDate ?? booking.serviceDate;
+  const eventHappened = !!eventDateRaw
+    && (booking.status === 'ADVANCE_PAID' || booking.status === 'IN_PROGRESS')
+    && new Date(eventDateRaw + 'T23:59:59').getTime() <= Date.now();
+  const canRate = booking.status === 'COMPLETED' || eventHappened;
+
+  if (!canRate) {
+    const dateStr = eventDateRaw ? new Date(eventDateRaw).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : null;
+    let why = 'Rating unlocks once your service is complete.';
+    if (booking.status === 'INQUIRY')         why = 'Rating unlocks once the service is delivered. Right now we\'re still matching you with a partner.';
+    else if (booking.status === 'QUOTED')     why = 'Rating unlocks once the service is delivered. You\'ll get the rate prompt right after the event.';
+    else if (booking.status === 'CONFIRMED')  why = 'Rating unlocks after the event. You\'ll be invited to rate as soon as your partner marks the job complete.';
+    else if (booking.status === 'ADVANCE_PAID' || booking.status === 'IN_PROGRESS') {
+      why = dateStr
+        ? `Rating unlocks the day after your event on ${dateStr}.`
+        : 'Rating unlocks the day of/after your event.';
+    }
+    else if (booking.status === 'CANCELLED')  why = 'This booking was cancelled, so there\'s nothing to rate.';
+    return (
+      <div className="text-center py-10 max-w-sm mx-auto">
+        <div className="inline-flex items-center justify-center w-14 h-14 rounded-full bg-amber-100 text-amber-600 text-2xl mb-3">⏳</div>
+        <h3 className="text-base font-bold text-gray-900 mb-1">Not yet</h3>
+        <p className="text-sm text-gray-500">{why}</p>
+      </div>
+    );
   }
 
   return (
@@ -899,7 +994,7 @@ function RatingTab({ booking, bookingKind, token, onRefresh }: {
       <textarea
         value={comment}
         onChange={e => setComment(e.target.value)}
-        placeholder="Share a few words about your chef..."
+        placeholder={`Share a few words about your ${partnerNounFromBooking(booking)}...`}
         rows={4}
         className="w-full border rounded-xl px-3 py-2 text-sm outline-none focus:border-orange-400 resize-none"
       />

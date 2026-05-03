@@ -791,8 +791,66 @@ export default function MyChefBookingsPage() {
                         View Bill & Pay Advance — {formatPaise(e.advanceAmountPaise)}
                       </button>
                     )}
-                    {['INQUIRY', 'QUOTED', 'CONFIRMED'].includes(e.status) && (
+                    {e.status === 'ADVANCE_PAID' && !e.balancePaidAt && e.balanceAmountPaise > 0 && (
                       <button onClick={async () => {
+                        if (!confirm(`Pay remaining balance of ${formatPaise(e.balanceAmountPaise)}?`)) return;
+                        try {
+                          const token = localStorage.getItem('access_token')!;
+                          // Razorpay order first; only mark balance paid in our DB
+                          // after checkout success — otherwise the customer gets
+                          // a free balance write without any actual transfer.
+                          const order = await api.createPaymentOrder(e.id, e.balanceAmountPaise, token);
+                          if (!(window as any).Razorpay) {
+                            await new Promise<void>((resolve, reject) => {
+                              const s = document.createElement('script');
+                              s.src = 'https://checkout.razorpay.com/v1/checkout.js';
+                              s.onload = () => resolve();
+                              s.onerror = () => reject(new Error('Failed to load Razorpay'));
+                              document.body.appendChild(s);
+                            });
+                          }
+                          const rzp = new (window as any).Razorpay({
+                            key: order.razorpayKeyId,
+                            amount: order.amountPaise,
+                            currency: 'INR',
+                            name: 'Safar',
+                            description: `Balance — ${e.bookingRef}`,
+                            order_id: order.razorpayOrderId,
+                            handler: async (resp: any) => {
+                              try {
+                                const fresh = localStorage.getItem('access_token') || token;
+                                const updated = await api.payEventBookingBalance(
+                                  e.id,
+                                  resp.razorpay_order_id,
+                                  resp.razorpay_payment_id,
+                                  fresh,
+                                );
+                                setEvents(prev => prev.map(ev => ev.id === e.id ? updated : ev));
+                              } catch (err: any) {
+                                alert(err.message || 'Payment received but our records did not update — please contact support with this booking ref.');
+                              }
+                            },
+                            prefill: { name: e.customerName, contact: e.customerPhone, email: e.customerEmail },
+                            theme: { color: '#22c55e' },
+                          });
+                          rzp.on('payment.failed', (r: any) => alert(r.error?.description || 'Payment failed'));
+                          rzp.open();
+                        } catch (err: any) { alert(err.message || 'Could not start payment'); }
+                      }}
+                        className="text-xs bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white px-4 py-1.5 rounded-lg font-semibold shadow-sm hover:shadow transition inline-flex items-center gap-1.5">
+                        <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M3 10h18M7 15h2m4 0h3M5 5h14a2 2 0 012 2v10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2z" />
+                        </svg>
+                        Pay Remaining Balance — {formatPaise(e.balanceAmountPaise)}
+                      </button>
+                    )}
+                    {['INQUIRY', 'QUOTED', 'CONFIRMED', 'ADVANCE_PAID'].includes(e.status) && (
+                      <button onClick={async () => {
+                        const advancePaid = e.status === 'ADVANCE_PAID';
+                        const confirmMsg = advancePaid
+                          ? `You've already paid ${formatPaise(e.advanceAmountPaise)} as advance. Cancelling now will start the refund process per our policy. Continue?`
+                          : 'Cancel this booking?';
+                        if (!confirm(confirmMsg)) return;
                         const reason = prompt('Reason for cancellation (optional):') ?? 'Customer cancelled';
                         try {
                           const token = localStorage.getItem('access_token')!;
@@ -813,10 +871,20 @@ export default function MyChefBookingsPage() {
                       }}
                         className="text-xs text-gray-600 border border-gray-200 px-3 py-1 rounded-lg hover:bg-gray-50">Invoice</button>
                     )}
-                    {e.status === 'COMPLETED' && !e.ratingGiven && (
-                      <button onClick={() => setRatingModal({ id: e.id, type: 'event' })}
-                        className="text-xs text-orange-600 border border-orange-200 px-3 py-1 rounded-lg hover:bg-orange-50">Rate & Review</button>
-                    )}
+                    {(() => {
+                      // Mirror backend: rating unlocks on COMPLETED OR
+                      // (ADVANCE_PAID/IN_PROGRESS + event date today/past).
+                      // Skip if customer already rated.
+                      if (e.ratingGiven) return null;
+                      const eventHappened = e.eventDate
+                        && (e.status === 'ADVANCE_PAID' || e.status === 'IN_PROGRESS')
+                        && new Date(e.eventDate + 'T23:59:59').getTime() <= Date.now();
+                      if (e.status !== 'COMPLETED' && !eventHappened) return null;
+                      return (
+                        <button onClick={() => setRatingModal({ id: e.id, type: 'event' })}
+                          className="text-xs text-orange-600 border border-orange-200 px-3 py-1 rounded-lg hover:bg-orange-50">Rate & Review</button>
+                      );
+                    })()}
                     {e.ratingGiven && <span className="text-xs text-gray-500">{'★'.repeat(e.ratingGiven)} Rated</span>}
                     {e.status === 'CANCELLED' && e.cancellationReason && (
                       <span className="text-xs text-red-400">{e.cancellationReason}</span>

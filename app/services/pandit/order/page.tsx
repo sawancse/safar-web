@@ -57,6 +57,8 @@ export default function PanditOrderPage() {
   const [agreeTerms, setAgreeTerms] = useState(false);
   const [processing, setProcessing] = useState(false);
   const [error, setError] = useState('');
+  const [attemptedStep1, setAttemptedStep1] = useState(false);
+  const [attemptedStep2, setAttemptedStep2] = useState(false);
 
   // Reset puja selection if customer changes occasion and the puja no longer fits.
   useEffect(() => {
@@ -94,9 +96,33 @@ export default function PanditOrderPage() {
     return { service, discount, gst, total, advance, balance, dakshina: selectedPuja.recommendedDakshinaPaise };
   }, [selectedPuja, couponApplied]);
 
-  const canProceedToSummary = !!occasion && !!eventDate && !!arrivalSlot && !!selectedPuja && !!language;
-  const canPay = !!priceBreakdown && !!address.trim() && !!city.trim() && !!pincode.trim()
-    && !!customerName.trim() && !!customerPhone.trim() && agreeTerms;
+  const step1Errors = useMemo(() => {
+    const e: Record<string, string> = {};
+    if (!occasion)     e.occasion    = 'Pick the occasion';
+    if (!eventDate)    e.eventDate   = 'Pick the date of the puja';
+    else if (eventDate < tomorrowIso) e.eventDate = 'Date must be tomorrow or later (24-hour lead time)';
+    if (!arrivalSlot)  e.arrivalSlot = 'Pick the pandit arrival time';
+    if (!pujaKey)      e.pujaKey     = 'Choose a puja from the list';
+    if (!language)     e.language    = 'Pick a preferred language';
+    return e;
+  }, [occasion, eventDate, arrivalSlot, pujaKey, language, tomorrowIso]);
+
+  const step2Errors = useMemo(() => {
+    const e: Record<string, string> = {};
+    if (!address.trim())       e.address  = 'Enter the venue address';
+    if (!city.trim())          e.city     = 'Enter the city';
+    if (!pincode.trim())       e.pincode  = 'Enter the pincode';
+    else if (!/^\d{6}$/.test(pincode.trim())) e.pincode = 'Pincode must be 6 digits';
+    if (!customerName.trim())  e.customerName  = 'Enter your name';
+    if (!customerPhone.trim()) e.customerPhone = 'Enter your phone number';
+    else if (!/^\d{10}$/.test(customerPhone.trim())) e.customerPhone = 'Phone must be 10 digits';
+    if (customerEmail.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(customerEmail.trim())) e.customerEmail = 'Enter a valid email or leave it blank';
+    if (!agreeTerms)           e.agreeTerms = 'Please accept the T&C to continue';
+    return e;
+  }, [address, city, pincode, customerName, customerPhone, customerEmail, agreeTerms]);
+
+  const canProceedToSummary = Object.keys(step1Errors).length === 0;
+  const canPay = !!priceBreakdown && Object.keys(step2Errors).length === 0;
 
   function applyCoupon() {
     setCouponError('');
@@ -104,7 +130,14 @@ export default function PanditOrderPage() {
     else setCouponError('Invalid coupon code');
   }
 
+  function handleProceedToSummary() {
+    setAttemptedStep1(true);
+    if (canProceedToSummary) setStep('summary');
+  }
+
   async function handlePay() {
+    setAttemptedStep2(true);
+    if (!canPay) return;
     if (!priceBreakdown || !selectedPuja) return;
     const token = localStorage.getItem('access_token') || '';
     if (!token) {
@@ -223,8 +256,9 @@ export default function PanditOrderPage() {
                 <label className="block text-sm font-semibold text-gray-900 mb-1.5">Select Date</label>
                 <DateField required value={eventDate} onChange={e => setEventDate(e.target.value)}
                            min={tomorrowIso}
-                           className="w-full border rounded-lg px-3 py-2.5 text-sm bg-gray-900 text-white" />
+                           className={`w-full border rounded-lg px-3 py-2.5 text-sm bg-gray-900 text-white ${attemptedStep1 && step1Errors.eventDate ? 'border-red-500 ring-1 ring-red-300' : ''}`} />
                 <p className="text-[10px] text-gray-400 mt-1">Earliest: tomorrow (24-hr lead time)</p>
+                {attemptedStep1 && step1Errors.eventDate && <p className="text-[11px] text-red-600 mt-1">{step1Errors.eventDate}</p>}
               </div>
 
               {/* Arrival time */}
@@ -238,18 +272,20 @@ export default function PanditOrderPage() {
                     </button>
                   ))}
                 </div>
+                {attemptedStep1 && step1Errors.arrivalSlot && <p className="text-[11px] text-red-600 mt-1">{step1Errors.arrivalSlot}</p>}
               </div>
 
               {/* Puja picker */}
               <div>
                 <label className="block text-sm font-semibold text-gray-900 mb-1.5">Select Puja</label>
                 <select value={pujaKey} onChange={e => setPujaKey(e.target.value)}
-                        className="w-full border rounded-lg px-3 py-2.5 text-sm">
+                        className={`w-full border rounded-lg px-3 py-2.5 text-sm ${attemptedStep1 && step1Errors.pujaKey ? 'border-red-500 ring-1 ring-red-300' : ''}`}>
                   <option value="">Select from here</option>
                   {availablePujas.map(p => (
                     <option key={p.key} value={p.key}>{p.label} — {formatPaise(p.pricePaise)}</option>
                   ))}
                 </select>
+                {attemptedStep1 && step1Errors.pujaKey && <p className="text-[11px] text-red-600 mt-1">{step1Errors.pujaKey}</p>}
 
                 {availablePujas.length > 0 && (
                   <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-[420px] overflow-y-auto pr-1">
@@ -366,10 +402,17 @@ export default function PanditOrderPage() {
                   </div>
                 </div>
               )}
+              {attemptedStep1 && !canProceedToSummary && (
+                <div className="mt-4 bg-red-50 border border-red-200 rounded-lg px-3 py-2 text-xs text-red-700">
+                  <p className="font-semibold mb-1">Please fix the following before continuing:</p>
+                  <ul className="list-disc pl-4 space-y-0.5">
+                    {Object.values(step1Errors).map((msg, i) => <li key={i}>{msg}</li>)}
+                  </ul>
+                </div>
+              )}
               <button
-                disabled={!canProceedToSummary}
-                onClick={() => setStep('summary')}
-                className="w-full mt-5 bg-orange-600 hover:bg-orange-700 disabled:opacity-40 text-white rounded-xl py-3 text-sm font-semibold transition">
+                onClick={handleProceedToSummary}
+                className="w-full mt-5 bg-orange-600 hover:bg-orange-700 text-white rounded-xl py-3 text-sm font-semibold transition">
                 View Total Bill →
               </button>
             </div>
@@ -438,13 +481,21 @@ export default function PanditOrderPage() {
                   <label className="block text-xs font-medium text-gray-600 mb-1">Address *</label>
                   <textarea required value={address} onChange={e => setAddress(e.target.value)}
                             rows={2} placeholder="Flat, building, street, area"
-                            className="w-full border rounded-lg px-3 py-2 text-sm resize-none" />
+                            className={`w-full border rounded-lg px-3 py-2 text-sm resize-none ${attemptedStep2 && step2Errors.address ? 'border-red-500 ring-1 ring-red-300' : ''}`} />
+                  {attemptedStep2 && step2Errors.address && <p className="text-[11px] text-red-600 mt-1">{step2Errors.address}</p>}
                 </div>
                 <div className="grid grid-cols-2 gap-3">
-                  <input type="text" required value={city} onChange={e => setCity(e.target.value)}
-                         placeholder="City *" className="border rounded-lg px-3 py-2 text-sm" />
-                  <input type="text" required value={pincode} onChange={e => setPincode(e.target.value)}
-                         placeholder="Pincode *" maxLength={6} className="border rounded-lg px-3 py-2 text-sm" />
+                  <div>
+                    <input type="text" required value={city} onChange={e => setCity(e.target.value)}
+                           placeholder="City *" className={`w-full border rounded-lg px-3 py-2 text-sm ${attemptedStep2 && step2Errors.city ? 'border-red-500 ring-1 ring-red-300' : ''}`} />
+                    {attemptedStep2 && step2Errors.city && <p className="text-[11px] text-red-600 mt-1">{step2Errors.city}</p>}
+                  </div>
+                  <div>
+                    <input type="text" required value={pincode} onChange={e => setPincode(e.target.value.replace(/\D/g, ''))}
+                           placeholder="Pincode *" maxLength={6} inputMode="numeric"
+                           className={`w-full border rounded-lg px-3 py-2 text-sm ${attemptedStep2 && step2Errors.pincode ? 'border-red-500 ring-1 ring-red-300' : ''}`} />
+                    {attemptedStep2 && step2Errors.pincode && <p className="text-[11px] text-red-600 mt-1">{step2Errors.pincode}</p>}
+                  </div>
                 </div>
               </div>
 
@@ -452,10 +503,22 @@ export default function PanditOrderPage() {
               <div className="bg-white rounded-xl border p-5 space-y-3">
                 <h3 className="font-semibold text-gray-900">Your details</h3>
                 <div className="grid grid-cols-2 gap-3">
-                  <input type="text" required value={customerName}  onChange={e => setCustomerName(e.target.value)}  placeholder="Your name *"  className="border rounded-lg px-3 py-2 text-sm" />
-                  <input type="tel"  required value={customerPhone} onChange={e => setCustomerPhone(e.target.value)} placeholder="Phone *"      maxLength={10} className="border rounded-lg px-3 py-2 text-sm" />
+                  <div>
+                    <input type="text" required value={customerName}  onChange={e => setCustomerName(e.target.value)}  placeholder="Your name *"
+                           className={`w-full border rounded-lg px-3 py-2 text-sm ${attemptedStep2 && step2Errors.customerName ? 'border-red-500 ring-1 ring-red-300' : ''}`} />
+                    {attemptedStep2 && step2Errors.customerName && <p className="text-[11px] text-red-600 mt-1">{step2Errors.customerName}</p>}
+                  </div>
+                  <div>
+                    <input type="tel"  required value={customerPhone} onChange={e => setCustomerPhone(e.target.value.replace(/\D/g, ''))} placeholder="Phone *" maxLength={10} inputMode="numeric"
+                           className={`w-full border rounded-lg px-3 py-2 text-sm ${attemptedStep2 && step2Errors.customerPhone ? 'border-red-500 ring-1 ring-red-300' : ''}`} />
+                    {attemptedStep2 && step2Errors.customerPhone && <p className="text-[11px] text-red-600 mt-1">{step2Errors.customerPhone}</p>}
+                  </div>
                 </div>
-                <input type="email" value={customerEmail} onChange={e => setCustomerEmail(e.target.value)} placeholder="Email (optional)" className="w-full border rounded-lg px-3 py-2 text-sm" />
+                <div>
+                  <input type="email" value={customerEmail} onChange={e => setCustomerEmail(e.target.value)} placeholder="Email (optional)"
+                         className={`w-full border rounded-lg px-3 py-2 text-sm ${attemptedStep2 && step2Errors.customerEmail ? 'border-red-500 ring-1 ring-red-300' : ''}`} />
+                  {attemptedStep2 && step2Errors.customerEmail && <p className="text-[11px] text-red-600 mt-1">{step2Errors.customerEmail}</p>}
+                </div>
               </div>
             </div>
 
@@ -511,16 +574,26 @@ export default function PanditOrderPage() {
               {/* Terms */}
               <label className="flex items-start gap-2 mt-4 pt-4 border-t cursor-pointer">
                 <input type="checkbox" checked={agreeTerms} onChange={e => setAgreeTerms(e.target.checked)}
-                       className="mt-0.5 w-4 h-4" />
+                       className={`mt-0.5 w-4 h-4 ${attemptedStep2 && step2Errors.agreeTerms ? 'ring-2 ring-red-300 rounded' : ''}`} />
                 <span className="text-[11px] text-gray-600 leading-snug">
                   60% advance is non-refundable after pandit confirmation. Dakshina is separate and customer pays in cash on the day. I agree to the <Link href="/terms" className="text-blue-600 hover:underline">T&C</Link>, <Link href="/privacy" className="text-blue-600 hover:underline">privacy policy</Link> and <Link href="/cancellation" className="text-blue-600 hover:underline">cancellation policy</Link>.
                 </span>
               </label>
+              {attemptedStep2 && step2Errors.agreeTerms && <p className="text-[11px] text-red-600 mt-1">{step2Errors.agreeTerms}</p>}
+
+              {attemptedStep2 && !canPay && Object.keys(step2Errors).length > 0 && (
+                <div className="mt-4 bg-red-50 border border-red-200 rounded-lg px-3 py-2 text-xs text-red-700">
+                  <p className="font-semibold mb-1">Please fix the following before paying:</p>
+                  <ul className="list-disc pl-4 space-y-0.5">
+                    {Object.values(step2Errors).map((msg, i) => <li key={i}>{msg}</li>)}
+                  </ul>
+                </div>
+              )}
 
               {error && <p className="text-sm text-red-600 mt-3">{error}</p>}
 
               <button
-                disabled={!canPay || processing}
+                disabled={processing}
                 onClick={handlePay}
                 className="w-full mt-4 bg-amber-500 hover:bg-amber-600 disabled:opacity-40 text-white rounded-xl py-3 text-sm font-bold transition shadow-md shadow-amber-500/30">
                 {processing ? 'Processing…' : `Pay 60% advance (${formatPaise(priceBreakdown.advance)})`}
@@ -536,11 +609,7 @@ export default function PanditOrderPage() {
 
       {step === 'design' && (
         <div className="fixed bottom-0 inset-x-0 bg-amber-500 text-white text-center py-3 px-4 text-sm font-bold shadow-xl lg:hidden">
-          {canProceedToSummary ? (
-            <button onClick={() => setStep('summary')} className="w-full">View Total Bill →</button>
-          ) : (
-            <span className="opacity-80">Pick occasion, date, time, puja and language</span>
-          )}
+          <button onClick={handleProceedToSummary} className="w-full">View Total Bill →</button>
         </div>
       )}
     </div>

@@ -2330,14 +2330,14 @@ export const api = {
       headers: { Authorization: `Bearer ${token}` },
     }),
 
-  payChefBookingBalance: (id: string, token: string) =>
-    apiFetch<any>(`/api/v1/chef-bookings/${id}/pay-balance`, {
+  payChefBookingBalance: (id: string, razorpayOrderId: string, razorpayPaymentId: string, token: string) =>
+    apiFetch<any>(`/api/v1/chef-bookings/${id}/pay-balance?razorpayOrderId=${encodeURIComponent(razorpayOrderId)}&razorpayPaymentId=${encodeURIComponent(razorpayPaymentId)}`, {
       method: 'POST',
       headers: { Authorization: `Bearer ${token}` },
     }),
 
-  payEventBookingBalance: (id: string, token: string) =>
-    apiFetch<any>(`/api/v1/chef-events/${id}/pay-balance`, {
+  payEventBookingBalance: (id: string, razorpayOrderId: string, razorpayPaymentId: string, token: string) =>
+    apiFetch<any>(`/api/v1/chef-events/${id}/pay-balance?razorpayOrderId=${encodeURIComponent(razorpayOrderId)}&razorpayPaymentId=${encodeURIComponent(razorpayPaymentId)}`, {
       method: 'POST',
       headers: { Authorization: `Bearer ${token}` },
     }),
