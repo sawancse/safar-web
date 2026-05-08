@@ -97,6 +97,11 @@ export default function DateField({
             minDate={isoToDate(min) ?? undefined}
             maxDate={isoToDate(max) ?? undefined}
             monthsShown={monthsShown}
+            showMonthDropdown
+            showYearDropdown
+            dropdownMode="select"
+            yearDropdownItemNumber={120}
+            scrollableYearDropdown
             inline
           />
         </div>
