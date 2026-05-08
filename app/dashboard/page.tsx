@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { api } from '@/lib/api';
 import { formatPaise } from '@/lib/utils';
+import PhoneInput from '@/components/PhoneInput';
 import type { Booking } from '@/types';
 
 const STATUS_LABEL: Record<string, { label: string; color: string }> = {
@@ -719,9 +720,7 @@ export default function DashboardPage() {
                 <input type="email" placeholder="Email" value={guestForm.email}
                   onChange={e => setGuestForm(f => ({ ...f, email: e.target.value }))}
                   className="border rounded-lg px-3 py-1.5 text-sm outline-none focus:border-orange-400" />
-                <input type="tel" placeholder="Phone" value={guestForm.phone}
-                  onChange={e => setGuestForm(f => ({ ...f, phone: e.target.value }))}
-                  className="border rounded-lg px-3 py-1.5 text-sm outline-none focus:border-orange-400" />
+                <PhoneInput value={guestForm.phone} onChange={(v) => setGuestForm(f => ({ ...f, phone: v }))} required={false} />
                 <input type="number" placeholder="Age" min="0" max="120" value={guestForm.age}
                   onChange={e => setGuestForm(f => ({ ...f, age: e.target.value }))}
                   className="border rounded-lg px-3 py-1.5 text-sm outline-none focus:border-orange-400" />

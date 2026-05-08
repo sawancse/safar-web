@@ -6,6 +6,7 @@ import { geocodeIndianAddress } from '@/lib/geocode';
 import MapLocationPicker from '@/components/MapLocationPicker';
 import PricingCalculator from '@/components/PricingCalculator';
 import DateField from '@/components/DateField';
+import PhoneInput from '@/components/PhoneInput';
 import type { ListingType } from '@/types';
 
 /* ── Constants ─────────────────────────────────────────────── */
@@ -1094,8 +1095,7 @@ export default function NewListingWizard() {
                 </div>
                 <div>
                   <label className="block text-xs font-semibold text-gray-600 mb-1">Secondary Phone</label>
-                  <input value={data.secondaryPhone} onChange={e => update({ secondaryPhone: e.target.value })}
-                    className="w-full border rounded-xl px-3 py-2 text-sm" placeholder="+91..." maxLength={13} />
+                  <PhoneInput value={data.secondaryPhone} onChange={(v) => update({ secondaryPhone: v })} required={false} />
                 </div>
                 <label className="flex items-center gap-2 cursor-pointer self-end">
                   <input type="checkbox" checked={data.multipleUnits} onChange={e => update({ multipleUnits: e.target.checked })} className="rounded" />

@@ -5,7 +5,9 @@ import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import DateField from '@/components/DateField';
 import MapLocationPicker from '@/components/MapLocationPicker';
+import PhoneInput from '@/components/PhoneInput';
 import { api } from '@/lib/api';
+import { isValidPhone } from '@/lib/phone';
 import { formatPaise } from '@/lib/utils';
 import { PUJAS, OCCASIONS, ARRIVAL_SLOTS, LANGUAGES, formatSlot, pujasForOccasion } from '../catalog';
 
@@ -114,8 +116,7 @@ export default function PanditOrderPage() {
     if (!pincode.trim())       e.pincode  = 'Enter the pincode';
     else if (!/^\d{6}$/.test(pincode.trim())) e.pincode = 'Pincode must be 6 digits';
     if (!customerName.trim())  e.customerName  = 'Enter your name';
-    if (!customerPhone.trim()) e.customerPhone = 'Enter your phone number';
-    else if (!/^\d{10}$/.test(customerPhone.trim())) e.customerPhone = 'Phone must be 10 digits';
+    if (!isValidPhone(customerPhone)) e.customerPhone = 'Enter a valid 10-digit phone number';
     if (customerEmail.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(customerEmail.trim())) e.customerEmail = 'Enter a valid email or leave it blank';
     if (!agreeTerms)           e.agreeTerms = 'Please accept the T&C to continue';
     return e;
@@ -509,9 +510,7 @@ export default function PanditOrderPage() {
                     {attemptedStep2 && step2Errors.customerName && <p className="text-[11px] text-red-600 mt-1">{step2Errors.customerName}</p>}
                   </div>
                   <div>
-                    <input type="tel"  required value={customerPhone} onChange={e => setCustomerPhone(e.target.value.replace(/\D/g, ''))} placeholder="Phone *" maxLength={10} inputMode="numeric"
-                           className={`w-full border rounded-lg px-3 py-2 text-sm ${attemptedStep2 && step2Errors.customerPhone ? 'border-red-500 ring-1 ring-red-300' : ''}`} />
-                    {attemptedStep2 && step2Errors.customerPhone && <p className="text-[11px] text-red-600 mt-1">{step2Errors.customerPhone}</p>}
+                    <PhoneInput value={customerPhone} onChange={setCustomerPhone} />
                   </div>
                 </div>
                 <div>

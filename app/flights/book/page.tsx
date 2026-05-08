@@ -5,6 +5,8 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { api } from '@/lib/api';
 import { formatPaise } from '@/lib/utils';
 import DateField from '@/components/DateField';
+import PhoneInput from '@/components/PhoneInput';
+import { isValidPhone } from '@/lib/phone';
 
 interface PassengerForm {
   title: string;
@@ -90,8 +92,8 @@ export default function FlightBookPage() {
         return;
       }
     }
-    if (!contactEmail || !contactPhone) {
-      setError('Contact email and phone are required');
+    if (!contactEmail || !isValidPhone(contactPhone)) {
+      setError('Contact email and a valid phone are required');
       return;
     }
 
@@ -295,14 +297,7 @@ export default function FlightBookPage() {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-600 mb-1">Phone *</label>
-                  <input
-                    type="tel"
-                    value={contactPhone}
-                    onChange={(e) => setContactPhone(e.target.value)}
-                    placeholder="+91 98765 43210"
-                    className="w-full border border-gray-300 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#003B95]"
-                    required
-                  />
+                  <PhoneInput value={contactPhone} onChange={setContactPhone} />
                 </div>
               </div>
             </div>

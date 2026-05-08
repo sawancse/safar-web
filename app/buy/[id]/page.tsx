@@ -5,6 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { api } from '@/lib/api';
 import DateField from '@/components/DateField';
+import PhoneInput from '@/components/PhoneInput';
 
 /* ── Price formatter for sale prices (paise → Lakh/Cr) ── */
 function formatSalePrice(paise: number): string {
@@ -1117,13 +1118,7 @@ export default function BuyPropertyDetailPage() {
                   </div>
                   <div>
                     <label className="block text-xs text-slate-500 mb-1">Phone</label>
-                    <input
-                      type="tel"
-                      required
-                      value={inquiryPhone}
-                      onChange={(e) => setInquiryPhone(e.target.value)}
-                      className="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500"
-                    />
+                    <PhoneInput value={inquiryPhone} onChange={setInquiryPhone} />
                   </div>
                   <div>
                     <label className="block text-xs text-slate-500 mb-1">Email</label>
@@ -1212,13 +1207,7 @@ export default function BuyPropertyDetailPage() {
                   </div>
                   <div>
                     <label className="block text-xs text-slate-500 mb-1">Phone</label>
-                    <input
-                      type="tel"
-                      required
-                      value={visitPhone}
-                      onChange={(e) => setVisitPhone(e.target.value)}
-                      className="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500"
-                    />
+                    <PhoneInput value={visitPhone} onChange={setVisitPhone} />
                   </div>
                   <div>
                     <label className="block text-xs text-slate-500 mb-1">Visit Date</label>

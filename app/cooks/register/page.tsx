@@ -3,6 +3,8 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { api } from '@/lib/api';
+import PhoneInput from '@/components/PhoneInput';
+import { isValidPhone } from '@/lib/phone';
 
 const CUISINES = ['SOUTH_INDIAN', 'NORTH_INDIAN', 'BENGALI', 'MAHARASHTRIAN', 'GUJARATI', 'PUNJABI', 'HYDERABADI', 'KERALA', 'CHINESE', 'CONTINENTAL', 'MUGHLAI', 'STREET_FOOD', 'DESSERTS', 'VEGAN', 'JAIN'];
 
@@ -198,8 +200,7 @@ export default function RegisterCookPage() {
             </div>
             <div>
               <label className="block text-xs font-medium text-gray-600 mb-1">Phone *</label>
-              <input value={phone} onChange={e => setPhone(e.target.value)}
-                className="w-full border rounded-lg px-3 py-2.5 text-sm" placeholder="+91..." />
+              <PhoneInput value={phone} onChange={setPhone} />
             </div>
           </div>
           <div>
@@ -241,7 +242,7 @@ export default function RegisterCookPage() {
                 className="w-full border rounded-lg px-3 py-2.5 text-sm" />
             </div>
           </div>
-          <button onClick={() => setStep(2)} disabled={!name || !phone}
+          <button onClick={() => setStep(2)} disabled={!name || !isValidPhone(phone)}
             className="w-full bg-orange-500 text-white font-semibold py-3 rounded-xl hover:bg-orange-600 disabled:opacity-50 transition">
             Next: Location & Cuisines
           </button>

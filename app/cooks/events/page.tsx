@@ -7,6 +7,7 @@ import { formatPaise } from '@/lib/utils';
 import CityAutocomplete from '@/components/CityAutocomplete';
 import LocalityAutocomplete from '@/components/LocalityAutocomplete';
 import DateField from '@/components/DateField';
+import PhoneInput from '@/components/PhoneInput';
 
 const EVENT_TYPES = [
   { value: 'BIRTHDAY',     label: 'Birthday Party', icon: '🎂',  img: 'https://images.unsplash.com/photo-1530103862676-de8c9debad1d?w=240&auto=format&fit=crop&q=70' },
@@ -581,8 +582,7 @@ export default function EventBookingPage() {
                     <div className="grid grid-cols-2 gap-4">
                       <input type="text" value={customerName} onChange={e => setCustomerName(e.target.value)}
                         placeholder="Your name" className="border rounded-lg px-4 py-2.5 text-sm" />
-                      <input type="tel" value={customerPhone} onChange={e => setCustomerPhone(e.target.value)}
-                        placeholder="Phone number" maxLength={10} className="border rounded-lg px-4 py-2.5 text-sm" />
+                      <PhoneInput value={customerPhone} onChange={setCustomerPhone} />
                     </div>
                   </div>
 

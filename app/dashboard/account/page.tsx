@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { api } from '@/lib/api';
 import DateField from '@/components/DateField';
+import PhoneInput from '@/components/PhoneInput';
 import type { UserProfile, CoTraveler, SavedPaymentMethod } from '@/types';
 
 type SidebarKey = 'personal' | 'security' | 'travelers' | 'display' | 'payments' | 'privacy';
@@ -422,10 +423,7 @@ export default function AccountPage() {
                       <p className="text-sm font-medium text-gray-500 mb-1">Phone number</p>
                       {editingField === 'phone' ? (
                         <div className="space-y-3 mt-2">
-                          <div className="flex gap-2">
-                            <div className="flex items-center border rounded-lg px-3 py-2 text-sm bg-gray-50 text-gray-600 shrink-0">+91</div>
-                            <input type="tel" value={editPhone} onChange={(e) => setEditPhone(e.target.value.replace(/\D/g, ''))} maxLength={10} className="w-full border rounded-lg px-3 py-2 text-sm outline-none focus:border-orange-500" placeholder="9876543210" />
-                          </div>
+                          <PhoneInput value={editPhone} onChange={setEditPhone} />
                           <div className="flex gap-2">
                             <button onClick={() => saveField('phone')} disabled={saving} className="bg-orange-500 text-white text-sm font-medium px-5 py-2 rounded-lg hover:bg-orange-600 transition disabled:opacity-50">{saving ? 'Saving...' : 'Save'}</button>
                             <button onClick={() => setEditingField(null)} className="text-sm text-gray-500 px-4 py-2 hover:text-gray-700">Cancel</button>

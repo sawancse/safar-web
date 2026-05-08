@@ -856,13 +856,29 @@ export default function AuthPage() {
                     type={isEmail ? 'email' : 'text'}
                     inputMode={isEmail ? 'email' : 'tel'}
                     value={inputValue}
-                    onChange={(e) => { setInputValue(e.target.value); setError(''); }}
+                    onChange={(e) => {
+                      let v = e.target.value;
+                      // If user is entering a phone number (no @ yet, starts with a digit), cap at 10 digits.
+                      if (!v.includes('@') && /^\d/.test(v)) {
+                        v = v.replace(/\D/g, '').slice(0, 10);
+                      }
+                      setInputValue(v);
+                      setError('');
+                    }}
+                    maxLength={!inputValue.includes('@') && /^\d/.test(inputValue) ? 10 : undefined}
                     onKeyDown={(e) => e.key === 'Enter' && (isEmail || isPhone) && handleContinue()}
                     placeholder="Phone number or email"
                     className="w-full px-4 py-3.5 text-sm outline-none placeholder-gray-400"
                     autoFocus
                   />
                 </div>
+                {/* Phone-mode validation hint */}
+                {!isEmail && /^\d/.test(inputValue) && inputValue.length > 0 && inputValue.length < 10 && (
+                  <p className="text-xs text-red-500 -mt-2">Phone must be 10 digits ({10 - inputValue.length} more)</p>
+                )}
+                {!isEmail && /^\d{10}$/.test(inputValue) && countryCode === '+91' && !/^[6-9]/.test(inputValue) && (
+                  <p className="text-xs text-red-500 -mt-2">Indian mobile numbers must start with 6, 7, 8, or 9</p>
+                )}
 
                 {/* Continue button */}
                 <button

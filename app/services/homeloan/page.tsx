@@ -3,6 +3,8 @@
 import { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import { api } from '@/lib/api';
+import PhoneInput from '@/components/PhoneInput';
+import { isValidPhone } from '@/lib/phone';
 
 function formatPaise(paise: number): string {
   return new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(paise / 100);
@@ -493,8 +495,7 @@ export default function HomeLoanPage() {
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Phone</label>
-                    <input type="tel" value={applyForm.phone} onChange={(e) => setApplyForm({ ...applyForm, phone: e.target.value })}
-                      className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm" placeholder="10-digit mobile number" />
+                    <PhoneInput value={applyForm.phone} onChange={(v) => setApplyForm({ ...applyForm, phone: v })} />
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
@@ -503,7 +504,7 @@ export default function HomeLoanPage() {
                   </div>
                 </div>
                 <button onClick={handleApply}
-                  disabled={applyLoading || !applyForm.loanAmount || !applyForm.name || !applyForm.phone || !applyForm.email}
+                  disabled={applyLoading || !applyForm.loanAmount || !applyForm.name || !isValidPhone(applyForm.phone) || !applyForm.email}
                   className="w-full mt-6 bg-orange-500 hover:bg-orange-600 text-white py-3 rounded-lg text-sm font-semibold transition-colors disabled:opacity-50">
                   {applyLoading ? 'Submitting...' : 'Submit Application'}
                 </button>

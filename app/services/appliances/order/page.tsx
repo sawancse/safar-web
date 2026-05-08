@@ -5,7 +5,9 @@ import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import DateField from '@/components/DateField';
 import MapLocationPicker from '@/components/MapLocationPicker';
+import PhoneInput from '@/components/PhoneInput';
 import { api } from '@/lib/api';
+import { isValidPhone } from '@/lib/phone';
 import { formatPaise } from '@/lib/utils';
 import { APPLIANCES, CATEGORIES, appliancesForCategory, ApplianceCategory, DELIVERY_FEE_PAISE, GST_RATE } from '../catalog';
 
@@ -106,7 +108,7 @@ export default function ApplianceOrderPage() {
 
   const canProceed = cartEntries.length > 0 && !!deliveryDate && !!pickupDate && rentalDays >= 1;
   const canPay = canProceed && !!priceBreakdown && !!address.trim() && !!city.trim() && !!pincode.trim()
-    && !!customerName.trim() && !!customerPhone.trim() && agreeTerms;
+    && !!customerName.trim() && isValidPhone(customerPhone) && agreeTerms;
 
   async function handlePay() {
     if (!priceBreakdown) return;
@@ -380,7 +382,7 @@ export default function ApplianceOrderPage() {
                 <h3 className="font-semibold text-gray-900">Your details</h3>
                 <div className="grid grid-cols-2 gap-3">
                   <input type="text" required value={customerName}  onChange={e => setCustomerName(e.target.value)}  placeholder="Your name *"  className="border rounded-lg px-3 py-2 text-sm" />
-                  <input type="tel"  required value={customerPhone} onChange={e => setCustomerPhone(e.target.value)} placeholder="Phone *"      maxLength={10} className="border rounded-lg px-3 py-2 text-sm" />
+                  <PhoneInput value={customerPhone} onChange={setCustomerPhone} />
                 </div>
                 <input type="email" value={customerEmail} onChange={e => setCustomerEmail(e.target.value)} placeholder="Email (optional)" className="w-full border rounded-lg px-3 py-2 text-sm" />
               </div>
@@ -436,7 +438,7 @@ export default function ApplianceOrderPage() {
                 <div className="mt-3 text-[11px] text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
                   {!address.trim() || !city.trim() || !pincode.trim()
                     ? 'Fill in the delivery address above.'
-                    : !customerName.trim() || !customerPhone.trim()
+                    : !customerName.trim() || !isValidPhone(customerPhone)
                       ? 'Fill in your name and phone above.'
                       : !agreeTerms
                         ? 'Accept the terms to enable payment.'

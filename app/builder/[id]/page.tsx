@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { api } from '@/lib/api';
+import PhoneInput from '@/components/PhoneInput';
 
 function formatSalePrice(paise: number): string {
   if (!paise) return 'Price on Request';
@@ -365,13 +366,7 @@ export default function BuilderProjectDetailPage() {
                     onChange={e => setInquiryForm(p => ({ ...p, buyerName: e.target.value }))}
                     className="w-full border rounded-lg px-3 py-2.5 text-sm outline-none focus:border-orange-400"
                   />
-                  <input
-                    type="tel"
-                    placeholder="Phone Number"
-                    value={inquiryForm.buyerPhone}
-                    onChange={e => setInquiryForm(p => ({ ...p, buyerPhone: e.target.value }))}
-                    className="w-full border rounded-lg px-3 py-2.5 text-sm outline-none focus:border-orange-400"
-                  />
+                  <PhoneInput value={inquiryForm.buyerPhone} onChange={(v) => setInquiryForm(p => ({ ...p, buyerPhone: v }))} />
                   {units.length > 0 && (
                     <select
                       value={inquiryForm.unitTypeId}

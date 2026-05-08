@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { api } from '@/lib/api';
 import { formatPaise } from '@/lib/utils';
+import PhoneInput from '@/components/PhoneInput';
 
 const STATUS_BADGE: Record<string, { label: string; color: string }> = {
   PENDING: { label: 'Under Review', color: 'bg-yellow-100 text-yellow-700' },
@@ -131,7 +132,7 @@ export default function LawyerDashboardPage() {
                     <input value={editForm.fullName || ''} onChange={e => setEditForm((p: any) => ({...p, fullName: e.target.value}))} placeholder="Full Name" className="border rounded-lg px-3 py-2 text-sm" />
                     <input value={editForm.barCouncilId || ''} onChange={e => setEditForm((p: any) => ({...p, barCouncilId: e.target.value}))} placeholder="Bar Council" className="border rounded-lg px-3 py-2 text-sm" />
                     <input value={editForm.email || ''} onChange={e => setEditForm((p: any) => ({...p, email: e.target.value}))} placeholder="Email" className="border rounded-lg px-3 py-2 text-sm" />
-                    <input value={editForm.phone || ''} onChange={e => setEditForm((p: any) => ({...p, phone: e.target.value}))} placeholder="Phone" className="border rounded-lg px-3 py-2 text-sm" />
+                    <PhoneInput value={editForm.phone || ''} onChange={(v) => setEditForm((p: any) => ({...p, phone: v}))} required={false} />
                     <input value={editForm.city || ''} onChange={e => setEditForm((p: any) => ({...p, city: e.target.value}))} placeholder="City" className="border rounded-lg px-3 py-2 text-sm" />
                     <input type="number" value={editForm.experienceYears || ''} onChange={e => setEditForm((p: any) => ({...p, experienceYears: e.target.value ? parseInt(e.target.value) : null}))} placeholder="Exp Years" className="border rounded-lg px-3 py-2 text-sm" />
                   </div>

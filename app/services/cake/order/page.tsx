@@ -5,7 +5,9 @@ import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import DateField from '@/components/DateField';
 import MapLocationPicker from '@/components/MapLocationPicker';
+import PhoneInput from '@/components/PhoneInput';
 import { api } from '@/lib/api';
+import { isValidPhone } from '@/lib/phone';
 import { formatPaise } from '@/lib/utils';
 import { CAKES, WEIGHTS, FLAVOURS, TIER_SURCHARGE } from '../catalog';
 
@@ -97,7 +99,7 @@ export default function DesignerCakeOrderPage() {
 
   const canProceedToSummary = selectedWeight && selectedCake && flavour;
   const canPay = !!priceBreakdown && !!deliveryDate && !!address.trim() && !!city.trim()
-    && !!pincode.trim() && !!customerName.trim() && !!customerPhone.trim() && agreeTerms;
+    && !!pincode.trim() && !!customerName.trim() && isValidPhone(customerPhone) && agreeTerms;
 
   function applyCoupon() {
     setCouponError('');
@@ -387,7 +389,7 @@ export default function DesignerCakeOrderPage() {
                 <h3 className="font-semibold text-gray-900">Your details</h3>
                 <div className="grid grid-cols-2 gap-3">
                   <input type="text" required value={customerName}  onChange={e => setCustomerName(e.target.value)}  placeholder="Your name *"  className="border rounded-lg px-3 py-2 text-sm" />
-                  <input type="tel"  required value={customerPhone} onChange={e => setCustomerPhone(e.target.value)} placeholder="Phone *"      maxLength={10} className="border rounded-lg px-3 py-2 text-sm" />
+                  <PhoneInput value={customerPhone} onChange={setCustomerPhone} />
                 </div>
                 <input type="email" value={customerEmail} onChange={e => setCustomerEmail(e.target.value)} placeholder="Email (optional)" className="w-full border rounded-lg px-3 py-2 text-sm" />
               </div>

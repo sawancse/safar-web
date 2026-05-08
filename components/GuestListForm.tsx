@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import PhoneInput from '@/components/PhoneInput';
 
 export interface GuestInfo {
   fullName: string;
@@ -151,9 +152,7 @@ export default function GuestListForm({ roomNames, onUpdate, primaryName, primar
                 <input type="email" placeholder="Email" value={guest.email}
                   onChange={e => updateGuest(i, 'email', e.target.value)}
                   className="border rounded-lg px-3 py-1.5 text-sm outline-none focus:border-orange-400" />
-                <input type="tel" placeholder="Phone" value={guest.phone}
-                  onChange={e => updateGuest(i, 'phone', e.target.value)}
-                  className="border rounded-lg px-3 py-1.5 text-sm outline-none focus:border-orange-400" />
+                <PhoneInput value={guest.phone} onChange={(v) => updateGuest(i, 'phone', v)} required={false} />
                 <input type="number" placeholder="Age" min="0" max="120" value={guest.age}
                   onChange={e => updateGuest(i, 'age', e.target.value)}
                   className="border rounded-lg px-3 py-1.5 text-sm outline-none focus:border-orange-400" />

@@ -9,6 +9,8 @@ import type { Listing, Booking, RoomType, RoomTypeInclusion } from '@/types';
 import RoomTypeSelector, { type RoomSelection } from '@/components/RoomTypeSelector';
 import GuestListForm, { type GuestInfo } from '@/components/GuestListForm';
 import DateField from '@/components/DateField';
+import PhoneInput from '@/components/PhoneInput';
+import { sanitizePhone, isValidPhone } from '@/lib/phone';
 
 function fmtDate(iso: string) {
   if (!iso) return '—';
@@ -101,8 +103,7 @@ export default function BookPage() {
       }
       if (p?.email) setEmail(prev => prev || p.email!);
       if (p?.phone) {
-        // UI shows a fixed "+91" chip, so strip any country-code prefix.
-        const local = p.phone.replace(/^\+?91[-\s]?/, '').replace(/\D/g, '');
+        const local = sanitizePhone(p.phone);
         setPhone(prev => prev || local);
       }
     }).catch((err) => {
@@ -295,7 +296,7 @@ export default function BookPage() {
     const requested = sel.rooms ?? sel.c ?? 1;
     return cap >= requested;
   });
-  const isFormValid = firstName.trim() && lastName.trim() && email.trim() && phone.trim() && (isMonthly ? leaseMonths > 0 : isHourly ? hours > 0 : nights > 0) && roomTypeSelected && selectionsWithinCapacity;
+  const isFormValid = firstName.trim() && lastName.trim() && email.trim() && isValidPhone(phone) && (isMonthly ? leaseMonths > 0 : isHourly ? hours > 0 : nights > 0) && roomTypeSelected && selectionsWithinCapacity;
 
   const guestLabel = [
     `${adults} adult${adults !== 1 ? 's' : ''}`,
@@ -415,11 +416,7 @@ export default function BookPage() {
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Phone number <span className="text-red-500">*</span></label>
-              <div className="flex gap-2">
-                <div className="flex items-center border rounded-lg px-3 py-2 text-sm bg-gray-50 text-gray-600 shrink-0">+91</div>
-                <input type="tel" value={phone} onChange={(e) => setPhone(e.target.value)}
-                  className="w-full border rounded-lg px-3 py-2 text-sm outline-none focus:border-orange-500" placeholder="Phone number" />
-              </div>
+              <PhoneInput value={phone} onChange={setPhone} placeholder="10-digit mobile number" />
             </div>
             <label className="flex items-start gap-2 cursor-pointer">
               <input type="checkbox" checked={paperlessConfirm} onChange={(e) => setPaperlessConfirm(e.target.checked)} className="mt-0.5 accent-orange-500" />

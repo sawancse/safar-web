@@ -7,6 +7,8 @@ import CityAutocomplete from '@/components/CityAutocomplete';
 import LocalityAutocomplete from '@/components/LocalityAutocomplete';
 import MapLocationPicker from '@/components/MapLocationPicker';
 import DateField from '@/components/DateField';
+import PhoneInput from '@/components/PhoneInput';
+import { isValidPhone } from '@/lib/phone';
 
 const INDIAN_STATES = [
   'Andhra Pradesh', 'Arunachal Pradesh', 'Assam', 'Bihar', 'Chhattisgarh',
@@ -358,10 +360,8 @@ export default function BuilderNewProjectPage() {
     switch (s) {
       case 0:
         if (!builderName.trim()) errors.push('Builder name is required');
-        if (builderPhone.trim()) {
-          // Optional, but if provided must be a valid 10-digit India number
-          const digits = builderPhone.replace(/\D/g, '').replace(/^91/, '').replace(/^0+/, '');
-          if (digits.length !== 10) errors.push('WhatsApp / phone must be a 10-digit India number');
+        if (builderPhone.trim() && !isValidPhone(builderPhone)) {
+          errors.push('WhatsApp / phone must be a 10-digit India number');
         }
         break;
       case 1:
@@ -619,15 +619,7 @@ export default function BuilderNewProjectPage() {
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">WhatsApp / Phone</label>
-              <input
-                type="tel"
-                value={builderPhone}
-                onChange={e => setBuilderPhone(e.target.value)}
-                placeholder="10-digit India mobile, e.g. 9876543210"
-                inputMode="numeric"
-                maxLength={15}
-                className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400"
-              />
+              <PhoneInput value={builderPhone} onChange={setBuilderPhone} required={false} />
               <p className="text-xs text-gray-400 mt-1">Buyers see a "WhatsApp Builder" button on your project page that opens a chat with this number.</p>
             </div>
 

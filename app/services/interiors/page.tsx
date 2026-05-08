@@ -4,6 +4,8 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { api } from '@/lib/api';
 import DateField from '@/components/DateField';
+import PhoneInput from '@/components/PhoneInput';
+import { isValidPhone } from '@/lib/phone';
 
 function formatPaise(paise: number): string {
   return new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(paise / 100);
@@ -192,14 +194,14 @@ export default function InteriorsPage() {
                   {BUDGET_RANGES.map((b) => <option key={b} value={b}>{b}</option>)}
                 </select>
                 <DateField value={formDate} onChange={(e) => setFormDate(e.target.value)} className="bg-white/20 border border-white/30 rounded-lg px-3 py-2.5 text-sm text-white" />
-                <input value={formPhone} onChange={(e) => setFormPhone(e.target.value)} className="bg-white/20 border border-white/30 rounded-lg px-3 py-2.5 text-sm text-white placeholder-orange-200" placeholder="Phone Number" />
+                <PhoneInput value={formPhone} onChange={setFormPhone} />
               </div>
               {!token ? (
                 <Link href="/auth" className="inline-flex bg-white text-orange-600 px-6 py-2.5 rounded-lg text-sm font-medium hover:bg-orange-50 transition-colors">
                   Sign in to Book
                 </Link>
               ) : (
-                <button onClick={bookConsultation} disabled={bookingSubmitting || !formCity || !formPhone}
+                <button onClick={bookConsultation} disabled={bookingSubmitting || !formCity || !isValidPhone(formPhone)}
                   className="bg-white text-orange-600 px-6 py-2.5 rounded-lg text-sm font-medium hover:bg-orange-50 transition-colors disabled:opacity-50">
                   {bookingSubmitting ? 'Booking...' : 'Book Free Consultation'}
                 </button>
