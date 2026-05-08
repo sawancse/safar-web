@@ -18,12 +18,33 @@ const STATUS_LABEL: Record<string, { label: string; color: string }> = {
 
 type TabKey = 'upcoming' | 'past' | 'cancelled';
 
+type SortKey = 'booked-desc' | 'booked-asc' | 'checkin-asc' | 'checkin-desc';
+
+const SORT_OPTIONS: { key: SortKey; label: string }[] = [
+  { key: 'booked-desc', label: 'Recently booked' },
+  { key: 'booked-asc',  label: 'Earliest booked' },
+  { key: 'checkin-asc', label: 'Check-in: soonest' },
+  { key: 'checkin-desc',label: 'Check-in: latest' },
+];
+
+function sortBookings(list: Booking[], key: SortKey): Booking[] {
+  const ts = (s?: string) => (s ? new Date(s).getTime() : 0);
+  const arr = [...list];
+  switch (key) {
+    case 'booked-desc':  return arr.sort((a, b) => ts(b.createdAt) - ts(a.createdAt));
+    case 'booked-asc':   return arr.sort((a, b) => ts(a.createdAt) - ts(b.createdAt));
+    case 'checkin-asc':  return arr.sort((a, b) => ts(a.checkIn) - ts(b.checkIn));
+    case 'checkin-desc': return arr.sort((a, b) => ts(b.checkIn) - ts(a.checkIn));
+  }
+}
+
 export default function DashboardPage() {
   const router = useRouter();
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(true);
   const [token, setToken] = useState('');
   const [activeTab, setActiveTab] = useState<TabKey>('upcoming');
+  const [sortKey, setSortKey] = useState<SortKey>('booked-desc');
   const [cancelModal, setCancelModal] = useState<{ open: boolean; bookingId: string; ref: string }>({ open: false, bookingId: '', ref: '' });
   const [cancelReason, setCancelReason] = useState('');
   const [cancelling, setCancelling] = useState(false);
@@ -190,7 +211,8 @@ export default function DashboardPage() {
   const past = bookings.filter((b) => ['COMPLETED', 'NO_SHOW'].includes(b.status));
   const cancelled = bookings.filter((b) => b.status === 'CANCELLED');
 
-  const filtered = activeTab === 'upcoming' ? upcoming : activeTab === 'past' ? past : cancelled;
+  const tabBookings = activeTab === 'upcoming' ? upcoming : activeTab === 'past' ? past : cancelled;
+  const filtered = sortBookings(tabBookings, sortKey);
 
   const tabs: { key: TabKey; label: string; count: number }[] = [
     { key: 'upcoming', label: 'Upcoming', count: upcoming.length },
@@ -239,28 +261,43 @@ export default function DashboardPage() {
         ))}
       </div>
 
-      {/* Tabs */}
-      <div className="flex gap-1 mb-6 border-b">
-        {tabs.map((tab) => (
-          <button
-            key={tab.key}
-            onClick={() => setActiveTab(tab.key)}
-            className={`px-4 py-2.5 text-sm font-medium border-b-2 transition ${
-              activeTab === tab.key
-                ? 'border-orange-500 text-orange-600'
-                : 'border-transparent text-gray-500 hover:text-gray-700'
-            }`}
+      {/* Tabs + sort */}
+      <div className="flex items-center justify-between gap-3 mb-6 border-b">
+        <div className="flex gap-1 -mb-px">
+          {tabs.map((tab) => (
+            <button
+              key={tab.key}
+              onClick={() => setActiveTab(tab.key)}
+              className={`px-4 py-2.5 text-sm font-medium border-b-2 transition ${
+                activeTab === tab.key
+                  ? 'border-orange-500 text-orange-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700'
+              }`}
+            >
+              {tab.label}
+              {tab.count > 0 && (
+                <span className={`ml-1.5 text-xs px-1.5 py-0.5 rounded-full ${
+                  activeTab === tab.key ? 'bg-orange-100 text-orange-600' : 'bg-gray-100 text-gray-500'
+                }`}>
+                  {tab.count}
+                </span>
+              )}
+            </button>
+          ))}
+        </div>
+        <div className="flex items-center gap-2 pb-1.5 shrink-0">
+          <label htmlFor="sort" className="text-xs text-gray-500 hidden sm:inline">Sort by</label>
+          <select
+            id="sort"
+            value={sortKey}
+            onChange={(e) => setSortKey(e.target.value as SortKey)}
+            className="border rounded-lg px-2.5 py-1.5 text-xs sm:text-sm outline-none focus:border-orange-500 bg-white text-gray-700"
           >
-            {tab.label}
-            {tab.count > 0 && (
-              <span className={`ml-1.5 text-xs px-1.5 py-0.5 rounded-full ${
-                activeTab === tab.key ? 'bg-orange-100 text-orange-600' : 'bg-gray-100 text-gray-500'
-              }`}>
-                {tab.count}
-              </span>
-            )}
-          </button>
-        ))}
+            {SORT_OPTIONS.map(o => (
+              <option key={o.key} value={o.key}>{o.label}</option>
+            ))}
+          </select>
+        </div>
       </div>
 
       {/* Bookings list */}
@@ -303,6 +340,9 @@ export default function DashboardPage() {
             const checkOutDate = booking.checkOut?.split('T')[0];
             const checkInFormatted = checkInDate ? new Date(checkInDate + 'T00:00').toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }) : '';
             const checkOutFormatted = checkOutDate ? new Date(checkOutDate + 'T00:00').toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : '';
+            const bookedOnFormatted = booking.createdAt
+              ? new Date(booking.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })
+              : '';
 
             return (
               <div key={booking.id} className="border rounded-2xl overflow-hidden hover:shadow-md transition bg-white">
@@ -328,11 +368,17 @@ export default function DashboardPage() {
                     <div>
                       <div className="flex items-start justify-between gap-2">
                         <div className="min-w-0">
-                          <div className="flex items-center gap-1.5 mb-0.5">
+                          <div className="flex items-center flex-wrap gap-1.5 mb-0.5">
                             <span className="text-sm">{typeIcon}</span>
                             <span className="text-[10px] text-gray-400 uppercase font-medium tracking-wide">{typeLabel}</span>
                             <span className="text-[10px] text-gray-300">|</span>
                             <span className="text-[10px] font-mono text-gray-400">{booking.bookingRef}</span>
+                            {bookedOnFormatted && (
+                              <>
+                                <span className="text-[10px] text-gray-300">|</span>
+                                <span className="text-[10px] text-gray-400">Booked {bookedOnFormatted}</span>
+                              </>
+                            )}
                           </div>
                           <Link href={`/listings/${booking.listingId}`}
                             className="font-semibold text-gray-900 hover:text-orange-500 transition text-sm line-clamp-1">

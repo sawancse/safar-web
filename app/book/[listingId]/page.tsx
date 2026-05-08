@@ -86,6 +86,28 @@ export default function BookPage() {
       return;
     }
     setToken(t);
+
+    // Prefill guest details from the signed-in user's profile (only fields the
+    // user hasn't typed into yet, so we never clobber in-flight edits).
+    api.getMyProfile(t).then((p) => {
+      const fullName = (p?.name || p?.displayName || '').trim();
+      if (fullName) {
+        const parts = fullName.split(/\s+/);
+        const first = parts[0] ?? '';
+        const last = parts.slice(1).join(' ');
+        setFirstName(prev => prev || first);
+        setLastName(prev => prev || last);
+      }
+      if (p?.email) setEmail(prev => prev || p.email!);
+      if (p?.phone) {
+        // UI shows a fixed "+91" chip, so strip any country-code prefix.
+        const local = p.phone.replace(/^\+?91[-\s]?/, '').replace(/\D/g, '');
+        setPhone(prev => prev || local);
+      }
+    }).catch((err) => {
+      console.warn('[book] profile prefill skipped:', err?.message || err);
+    });
+
     api.getListing(listingId).then((l) => {
       setListing(l);
       // Auto-adjust rooms if guest count exceeds per-room capacity
