@@ -193,23 +193,34 @@ export default function HostRoomOccupancyTab({ token, listings }: { token: strin
                 const rtTotal = rt.count * bedsPerRoom;
 
                 // Build booking occupancy for this room type (legacy single + multi-select).
-                // Subtract beds already represented by a live tenancy for the same
-                // tenant — otherwise a booked-then-checked-in guest shows BOTH a
-                // booking cell AND a tenancy cell, inflating the count.
+                // We dedupe against tenancies for the SAME guest using a shared "credit"
+                // pool — otherwise multiple bookings by the same guest each subtract the
+                // full tenancy count and all collapse to 0. Each tenancy is consumed
+                // by at most one booking.
+                const tenancyCreditsByGuest = new Map<string, number>();
+                rtTenancies.forEach(t => {
+                  if (t.tenantId) {
+                    tenancyCreditsByGuest.set(t.tenantId, (tenancyCreditsByGuest.get(t.tenantId) || 0) + 1);
+                  }
+                });
+                const consumeCredits = (guestId: string | undefined, want: number): number => {
+                  if (!guestId) return want;
+                  const credits = tenancyCreditsByGuest.get(guestId) || 0;
+                  const used = Math.min(credits, want);
+                  if (used > 0) tenancyCreditsByGuest.set(guestId, credits - used);
+                  return want - used;
+                };
                 const rtBookings: { booking: BookingLite; rooms: number }[] = [];
                 bookings.forEach(b => {
-                  const tenancyBedsForThisGuest = rtTenancies.filter(
-                    t => t.tenantId && b.guestId && t.tenantId === b.guestId
-                  ).length;
                   if (b.roomSelections && b.roomSelections.length > 0) {
                     b.roomSelections
                       .filter(s => s.roomTypeId === rt.id)
                       .forEach(s => {
-                        const rooms = Math.max(0, s.count - tenancyBedsForThisGuest);
+                        const rooms = consumeCredits(b.guestId, s.count);
                         if (rooms > 0) rtBookings.push({ booking: b, rooms });
                       });
                   } else if (b.roomTypeId === rt.id) {
-                    const rooms = Math.max(0, (b.roomsCount || 1) - tenancyBedsForThisGuest);
+                    const rooms = consumeCredits(b.guestId, b.roomsCount || 1);
                     if (rooms > 0) rtBookings.push({ booking: b, rooms });
                   }
                 });
