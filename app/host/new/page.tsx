@@ -320,6 +320,8 @@ interface WizardData {
   foodType: 'VEG' | 'NON_VEG' | 'BOTH' | 'NONE';
   gateClosingTime: string;
   noticePeriodDays: number;
+  payAtPropertyEnabled: boolean;
+  partialPrepaidPercent: number;
   pgRoomTypes: PgRoomConfig[];
   // Hotel specific
   hotelChain: string;
@@ -347,7 +349,8 @@ const INITIAL_DATA: WizardData = {
   availableFrom: '', preferredTenants: [], waterSupply: '', gatedSecurity: false, nonVegAllowed: true,
   propertyCondition: '', showPropertyBy: 'OWNER', directionTips: '', visitAvailability: 'EVERYDAY',
   visitTimeFrom: '10:00', visitTimeUntil: '18:00', secondaryPhone: '', multipleUnits: false,
-  occupancyType: '', foodType: 'NONE', gateClosingTime: '22:00', noticePeriodDays: 30, pgRoomTypes: [{ ...DEFAULT_PG_ROOM }],
+  occupancyType: '', foodType: 'NONE', gateClosingTime: '22:00', noticePeriodDays: 30,
+  payAtPropertyEnabled: false, partialPrepaidPercent: 18, pgRoomTypes: [{ ...DEFAULT_PG_ROOM }],
   hotelChain: '', frontDesk24h: false, checkinTime: '14:00', checkoutTime: '11:00',
   amenities: [], bedTypes: [], mealPlan: 'NONE', accessibilityFeatures: [], breakfastIncluded: false, parkingType: 'NONE',
   petFriendly: false, maxPets: 0, childrenAllowed: true,
@@ -529,6 +532,8 @@ export default function NewListingWizard() {
         body.foodType = data.foodType;
         body.gateClosingTime = data.gateClosingTime;
         body.noticePeriodDays = data.noticePeriodDays;
+        body.payAtPropertyEnabled = data.payAtPropertyEnabled;
+        body.partialPrepaidPercent = data.payAtPropertyEnabled ? data.partialPrepaidPercent : null;
         body.minStayDays = 30;
         // Send wizard-configured room types
         if (data.pgRoomTypes.length > 0 && data.pgRoomTypes.every(rt => rt.name.trim() && rt.basePricePaise > 0)) {
@@ -1223,6 +1228,36 @@ export default function NewListingWizard() {
               </div>
               <div>
                 {/* Deposit moved to global section below */}
+              </div>
+
+              {/* ── Partial-prepayment (split payment) ── */}
+              <div className="sm:col-span-2 border-t pt-4 mt-2">
+                <h3 className="text-sm font-bold text-gray-800 mb-1">Payment Options</h3>
+                <p className="text-xs text-gray-500 mb-3">Let guests pay a small amount online and the rest at check-in.</p>
+                <label className="flex items-start gap-3 cursor-pointer">
+                  <input type="checkbox" className="mt-1 w-5 h-5 rounded text-orange-500 focus:ring-orange-400"
+                    checked={data.payAtPropertyEnabled}
+                    onChange={e => update({ payAtPropertyEnabled: e.target.checked })} />
+                  <div>
+                    <span className="text-sm font-medium text-gray-700">Allow partial payment (pay-at-property)</span>
+                    <p className="text-xs text-gray-500">Guest pays a percentage upfront, balance collected at check-in.</p>
+                  </div>
+                </label>
+                {data.payAtPropertyEnabled && (
+                  <div className="mt-3 ml-8">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Upfront percentage (10–50%)</label>
+                    <div className="flex items-center gap-2">
+                      <input type="number" min={10} max={50}
+                        className="w-32 border rounded-xl px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-orange-400"
+                        value={data.partialPrepaidPercent}
+                        onChange={e => update({ partialPrepaidPercent: Number(e.target.value) || 18 })} />
+                      <span className="text-sm text-gray-600">%</span>
+                    </div>
+                    <p className="text-xs text-gray-500 mt-2">
+                      Guest pays {data.partialPrepaidPercent}% online; balance ({100 - data.partialPrepaidPercent}%) collected at check-in.
+                    </p>
+                  </div>
+                )}
               </div>
             </>
           )}

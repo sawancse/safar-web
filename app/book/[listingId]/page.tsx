@@ -76,6 +76,7 @@ export default function BookPage() {
   const [airportShuttle, setAirportShuttle] = useState(false);
   const [specialRequests, setSpecialRequests] = useState('');
   const [arrivalTime, setArrivalTime] = useState('');
+  const [paymentMode, setPaymentMode] = useState<'PREPAID' | 'PARTIAL_PREPAID'>('PREPAID');
 
   const today = new Date().toISOString().split('T')[0];
 
@@ -331,6 +332,7 @@ export default function BookPage() {
           airportShuttle,
           specialRequests: specialRequests.trim() || undefined,
           arrivalTime: arrivalTime || undefined,
+          paymentMode: (isPG && listing?.payAtPropertyEnabled) ? paymentMode : undefined,
           selectedInclusionIds: selectedInclusionIds.length > 0 ? selectedInclusionIds : undefined,
           roomSelections: selectedRoomSelections.length > 0
             ? selectedRoomSelections.map(s => ({ roomTypeId: s.id, count: s.c, guests: s.c }))
@@ -547,6 +549,42 @@ export default function BookPage() {
 
           {error && <div className="bg-red-50 text-red-600 rounded-xl px-4 py-3 text-sm">{error}</div>}
 
+          {/* Payment mode (PG only, when host has enabled partial-prepayment) */}
+          {!booking && isPG && listing?.payAtPropertyEnabled && (() => {
+            const pct = Math.min(50, Math.max(10, listing?.partialPrepaidPercent ?? 30));
+            const upfront = Math.round(totalPaise * pct / 100);
+            const due = totalPaise - upfront;
+            return (
+              <div className="border rounded-2xl p-4 space-y-3">
+                <p className="text-sm font-semibold text-gray-800">How would you like to pay?</p>
+                <label className={`flex items-start gap-3 p-3 rounded-xl border cursor-pointer transition ${paymentMode === 'PREPAID' ? 'border-orange-500 bg-orange-50' : 'border-gray-200 hover:border-gray-300'}`}>
+                  <input type="radio" name="paymentMode" className="mt-1 accent-orange-500"
+                    checked={paymentMode === 'PREPAID'}
+                    onChange={() => setPaymentMode('PREPAID')} />
+                  <div className="flex-1">
+                    <div className="flex justify-between">
+                      <span className="text-sm font-medium text-gray-800">Pay full amount now</span>
+                      <span className="text-sm font-semibold">{formatPaise(totalPaise)}</span>
+                    </div>
+                    <p className="text-xs text-gray-500 mt-1">Hassle-free check-in.</p>
+                  </div>
+                </label>
+                <label className={`flex items-start gap-3 p-3 rounded-xl border cursor-pointer transition ${paymentMode === 'PARTIAL_PREPAID' ? 'border-orange-500 bg-orange-50' : 'border-gray-200 hover:border-gray-300'}`}>
+                  <input type="radio" name="paymentMode" className="mt-1 accent-orange-500"
+                    checked={paymentMode === 'PARTIAL_PREPAID'}
+                    onChange={() => setPaymentMode('PARTIAL_PREPAID')} />
+                  <div className="flex-1">
+                    <div className="flex justify-between">
+                      <span className="text-sm font-medium text-gray-800">Pay {pct}% now, rest at check-in</span>
+                      <span className="text-sm font-semibold">{formatPaise(upfront)}</span>
+                    </div>
+                    <p className="text-xs text-gray-500 mt-1">Balance {formatPaise(due)} collected at the property.</p>
+                  </div>
+                </label>
+              </div>
+            );
+          })()}
+
           {/* Action button */}
           {roomTypes.length > 0 && selectedRoomSelections.length === 0 && (
             <p className="text-xs text-red-500 font-medium text-center mb-2">Please select a room type above to continue</p>
@@ -558,24 +596,42 @@ export default function BookPage() {
             </button>
           ) : (
             <div className="space-y-3">
-              <p className="text-sm font-semibold text-gray-700">
-                Choose payment method · Pay {formatPaise(booking.totalAmountPaise)}
-              </p>
-              <RazorpayButton bookingId={booking.id} amountPaise={booking.totalAmountPaise} token={token} onSuccess={onPaymentSuccess} />
-              <div className="relative">
-                <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-gray-200" /></div>
-                <div className="relative flex justify-center text-xs"><span className="bg-white px-3 text-gray-400">or</span></div>
-              </div>
-              <button onClick={async () => {
-                setLoading(true);
-                try { await api.confirmBooking(booking.id, token); setSuccess(true); setTimeout(() => router.push('/dashboard'), 2000); }
-                catch (e: any) { setError(e.message || 'Failed to confirm booking'); }
-                finally { setLoading(false); }
-              }} disabled={loading}
-                className="w-full border-2 border-green-500 text-green-700 hover:bg-green-50 font-semibold py-3 rounded-xl disabled:opacity-50 transition flex items-center justify-center gap-2">
-                &#x1F4B5; {loading ? 'Confirming...' : 'Cash on Arrival'}
-              </button>
-              <p className="text-xs text-gray-400 text-center">Pay directly at the property. Host will confirm your booking.</p>
+              {booking.paymentMode === 'PARTIAL_PREPAID' && booking.prepaidAmountPaise != null ? (
+                <>
+                  <p className="text-sm font-semibold text-gray-700">
+                    Pay {formatPaise(booking.prepaidAmountPaise)} now to confirm your booking
+                  </p>
+                  <p className="text-xs text-gray-500">
+                    Balance {formatPaise(booking.dueAtPropertyPaise ?? 0)} will be collected at check-in.
+                  </p>
+                  <RazorpayButton bookingId={booking.id} amountPaise={booking.prepaidAmountPaise} token={token} onSuccess={onPaymentSuccess} />
+                </>
+              ) : (
+                <>
+                  <p className="text-sm font-semibold text-gray-700">
+                    Choose payment method · Pay {formatPaise(booking.totalAmountPaise)}
+                  </p>
+                  <RazorpayButton bookingId={booking.id} amountPaise={booking.totalAmountPaise} token={token} onSuccess={onPaymentSuccess} />
+                </>
+              )}
+              {booking.paymentMode !== 'PARTIAL_PREPAID' && (
+                <>
+                  <div className="relative">
+                    <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-gray-200" /></div>
+                    <div className="relative flex justify-center text-xs"><span className="bg-white px-3 text-gray-400">or</span></div>
+                  </div>
+                  <button onClick={async () => {
+                    setLoading(true);
+                    try { await api.confirmBooking(booking.id, token); setSuccess(true); setTimeout(() => router.push('/dashboard'), 2000); }
+                    catch (e: any) { setError(e.message || 'Failed to confirm booking'); }
+                    finally { setLoading(false); }
+                  }} disabled={loading}
+                    className="w-full border-2 border-green-500 text-green-700 hover:bg-green-50 font-semibold py-3 rounded-xl disabled:opacity-50 transition flex items-center justify-center gap-2">
+                    &#x1F4B5; {loading ? 'Confirming...' : 'Cash on Arrival'}
+                  </button>
+                  <p className="text-xs text-gray-400 text-center">Pay directly at the property. Host will confirm your booking.</p>
+                </>
+              )}
             </div>
           )}
         </div>

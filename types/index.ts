@@ -122,6 +122,9 @@ export interface Listing {
   preferredPartner?: boolean;
   panoramaUrl?: string;
   videoTourUrl?: string;
+  // Partial-prepayment (PG): host enables + sets % collected upfront
+  payAtPropertyEnabled?: boolean;
+  partialPrepaidPercent?: number;
   createdAt: string;
   updatedAt: string;
 }
@@ -272,6 +275,9 @@ export interface Booking {
   securityDepositStatus?: string;
   pricingUnit?: 'NIGHT' | 'HOUR' | 'MONTH';
   inclusionsTotalPaise?: number;
+  paymentMode?: 'PREPAID' | 'PAY_AT_PROPERTY' | 'PARTIAL_PREPAID' | string;
+  prepaidAmountPaise?: number;
+  dueAtPropertyPaise?: number;
   roomSelections?: {
     id: string;
     roomTypeId: string;

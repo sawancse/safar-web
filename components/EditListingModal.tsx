@@ -94,6 +94,10 @@ export default function EditListingModal({ listing, onClose, onSaved, token }: P
           rentNegotiable, preferredTenants: preferredTenants || null,
           propertyCondition: propertyCondition || null, availableFrom: availableFrom || null,
         } : {}),
+        ...(isPgListing ? {
+          payAtPropertyEnabled,
+          partialPrepaidPercent: payAtPropertyEnabled ? partialPrepaidPercent : null,
+        } : {}),
       }, token);
       onSaved();
     } catch (e: any) {
@@ -121,6 +125,10 @@ export default function EditListingModal({ listing, onClose, onSaved, token }: P
   const [insuranceEnabled, setInsuranceEnabled] = useState(listing.insuranceEnabled || false);
   const [insuranceAmountPaise, setInsuranceAmountPaise] = useState(listing.insuranceAmountPaise || 0);
   const [insuranceType, setInsuranceType] = useState(listing.insuranceType || 'BASIC');
+  // Partial-prepayment (PG)
+  const [payAtPropertyEnabled, setPayAtPropertyEnabled] = useState(listing.payAtPropertyEnabled || false);
+  const [partialPrepaidPercent, setPartialPrepaidPercent] = useState(listing.partialPrepaidPercent || 18);
+  const isPgListing = listing.type === 'PG' || listing.type === 'COLIVING';
 
   const SECTIONS = [
     { key: 'basic', label: 'Basic Info' },
@@ -449,6 +457,34 @@ export default function EditListingModal({ listing, onClose, onSaved, token }: P
                   className="w-full border rounded-lg px-3 py-2 text-sm mt-2"
                   placeholder="Deposit terms (e.g. Refunded within 7 days after checkout minus damages)" />
               </div>
+
+              {/* Partial-prepayment (PG only) */}
+              {isPgListing && (
+                <div className="border-t pt-3 mt-2">
+                  <label className="flex items-start gap-2 cursor-pointer">
+                    <input type="checkbox" checked={payAtPropertyEnabled}
+                      onChange={e => setPayAtPropertyEnabled(e.target.checked)} className="mt-1 rounded" />
+                    <div>
+                      <span className="text-sm font-medium">Allow partial payment (pay-at-property)</span>
+                      <p className="text-xs text-gray-500">Guest pays a percentage upfront, balance collected at check-in.</p>
+                    </div>
+                  </label>
+                  {payAtPropertyEnabled && (
+                    <div className="mt-3 ml-6">
+                      <label className="block text-xs font-medium text-gray-700 mb-1">Upfront percentage (10–50%)</label>
+                      <div className="flex items-center gap-2">
+                        <input type="number" min={10} max={50} value={partialPrepaidPercent}
+                          onChange={e => setPartialPrepaidPercent(Number(e.target.value) || 18)}
+                          className="w-32 border rounded-lg px-3 py-2 text-sm" />
+                        <span className="text-sm text-gray-600">%</span>
+                      </div>
+                      <p className="text-xs text-gray-500 mt-1">
+                        Guest pays {partialPrepaidPercent}% online; balance ({100 - partialPrepaidPercent}%) at check-in.
+                      </p>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           )}
 
