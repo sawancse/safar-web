@@ -134,7 +134,13 @@ export default function VendorItemsPage() {
         </h2>
         <div className="space-y-3">
           <Input label="Title" value={form.title} onChange={v => setForm(s => ({ ...s, title: v }))} placeholder='e.g. "3-tier Chocolate Truffle Birthday Cake"' />
-          <Input label="Hero photo URL" value={form.heroPhotoUrl} onChange={v => setForm(s => ({ ...s, heroPhotoUrl: v }))} placeholder="S3 URL" />
+          <div>
+            <label className="block text-sm font-medium text-gray-800 mb-1">Hero photo</label>
+            <HeroPhotoField
+              value={form.heroPhotoUrl}
+              onChange={url => setForm(s => ({ ...s, heroPhotoUrl: url }))}
+            />
+          </div>
           <div>
             <label className="block text-sm font-medium text-gray-800 mb-1">Description</label>
             <textarea
@@ -202,6 +208,63 @@ export default function VendorItemsPage() {
         ))}
       </div>
     </div>
+  );
+}
+
+function HeroPhotoField({ value, onChange }: { value: string; onChange: (url: string) => void }) {
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+
+  async function pick(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith('image/')) { setErr('Please pick an image file'); e.target.value = ''; return; }
+    if (file.size > 10 * 1024 * 1024)    { setErr('Image must be under 10 MB');  e.target.value = ''; return; }
+    setErr(null); setBusy(true);
+    try {
+      const t = (typeof window !== 'undefined' ? localStorage.getItem('access_token') : '') || '';
+      const url = await api.uploadGenericFile(file, 'service-items', t);
+      onChange(url);
+    } catch (ex: any) {
+      setErr(ex?.message || 'Upload failed');
+    } finally {
+      setBusy(false);
+      e.target.value = '';
+    }
+  }
+
+  if (value) {
+    return (
+      <div className="flex items-center gap-3 bg-gray-50 border border-gray-200 rounded-lg p-3">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src={value} alt="Item hero" className="w-20 h-20 object-cover rounded-md border shrink-0" />
+        <div className="flex-1 min-w-0">
+          <p className="text-xs text-gray-500 truncate">{value}</p>
+          <div className="mt-1 flex gap-3">
+            <label className="cursor-pointer text-xs font-semibold text-orange-600 hover:underline">
+              Replace
+              <input type="file" accept="image/*" className="hidden" onChange={pick} disabled={busy} />
+            </label>
+            <button type="button" onClick={() => onChange('')}
+              className="text-xs font-semibold text-gray-500 hover:text-red-600">
+              Remove
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <>
+      <label className="flex flex-col items-center justify-center cursor-pointer border-2 border-dashed border-gray-300 rounded-xl px-4 py-6 hover:border-orange-400 hover:bg-orange-50/40 transition">
+        <span className="text-2xl mb-1">📷</span>
+        <span className="text-sm font-semibold text-gray-700">{busy ? 'Uploading…' : 'Browse a photo'}</span>
+        <span className="text-[11px] text-gray-500 mt-1">JPG / PNG, under 10 MB</span>
+        <input type="file" accept="image/*" className="hidden" onChange={pick} disabled={busy} />
+      </label>
+      {err && <p className="text-xs text-red-500 mt-1">{err}</p>}
+    </>
   );
 }
 

@@ -323,25 +323,58 @@ function KycDocField({
 }) {
   const docType = field.documentType!;
   const existing = kycByType[docType];
-  const [url, setUrl] = useState(existing?.url ?? '');
   const [number, setNumber] = useState(existing?.number ?? '');
   const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+  const [fileName, setFileName] = useState<string | null>(null);
 
-  // Sync if parent updates (e.g., after saveDraft + upload)
   useEffect(() => {
-    setUrl(existing?.url ?? '');
     setNumber(existing?.number ?? '');
-  }, [existing?.url, existing?.number]);
+  }, [existing?.number]);
 
-  async function submitDoc() {
-    if (!url.trim()) return;
+  // PDF for cert scans, JPG/PNG for phone-camera captures, HEIC for iPhone
+  // shooters who don't convert. KYC scans run bigger than listing photos so
+  // bump the cap to 20 MB.
+  const ACCEPT = '.pdf,application/pdf,image/jpeg,image/png,image/jpg,image/heic,image/heif';
+  const MAX_BYTES = 20 * 1024 * 1024;
+
+  async function pick(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const isPdf = file.type === 'application/pdf' || /\.pdf$/i.test(file.name);
+    const isImg = file.type.startsWith('image/');
+    if (!isPdf && !isImg) { setErr('PDF or image only'); e.target.value = ''; return; }
+    if (file.size > MAX_BYTES) { setErr('File must be under 20 MB'); e.target.value = ''; return; }
+    setErr(null);
+    setBusy(true);
+    setFileName(file.name);
+    try {
+      const t = (typeof window !== 'undefined' ? localStorage.getItem('access_token') : '') || '';
+      const url = await api.uploadGenericFile(file, 'vendor-kyc', t);
+      await onUpload(field, url, number.trim() || undefined);
+    } catch (ex: any) {
+      setErr(ex?.message || 'Upload failed');
+    } finally {
+      setBusy(false);
+      e.target.value = '';
+    }
+  }
+
+  // After-the-fact number edit — re-submits the existing URL with the new
+  // number so the back-end record stays in sync without re-uploading.
+  async function saveNumber() {
+    if (!existing?.url) return;
     setBusy(true);
     try {
-      await onUpload(field, url.trim(), number.trim() || undefined);
+      await onUpload(field, existing.url, number.trim() || undefined);
+    } catch (ex: any) {
+      setErr(ex?.message || 'Save failed');
     } finally {
       setBusy(false);
     }
   }
+
+  const isPdfPreview = !!existing?.url && /\.pdf(\?|$)/i.test(existing.url);
 
   return (
     <div className="border border-gray-200 rounded-xl p-4">
@@ -350,35 +383,63 @@ function KycDocField({
           {field.label}
           {field.required && <span className="text-red-500 ml-1">*</span>}
         </label>
-        {existing?.uploaded && <span className="text-xs text-green-600">✓ Uploaded</span>}
+        {existing?.uploaded && <span className="text-xs text-green-600 font-semibold">✓ Uploaded</span>}
       </div>
       {field.helpText && <p className="text-xs text-gray-500 mb-3">{field.helpText}</p>}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
-        <input
-          type="text"
-          value={url}
-          onChange={e => setUrl(e.target.value)}
-          placeholder="S3 document URL"
-          className="md:col-span-2 border border-gray-300 rounded-lg px-3 py-2 text-sm"
-        />
+
+      {existing?.uploaded && existing.url ? (
+        <div className="flex items-center gap-3 bg-gray-50 border border-gray-200 rounded-lg p-3 mb-3">
+          {isPdfPreview ? (
+            <div className="w-14 h-14 rounded-md bg-red-50 border border-red-200 flex items-center justify-center text-red-600 text-xs font-bold shrink-0">
+              PDF
+            </div>
+          ) : (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={existing.url} alt={field.label} className="w-14 h-14 object-cover rounded-md border shrink-0" />
+          )}
+          <div className="flex-1 min-w-0">
+            <a href={existing.url} target="_blank" rel="noopener noreferrer"
+              className="text-xs font-semibold text-blue-600 hover:underline truncate block">
+              View document ↗
+            </a>
+            <p className="text-[11px] text-gray-400 truncate">{fileName || existing.url}</p>
+          </div>
+          <label className="cursor-pointer text-xs font-semibold text-orange-600 hover:underline shrink-0">
+            Replace
+            <input type="file" accept={ACCEPT} className="hidden" onChange={pick} disabled={busy} />
+          </label>
+        </div>
+      ) : (
+        <label className="flex flex-col items-center justify-center cursor-pointer border-2 border-dashed border-gray-300 rounded-xl px-4 py-6 mb-3 hover:border-orange-400 hover:bg-orange-50/40 transition">
+          <span className="text-2xl mb-1">📄</span>
+          <span className="text-sm font-semibold text-gray-700">
+            {busy ? 'Uploading…' : 'Browse from your device'}
+          </span>
+          <span className="text-[11px] text-gray-500 mt-1">PDF or photo · up to 20 MB</span>
+          <input type="file" accept={ACCEPT} className="hidden" onChange={pick} disabled={busy} />
+        </label>
+      )}
+
+      <div className="flex items-center gap-2">
         <input
           type="text"
           value={number}
           onChange={e => setNumber(e.target.value)}
-          placeholder="Document #"
-          className="border border-gray-300 rounded-lg px-3 py-2 text-sm"
+          placeholder="Document number (e.g. PAN / GSTIN)"
+          className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm"
         />
+        {existing?.uploaded && number !== (existing.number ?? '') && (
+          <button
+            type="button"
+            onClick={saveNumber}
+            disabled={busy}
+            className="px-3 py-2 rounded-lg text-xs font-semibold bg-gray-900 text-white hover:bg-gray-800 disabled:opacity-40 whitespace-nowrap">
+            Save number
+          </button>
+        )}
       </div>
-      <button
-        type="button"
-        onClick={submitDoc}
-        disabled={busy || !url.trim()}
-        className="mt-2 px-4 py-1.5 rounded-lg text-xs font-semibold bg-gray-900 text-white hover:bg-gray-800 disabled:opacity-40">
-        {busy ? 'Uploading…' : (existing?.uploaded ? 'Replace' : 'Upload')}
-      </button>
-      <p className="text-[11px] text-gray-400 mt-2">
-        V1: paste S3 URL after uploading via media-service. V2 will add a direct file picker.
-      </p>
+
+      {err && <p className="text-xs text-red-500 mt-2">{err}</p>}
     </div>
   );
 }
