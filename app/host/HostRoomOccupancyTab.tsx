@@ -255,8 +255,13 @@ export default function HostRoomOccupancyTab({ token, listings }: { token: strin
                 });
 
                 const bookingBeds = bookingCellMap.size;
-                const tenancyBedsLive = rtTenancies.length;
-                const rtOccupied = Math.min(rtTotal, Math.max(rt.occupiedBeds || 0, tenancyBedsLive + bookingBeds));
+                // Count DISTINCT bed slots held by tenancies — duplicate rows on the same
+                // bed (e.g. NOTICE_PERIOD outgoing + ACTIVE incoming during handover) must
+                // count as one cell, not two.
+                const tenancyBedsLive = tenancyCells.size > 0
+                  ? tenancyCells.size
+                  : new Set(rtTenancies.map(t => t.bedNumber).filter(Boolean)).size;
+                const rtOccupied = Math.min(rtTotal, tenancyBedsLive + bookingBeds);
                 const rtVacant = rtTotal - rtOccupied;
                 const roomsOccupied = bedsPerRoom > 0 ? Math.ceil(rtOccupied / bedsPerRoom) : 0;
                 const roomsVacant = (rt.count ?? 0) - roomsOccupied;
