@@ -509,10 +509,28 @@ export default function HostBookingsTab({ token: initialToken }: { token: string
                     )}
                     {b.status === 'CONFIRMED' && (
                       <>
-                        <button onClick={() => handleAction(b.id, () => api.checkInBooking(b.id, token))}
+                        <button onClick={() => {
+                            const balance = b.paymentMode === 'PARTIAL_PREPAID'
+                              ? Math.max(0, (b.totalAmountPaise || 0)
+                                            - (b.prepaidAmountPaise || 0)
+                                            - ((b as any).cashCollectedPaise || 0))
+                              : 0;
+                            if (balance > 0) {
+                              const ok = window.confirm(
+                                `Confirm: collect remaining ${formatPaise(balance)} from guest at check-in? `
+                                + `This will mark the booking as fully paid.`);
+                              if (!ok) return;
+                            }
+                            handleAction(b.id, () => api.checkInBooking(b.id, token));
+                          }}
                           disabled={actionLoading === b.id}
                           className="text-sm px-4 py-2 rounded-xl bg-green-500 hover:bg-green-600 text-white font-semibold disabled:opacity-50 transition">
-                          {actionLoading === b.id ? 'Processing...' : 'Check In Guest'}
+                          {actionLoading === b.id
+                            ? 'Processing...'
+                            : (b.paymentMode === 'PARTIAL_PREPAID'
+                                && (b.totalAmountPaise || 0) - (b.prepaidAmountPaise || 0) - ((b as any).cashCollectedPaise || 0) > 0)
+                              ? `Check In · Collect ${formatPaise((b.totalAmountPaise || 0) - (b.prepaidAmountPaise || 0) - ((b as any).cashCollectedPaise || 0))}`
+                              : 'Check In Guest'}
                         </button>
                         <button onClick={() => handleAction(b.id, () => api.markNoShow(b.id, token))}
                           disabled={actionLoading === b.id}

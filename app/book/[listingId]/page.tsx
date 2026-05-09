@@ -586,12 +586,21 @@ export default function BookPage() {
           {roomTypes.length > 0 && selectedRoomSelections.length === 0 && (
             <p className="text-xs text-red-500 font-medium text-center mb-2">Please select a room type above to continue</p>
           )}
-          {!booking ? (
-            <button onClick={handleCreateBooking} disabled={loading || !isFormValid}
-              className="w-full bg-orange-500 hover:bg-orange-600 text-white font-semibold py-3 rounded-xl disabled:opacity-50 transition">
-              {loading ? 'Creating booking...' : `Proceed to Payment · ${formatPaise(totalPaise)}`}
-            </button>
-          ) : (
+          {!booking ? (() => {
+            const partialActive = isPG && listing?.payAtPropertyEnabled && paymentMode === 'PARTIAL_PREPAID';
+            const pct = Math.min(50, Math.max(10, listing?.partialPrepaidPercent ?? 30));
+            const upfrontPaise = partialActive ? Math.round(totalPaise * pct / 100) : totalPaise;
+            return (
+              <button onClick={handleCreateBooking} disabled={loading || !isFormValid}
+                className="w-full bg-orange-500 hover:bg-orange-600 text-white font-semibold py-3 rounded-xl disabled:opacity-50 transition">
+                {loading
+                  ? 'Creating booking...'
+                  : partialActive
+                    ? `Pay ${formatPaise(upfrontPaise)} now · ${pct}% upfront`
+                    : `Proceed to Payment · ${formatPaise(totalPaise)}`}
+              </button>
+            );
+          })() : (
             <div className="space-y-3">
               {booking.paymentMode === 'PARTIAL_PREPAID' && booking.prepaidAmountPaise != null ? (
                 <>
