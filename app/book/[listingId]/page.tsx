@@ -979,6 +979,21 @@ export default function BookPage() {
                     <span>Total</span>
                     <span>{formatPaise(booking.totalAmountPaise)}</span>
                   </div>
+
+                  {/* Partial payment split — when host enabled and guest opted in */}
+                  {booking.paymentMode === 'PARTIAL_PREPAID' && booking.prepaidAmountPaise != null && (
+                    <div className="bg-orange-50 border border-orange-200 rounded-xl p-3 mt-2 space-y-1.5">
+                      <p className="text-xs font-semibold text-orange-700 uppercase tracking-wider">Split payment</p>
+                      <div className="flex justify-between text-sm">
+                        <span className="text-gray-700">Pay now</span>
+                        <span className="font-semibold text-orange-700">{formatPaise(booking.prepaidAmountPaise)}</span>
+                      </div>
+                      <div className="flex justify-between text-sm">
+                        <span className="text-gray-700">Pay at check-in</span>
+                        <span className="font-semibold text-gray-800">{formatPaise(booking.dueAtPropertyPaise ?? 0)}</span>
+                      </div>
+                    </div>
+                  )}
                 </>
               ) : (
                 /* ── Before booking: show frontend estimate ── */
@@ -1097,6 +1112,27 @@ export default function BookPage() {
                     <span>Total Payable</span>
                     <span>{formatPaise(totalPaise)}</span>
                   </div>
+
+                  {/* Partial payment split — when host enabled and guest opted in */}
+                  {isPG && listing?.payAtPropertyEnabled && paymentMode === 'PARTIAL_PREPAID' && (() => {
+                    const pct = Math.min(50, Math.max(10, listing?.partialPrepaidPercent ?? 30));
+                    const upfront = Math.round(totalPaise * pct / 100);
+                    const due = totalPaise - upfront;
+                    return (
+                      <div className="bg-orange-50 border border-orange-200 rounded-xl p-3 mt-2 space-y-1.5">
+                        <p className="text-xs font-semibold text-orange-700 uppercase tracking-wider">Split payment ({pct}% upfront)</p>
+                        <div className="flex justify-between text-sm">
+                          <span className="text-gray-700">Pay now</span>
+                          <span className="font-semibold text-orange-700">{formatPaise(upfront)}</span>
+                        </div>
+                        <div className="flex justify-between text-sm">
+                          <span className="text-gray-700">Pay at check-in</span>
+                          <span className="font-semibold text-gray-800">{formatPaise(due)}</span>
+                        </div>
+                      </div>
+                    );
+                  })()}
+
                   {securityDepositPaise > 0 && (
                     <p className="text-[10px] text-gray-400 mt-1">
                       Includes {formatPaise(securityDepositPaise)} security deposit
