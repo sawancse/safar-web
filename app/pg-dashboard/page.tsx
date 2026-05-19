@@ -29,6 +29,12 @@ interface Invoice {
   grandTotalPaise: number;
   dueDate: string;
   status: string;
+  rentPaise?: number;
+  packagesPaise?: number;
+  electricityPaise?: number;
+  waterPaise?: number;
+  gstPaise?: number;
+  latePenaltyPaise?: number;
 }
 
 interface Subscription {
@@ -363,9 +369,38 @@ export default function PgDashboardPage() {
                     {(INVOICE_STATUS[currentInvoice.status] || { label: currentInvoice.status }).label}
                   </span>
                 </div>
+                {(() => {
+                  const items: { label: string; paise: number }[] = [];
+                  if (currentInvoice.rentPaise != null && currentInvoice.rentPaise > 0)
+                    items.push({ label: 'Monthly rent', paise: currentInvoice.rentPaise });
+                  if (currentInvoice.packagesPaise && currentInvoice.packagesPaise > 0)
+                    items.push({ label: 'Meals / packages', paise: currentInvoice.packagesPaise });
+                  if (currentInvoice.electricityPaise && currentInvoice.electricityPaise > 0)
+                    items.push({ label: 'Electricity', paise: currentInvoice.electricityPaise });
+                  if (currentInvoice.waterPaise && currentInvoice.waterPaise > 0)
+                    items.push({ label: 'Water', paise: currentInvoice.waterPaise });
+                  if (currentInvoice.gstPaise && currentInvoice.gstPaise > 0)
+                    items.push({ label: 'GST', paise: currentInvoice.gstPaise });
+                  if (currentInvoice.latePenaltyPaise && currentInvoice.latePenaltyPaise > 0)
+                    items.push({ label: 'Late penalty', paise: currentInvoice.latePenaltyPaise });
+                  if (items.length === 0) return null;
+                  return (
+                    <div className="bg-gray-50 border border-gray-100 rounded-lg p-3 mb-4 text-sm">
+                      <p className="text-[11px] uppercase tracking-wider text-gray-400 mb-2">What you&apos;re paying for</p>
+                      <div className="space-y-1.5">
+                        {items.map((item, idx) => (
+                          <div key={idx} className="flex justify-between">
+                            <span className={`${item.label === 'Late penalty' ? 'text-red-600' : 'text-gray-600'}`}>{item.label}</span>
+                            <span className={`${item.label === 'Late penalty' ? 'text-red-600 font-medium' : 'text-gray-700'}`}>{formatPaise(item.paise)}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })()}
                 <div className="space-y-2 mb-4">
                   <div className="flex justify-between text-sm">
-                    <span className="text-gray-500">Amount</span>
+                    <span className="text-gray-500">Total amount</span>
                     <span className="font-semibold text-gray-900">{formatPaise(currentInvoice.grandTotalPaise)}</span>
                   </div>
                   <div className="flex justify-between text-sm">

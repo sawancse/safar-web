@@ -130,6 +130,15 @@ export default function InvoicesPage() {
                 const st = INVOICE_STATUS[inv.status] || { label: inv.status, color: 'text-gray-600', bg: 'bg-gray-100' };
                 const canPay = inv.status === 'GENERATED' || inv.status === 'OVERDUE';
 
+                const lineItems: { label: string; paise: number; emphasize?: boolean }[] = [
+                  { label: 'Monthly rent', paise: inv.rentPaise, emphasize: true },
+                ];
+                if (inv.packagesPaise > 0) lineItems.push({ label: 'Meals / packages', paise: inv.packagesPaise });
+                if (inv.electricityPaise > 0) lineItems.push({ label: 'Electricity', paise: inv.electricityPaise });
+                if (inv.waterPaise > 0) lineItems.push({ label: 'Water', paise: inv.waterPaise });
+                if (inv.gstPaise > 0) lineItems.push({ label: 'GST', paise: inv.gstPaise });
+                if (inv.latePenaltyPaise > 0) lineItems.push({ label: 'Late penalty', paise: inv.latePenaltyPaise });
+
                 return (
                   <div key={inv.id} className="px-6 py-4 hover:bg-gray-50 transition">
                     <div className="flex items-center justify-between mb-2">
@@ -142,12 +151,11 @@ export default function InvoicesPage() {
                       <span className="text-lg font-bold text-gray-900">{formatPaise(inv.grandTotalPaise)}</span>
                     </div>
 
-                    <div className="flex items-center justify-between">
+                    <div className="flex items-center justify-between mb-3">
                       <div className="flex gap-4 text-xs text-gray-500">
                         <span>{MONTHS[inv.billingMonth]} {inv.billingYear}</span>
                         <span>Due: {new Date(inv.dueDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}</span>
                         {inv.paidDate && <span className="text-green-600">Paid: {new Date(inv.paidDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}</span>}
-                        {inv.latePenaltyPaise > 0 && <span className="text-red-600">Penalty: {formatPaise(inv.latePenaltyPaise)}</span>}
                       </div>
                       {canPay && (
                         <button
@@ -161,16 +169,27 @@ export default function InvoicesPage() {
                       )}
                     </div>
 
-                    {/* Breakdown (collapsed) */}
-                    {(inv.packagesPaise > 0 || inv.electricityPaise > 0 || inv.waterPaise > 0 || inv.gstPaise > 0) && (
-                      <div className="mt-2 flex gap-3 text-xs text-gray-400">
-                        <span>Rent: {formatPaise(inv.rentPaise)}</span>
-                        {inv.packagesPaise > 0 && <span>Packages: {formatPaise(inv.packagesPaise)}</span>}
-                        {inv.electricityPaise > 0 && <span>Electricity: {formatPaise(inv.electricityPaise)}</span>}
-                        {inv.waterPaise > 0 && <span>Water: {formatPaise(inv.waterPaise)}</span>}
-                        {inv.gstPaise > 0 && <span>GST: {formatPaise(inv.gstPaise)}</span>}
+                    {/* Itemized breakdown — always shown so the tenant can see exactly
+                        what makes up the bill, even for rent-only invoices. */}
+                    <div className="bg-gray-50 border border-gray-100 rounded-lg p-3 text-sm">
+                      <p className="text-[11px] uppercase tracking-wider text-gray-400 mb-2">What you&apos;re paying for</p>
+                      <div className="space-y-1.5">
+                        {lineItems.map((item, idx) => (
+                          <div key={idx} className="flex justify-between">
+                            <span className={`${item.emphasize ? 'text-gray-700 font-medium' : 'text-gray-600'} ${item.label === 'Late penalty' ? 'text-red-600' : ''}`}>
+                              {item.label}
+                            </span>
+                            <span className={`${item.emphasize ? 'font-semibold text-gray-900' : 'text-gray-700'} ${item.label === 'Late penalty' ? 'text-red-600' : ''}`}>
+                              {formatPaise(item.paise)}
+                            </span>
+                          </div>
+                        ))}
+                        <div className="flex justify-between border-t border-gray-200 pt-2 mt-2">
+                          <span className="font-semibold text-gray-900">Total payable</span>
+                          <span className="font-bold text-gray-900">{formatPaise(inv.grandTotalPaise)}</span>
+                        </div>
                       </div>
-                    )}
+                    </div>
                   </div>
                 );
               })}

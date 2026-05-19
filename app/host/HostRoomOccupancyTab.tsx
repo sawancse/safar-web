@@ -10,6 +10,7 @@ interface Tenancy {
   tenancyRef: string;
   tenantId: string;
   listingId: string;
+  sourceBookingId?: string | null;
   roomTypeId: string;
   bedNumber: string;
   sharingType: string;
@@ -305,6 +306,14 @@ export default function HostRoomOccupancyTab({ token, listings }: { token: strin
                           // Find tenant for this bed
                           const tenant = rtTenancies.find(t => t.bedNumber === bedId || t.bedNumber === bedLabel);
                           const booking = !tenant ? bookingCellMap.get(idx) : undefined;
+                          // Originating booking: prefer the canonical sourceBookingId FK
+                          // populated by BookingService.checkInBooking; fall back to
+                          // guestId-on-same-listing for pre-V51 rows the backfill missed.
+                          const tenantOriginBooking = tenant
+                            ? (tenant.sourceBookingId
+                                ? bookings.find(b => b.id === tenant.sourceBookingId)
+                                : bookings.find(b => b.guestId && b.guestId === tenant.tenantId))
+                            : undefined;
                           const isOccupied = !!tenant || !!booking;
                           const isNotice = tenant?.status === 'NOTICE_PERIOD';
                           const isBooking = !!booking;
@@ -330,6 +339,11 @@ export default function HostRoomOccupancyTab({ token, listings }: { token: strin
                                   <p className={`text-xs font-semibold mt-1 ${isNotice ? 'text-yellow-700' : 'text-green-700'}`}>
                                     {tenant.tenancyRef}
                                   </p>
+                                  {tenantOriginBooking && (
+                                    <p className="text-[10px] text-gray-500 font-mono mt-0.5 truncate" title={tenantOriginBooking.bookingRef}>
+                                      {tenantOriginBooking.bookingRef}
+                                    </p>
+                                  )}
                                   <span className={`inline-block mt-1 px-2 py-0.5 rounded-full text-[10px] font-medium ${STATUS_COLORS[tenant.status] || ''}`}>
                                     {tenant.status.replace('_', ' ')}
                                   </span>

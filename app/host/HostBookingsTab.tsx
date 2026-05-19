@@ -55,6 +55,11 @@ export default function HostBookingsTab({ token: initialToken }: { token: string
   const [cancelTarget, setCancelTarget] = useState<string | null>(null);
   const [cancelReason, setCancelReason] = useState('');
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [balanceLinkModal, setBalanceLinkModal] = useState<{
+    open: boolean; booking: Booking | null; balancePaise: number;
+    shortUrl: string; generating: boolean; error: string;
+  }>({ open: false, booking: null, balancePaise: 0, shortUrl: '', generating: false, error: '' });
+  const [copyTooltip, setCopyTooltip] = useState(false);
 
   // Enhanced filter state
   const [dateFrom, setDateFrom] = useState('');
@@ -516,10 +521,13 @@ export default function HostBookingsTab({ token: initialToken }: { token: string
                                             - ((b as any).cashCollectedPaise || 0))
                               : 0;
                             if (balance > 0) {
-                              const ok = window.confirm(
-                                `Confirm: collect remaining ${formatPaise(balance)} from guest at check-in? `
-                                + `This will mark the booking as fully paid.`);
-                              if (!ok) return;
+                              // Open payment-link modal instead of silently marking cash collected.
+                              // Host shares the link with guest (WhatsApp / SMS); webhook marks paid.
+                              setBalanceLinkModal({
+                                open: true, booking: b, balancePaise: balance,
+                                shortUrl: '', generating: false, error: '',
+                              });
+                              return;
                             }
                             handleAction(b.id, () => api.checkInBooking(b.id, token));
                           }}
@@ -529,7 +537,7 @@ export default function HostBookingsTab({ token: initialToken }: { token: string
                             ? 'Processing...'
                             : (b.paymentMode === 'PARTIAL_PREPAID'
                                 && (b.totalAmountPaise || 0) - (b.prepaidAmountPaise || 0) - ((b as any).cashCollectedPaise || 0) > 0)
-                              ? `Check In · Collect ${formatPaise((b.totalAmountPaise || 0) - (b.prepaidAmountPaise || 0) - ((b as any).cashCollectedPaise || 0))}`
+                              ? `Send Payment Link · ${formatPaise((b.totalAmountPaise || 0) - (b.prepaidAmountPaise || 0) - ((b as any).cashCollectedPaise || 0))}`
                               : 'Check In Guest'}
                         </button>
                         <button onClick={() => handleAction(b.id, () => api.markNoShow(b.id, token))}
@@ -601,6 +609,113 @@ export default function HostBookingsTab({ token: initialToken }: { token: string
                 {actionLoading === cancelTarget ? 'Cancelling...' : 'Confirm Cancel'}
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Balance Payment Link Modal */}
+      {balanceLinkModal.open && balanceLinkModal.booking && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4"
+          onClick={() => setBalanceLinkModal({ open: false, booking: null, balancePaise: 0, shortUrl: '', generating: false, error: '' })}>
+          <div className="bg-white rounded-2xl max-w-md w-full p-6"
+            onClick={(e) => e.stopPropagation()}>
+            <h3 className="text-lg font-bold mb-1">Collect remaining balance</h3>
+            <p className="text-sm text-gray-500 mb-4">
+              Booking <span className="font-mono">{balanceLinkModal.booking.bookingRef}</span>
+            </p>
+
+            <div className="bg-orange-50 border border-orange-200 rounded-xl px-4 py-3 mb-5 text-center">
+              <p className="text-xs text-orange-700 font-semibold uppercase tracking-wider">Balance due</p>
+              <p className="text-2xl font-bold text-orange-700 mt-1">{formatPaise(balanceLinkModal.balancePaise)}</p>
+            </div>
+
+            {!balanceLinkModal.shortUrl ? (
+              <>
+                <p className="text-sm text-gray-600 mb-4">
+                  Generate a secure Razorpay payment link and share it with the guest. They can pay
+                  from any device (UPI / card / netbanking). Once paid, the balance is marked cleared
+                  automatically and you can complete check-in.
+                </p>
+                {balanceLinkModal.error && (
+                  <p className="bg-red-50 text-red-600 text-sm rounded-xl px-3 py-2 mb-3">{balanceLinkModal.error}</p>
+                )}
+                <button
+                  disabled={balanceLinkModal.generating}
+                  onClick={async () => {
+                    if (!balanceLinkModal.booking) return;
+                    setBalanceLinkModal(m => ({ ...m, generating: true, error: '' }));
+                    try {
+                      const guestName = [balanceLinkModal.booking.guestFirstName, balanceLinkModal.booking.guestLastName]
+                        .filter(Boolean).join(' ');
+                      const res = await api.createBalancePaymentLink({
+                        bookingId: balanceLinkModal.booking.id,
+                        amountPaise: balanceLinkModal.balancePaise,
+                        customerName: guestName || undefined,
+                        customerPhone: balanceLinkModal.booking.guestPhone || undefined,
+                        customerEmail: balanceLinkModal.booking.guestEmail || undefined,
+                      }, token);
+                      setBalanceLinkModal(m => ({ ...m, shortUrl: res.shortUrl, generating: false }));
+                    } catch (e: any) {
+                      setBalanceLinkModal(m => ({ ...m, generating: false, error: e?.message || 'Failed to generate link' }));
+                    }
+                  }}
+                  className="w-full bg-green-500 hover:bg-green-600 text-white font-semibold py-3 rounded-xl disabled:opacity-50 transition">
+                  {balanceLinkModal.generating ? 'Generating link...' : 'Generate payment link'}
+                </button>
+              </>
+            ) : (
+              <>
+                <p className="text-xs uppercase tracking-wider text-gray-400 mb-2">Payment link</p>
+                <div className="flex items-stretch gap-2 mb-3">
+                  <input
+                    type="text" readOnly value={balanceLinkModal.shortUrl}
+                    className="flex-1 border rounded-xl px-3 py-2 text-sm font-mono bg-gray-50 outline-none"
+                    onFocus={(e) => e.target.select()}
+                  />
+                  <button
+                    onClick={() => {
+                      navigator.clipboard.writeText(balanceLinkModal.shortUrl).then(() => {
+                        setCopyTooltip(true);
+                        setTimeout(() => setCopyTooltip(false), 1500);
+                      });
+                    }}
+                    className="px-3 py-2 rounded-xl bg-gray-100 hover:bg-gray-200 text-sm font-medium transition">
+                    {copyTooltip ? 'Copied!' : 'Copy'}
+                  </button>
+                </div>
+                <div className="flex gap-2 mb-4">
+                  {balanceLinkModal.booking.guestPhone && (
+                    <a
+                      href={`https://wa.me/${(balanceLinkModal.booking.guestPhone || '').replace(/\D/g, '')}?text=${encodeURIComponent(
+                        `Hi, your remaining balance for booking ${balanceLinkModal.booking.bookingRef} is ${formatPaise(balanceLinkModal.balancePaise)}. Pay securely here: ${balanceLinkModal.shortUrl}`
+                      )}`}
+                      target="_blank" rel="noopener noreferrer"
+                      className="flex-1 text-center text-sm px-4 py-2.5 rounded-xl bg-green-500 hover:bg-green-600 text-white font-semibold transition">
+                      Share on WhatsApp
+                    </a>
+                  )}
+                  {balanceLinkModal.booking.guestEmail && (
+                    <a
+                      href={`mailto:${balanceLinkModal.booking.guestEmail}?subject=${encodeURIComponent(`Pay your remaining balance — ${balanceLinkModal.booking.bookingRef}`)}&body=${encodeURIComponent(
+                        `Hi,\n\nYour remaining balance for booking ${balanceLinkModal.booking.bookingRef} is ${formatPaise(balanceLinkModal.balancePaise)}.\n\nPlease pay securely here:\n${balanceLinkModal.shortUrl}\n\nThanks,\nSafar`
+                      )}`}
+                      className="flex-1 text-center text-sm px-4 py-2.5 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold transition">
+                      Send email
+                    </a>
+                  )}
+                </div>
+                <p className="text-xs text-gray-500 bg-blue-50 border border-blue-100 rounded-lg px-3 py-2 mb-4">
+                  Once the guest pays, this booking&apos;s balance will be cleared automatically (within a few seconds).
+                  Then click <strong>Check In Guest</strong>.
+                </p>
+              </>
+            )}
+
+            <button
+              onClick={() => setBalanceLinkModal({ open: false, booking: null, balancePaise: 0, shortUrl: '', generating: false, error: '' })}
+              className="w-full text-sm text-gray-500 hover:text-gray-700 mt-1 py-2">
+              Close
+            </button>
           </div>
         </div>
       )}

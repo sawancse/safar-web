@@ -776,6 +776,28 @@ export const api = {
       headers: { Authorization: `Bearer ${token}` },
     }),
 
+  createBalancePaymentLink: (
+    data: {
+      bookingId: string;
+      amountPaise: number;
+      customerName?: string;
+      customerPhone?: string;
+      customerEmail?: string;
+    },
+    token: string,
+  ) => {
+    const qs = new URLSearchParams();
+    qs.set('bookingId', data.bookingId);
+    qs.set('amountPaise', String(data.amountPaise));
+    if (data.customerName) qs.set('customerName', data.customerName);
+    if (data.customerPhone) qs.set('customerPhone', data.customerPhone);
+    if (data.customerEmail) qs.set('customerEmail', data.customerEmail);
+    return apiFetch<{ bookingId: string; linkId: string; shortUrl: string; amountPaise: number }>(
+      `/api/v1/payments/balance-payment-link?${qs.toString()}`,
+      { method: 'POST', headers: { Authorization: `Bearer ${token}` } }
+    );
+  },
+
   /* ── Donations (Aashray) ──────────────────────────────────── */
   createDonation: (data: {
     amountPaise: number;
