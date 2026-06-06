@@ -2901,6 +2901,8 @@ export const api = {
     apiFetch<any>(`/api/v1/services/listings/by-slug/${slug}`),
   getServiceListingItems: (listingId: string) =>
     apiFetch<any[]>(`/api/v1/services/listings/${listingId}/items`),
+  getServiceListingReviews: (listingId: string) =>
+    apiFetch<any[]>(`/api/v1/services/listings/${listingId}/reviews`),
   getServiceItem: (itemId: string) =>
     apiFetch<any>(`/api/v1/services/items/${itemId}`),
 

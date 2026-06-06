@@ -54,6 +54,7 @@ export default function StorefrontPage() {
   const slug = String(params?.slug ?? '');
   const [listing, setListing] = useState<Listing | null>(null);
   const [items, setItems] = useState<Item[]>([]);
+  const [reviews, setReviews] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -67,6 +68,8 @@ export default function StorefrontPage() {
         setListing(l);
         const items = await api.getServiceListingItems(l.id).catch(() => []);
         if (!cancelled) setItems(items || []);
+        const rv = await api.getServiceListingReviews(l.id).catch(() => []);
+        if (!cancelled) setReviews(rv || []);
       } catch (e: any) {
         if (!cancelled) setError(e?.message || 'Vendor not found');
       } finally {
@@ -186,6 +189,40 @@ export default function StorefrontPage() {
           </div>
         )}
       </section>
+
+      {/* Reviews */}
+      {reviews.length > 0 && (
+        <section className="mb-12">
+          <h2 className="text-lg font-bold text-gray-900 mb-4">
+            Reviews ({listing.ratingCount && listing.ratingCount > reviews.length ? listing.ratingCount : reviews.length})
+          </h2>
+          <div className="space-y-3">
+            {reviews.map((r, i) => (
+              <div key={i} className="bg-white border border-gray-200 rounded-2xl p-4">
+                <div className="flex items-center justify-between gap-3 flex-wrap">
+                  <div className="flex items-center gap-2">
+                    <div className="w-9 h-9 rounded-full bg-orange-100 flex items-center justify-center text-sm font-bold text-orange-600">
+                      {(r.reviewerName || '?').charAt(0).toUpperCase()}
+                    </div>
+                    <div>
+                      <p className="text-sm font-semibold text-gray-900">{r.reviewerName || 'Verified customer'}</p>
+                      {(r.eventType || r.date) && (
+                        <p className="text-[11px] text-gray-400">{[r.eventType, r.date].filter(Boolean).join(' · ')}</p>
+                      )}
+                    </div>
+                  </div>
+                  <div className="text-amber-500 text-sm" aria-label={`${r.rating} out of 5`}>
+                    {'★'.repeat(Math.max(0, Math.min(5, r.rating)))}{'☆'.repeat(Math.max(0, 5 - r.rating))}
+                  </div>
+                </div>
+                {r.comment && r.comment.trim()
+                  ? <p className="text-sm text-gray-700 mt-2 whitespace-pre-wrap">{r.comment}</p>
+                  : <p className="text-xs text-gray-400 italic mt-2">No written comment</p>}
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
 
       {/* Coverage + policy */}
       <section className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-12">
