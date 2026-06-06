@@ -70,6 +70,7 @@ export default function ChefBookingDetailPage() {
   // row, not a ChefProfile. Resolve the vendor's userId from the active vendor
   // assignment so chat has someone to send to.
   const [vendorUserId, setVendorUserId] = useState<string | null>(null);
+  const [vendor, setVendor] = useState<any>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // Keep tab in sync with ?event= and vice versa
@@ -143,6 +144,7 @@ export default function ChefBookingDetailPage() {
       if (kind === 'event' && !bk.chefId) {
         try {
           const v = await api.getEventActiveVendor(bookingId, t);
+          if (v) setVendor(v);
           if (v?.vendorUserId) setVendorUserId(v.vendorUserId);
         } catch { /* no vendor yet — chat just shows the empty state */ }
       }
@@ -284,7 +286,7 @@ export default function ChefBookingDetailPage() {
                 servicesJson={booking.servicesJson}
               />
             )}
-            {tab === 'provider'    && <ChefTab chef={chef} booking={booking} />}
+            {tab === 'provider'    && <ChefTab chef={chef} booking={booking} vendor={vendor} />}
             {tab === 'team'        && <TeamTab booking={booking} bookingKind={bookingKind} token={token} />}
             {tab === 'otp'         && <OtpTab booking={booking} chef={chef} userId={userId} />}
             {tab === 'pay'         && <PayTab
@@ -627,10 +629,51 @@ function IngredientsTab({ menuItems, shoppingList, guests, menuName, menuDescrip
 }
 
 /* ────── Tab: Chef profile ────── */
-function ChefTab({ chef, booking }: { chef: any; booking: any }) {
+function ChefTab({ chef, booking, vendor }: { chef: any; booking: any; vendor?: any }) {
+  // Vendor-fulfilled bookings (pandit/decor/cake/singer/staff) have no ChefProfile —
+  // render the assigned PartnerVendor's profile instead of the "not available" state.
+  if (!chef && vendor) {
+    const noun = partnerNounFromBooking(booking);
+    const Noun = noun.charAt(0).toUpperCase() + noun.slice(1);
+    const name = vendor.vendorBusinessName || booking.chefName || `Your ${noun}`;
+    const rating = vendor.vendorRatingAvg != null ? Number(vendor.vendorRatingAvg) : null;
+    const STATUS_LABEL: Record<string, string> = { ASSIGNED: 'Assigned', CONFIRMED: 'Confirmed', DELIVERED: 'Delivered', CANCELLED: 'Cancelled' };
+    return (
+      <div>
+        <div className="flex items-start gap-4 mb-5">
+          <div className="w-20 h-20 rounded-full bg-orange-100 flex items-center justify-center text-2xl font-bold text-orange-600">
+            {(name || '?').charAt(0).toUpperCase()}
+          </div>
+          <div className="flex-1">
+            <h3 className="text-lg font-bold text-gray-900">{name}</h3>
+            <p className="text-sm text-gray-500 mt-0.5">{Noun}</p>
+            <div className="flex items-center gap-3 mt-2 text-sm flex-wrap">
+              {rating != null && rating > 0 && <span className="font-semibold text-gray-800">⭐ {rating.toFixed(1)}</span>}
+              {vendor.vendorJobsCompleted != null && <span className="text-gray-500">{vendor.vendorJobsCompleted} job{vendor.vendorJobsCompleted === 1 ? '' : 's'} completed</span>}
+              {vendor.status && <span className="text-[11px] px-2 py-0.5 rounded-full bg-blue-50 text-blue-700">{STATUS_LABEL[vendor.status] || vendor.status}</span>}
+            </div>
+          </div>
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
+          {vendor.vendorPhone && (
+            <a href={`tel:${vendor.vendorPhone}`} className="border rounded-lg p-3 hover:bg-gray-50 transition block">
+              <p className="text-xs text-gray-500">Phone</p>
+              <p className="font-semibold text-gray-800">📞 {vendor.vendorPhone}</p>
+            </a>
+          )}
+          {vendor.vendorEmail && (
+            <a href={`mailto:${vendor.vendorEmail}`} className="border rounded-lg p-3 hover:bg-gray-50 transition block">
+              <p className="text-xs text-gray-500">Email</p>
+              <p className="font-semibold text-gray-800 truncate">✉️ {vendor.vendorEmail}</p>
+            </a>
+          )}
+        </div>
+      </div>
+    );
+  }
+
   if (!chef) {
-    // Service bookings (pandit/decor/cake/singer/staff) have no ChefProfile —
-    // use the service-aware noun and the vendor's name so it never says "Chef".
+    // No ChefProfile and no assigned vendor yet — service-aware placeholder.
     const noun = partnerNounFromBooking(booking);
     const Noun = noun.charAt(0).toUpperCase() + noun.slice(1);
     const assignedName = booking.chefName || booking.vendorBusinessName;
