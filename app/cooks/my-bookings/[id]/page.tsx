@@ -629,10 +629,15 @@ function IngredientsTab({ menuItems, shoppingList, guests, menuName, menuDescrip
 /* ────── Tab: Chef profile ────── */
 function ChefTab({ chef, booking }: { chef: any; booking: any }) {
   if (!chef) {
+    // Service bookings (pandit/decor/cake/singer/staff) have no ChefProfile —
+    // use the service-aware noun and the vendor's name so it never says "Chef".
+    const noun = partnerNounFromBooking(booking);
+    const Noun = noun.charAt(0).toUpperCase() + noun.slice(1);
+    const assignedName = booking.chefName || booking.vendorBusinessName;
     return (
       <div className="text-center py-12">
-        <p className="text-gray-500 mb-3">Chef profile not available yet.</p>
-        {booking.chefName && <p className="text-sm text-gray-700">Assigned: <strong>{booking.chefName}</strong></p>}
+        <p className="text-gray-500 mb-3">{Noun} profile not available yet.</p>
+        {assignedName && <p className="text-sm text-gray-700">Assigned: <strong>{assignedName}</strong></p>}
       </div>
     );
   }
@@ -1302,7 +1307,7 @@ function TeamTab({ booking, bookingKind, token }: { booking: any; bookingKind: '
     return (
       <div className="py-10 text-center">
         <div className="text-4xl mb-2">🧑‍🍳</div>
-        <p className="text-sm text-gray-500">No staff assigned yet — your chef will pick from their team and add them here before the event.</p>
+        <p className="text-sm text-gray-500">No staff assigned yet — your service provider will pick from their team and add them here before the event.</p>
       </div>
     );
   }
