@@ -201,6 +201,17 @@ export default function ChefBookingDetailPage() {
   const isChef = bookingKind === 'chef';
   const menuId = booking.menuId || booking.menuPackageId;
 
+  // Chat header label — prefer the real provider name, else a service-aware
+  // noun (pandit / cook / baker / decorator …), else a generic fallback so a
+  // pandit/decor/cake booking never reads "Chat with chef".
+  const chatProviderName: string = chef?.name || booking.vendorBusinessName || booking.chefName || '';
+  const chatPartnerNoun = partnerNounFromBooking(booking);
+  const chatLabel = chatProviderName
+    ? `Chat with ${chatProviderName}`
+    : (chatPartnerNoun === 'cook' && bookingKind === 'event'
+        ? 'Chat with your service provider'
+        : `Chat with your ${chatPartnerNoun}`);
+
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-5xl mx-auto px-4 py-6">
@@ -302,7 +313,7 @@ export default function ChefBookingDetailPage() {
             onClick={() => setShowSecondary(s => !s)}
             className="w-full px-5 py-4 flex items-center justify-between text-left hover:bg-gray-50"
           >
-            <span className="text-sm font-bold text-gray-900">💬 Chat with chef</span>
+            <span className="text-sm font-bold text-gray-900">💬 {chatLabel}</span>
             <span className="text-gray-400 text-xs">{showSecondary ? 'Hide' : 'Show'}</span>
           </button>
           {showSecondary && (
@@ -1201,7 +1212,7 @@ function TrackingPanel({ bookingId, booking, bookingKind, chef, onBookingUpdated
             <div className="flex flex-col gap-2 mt-auto">
               {chefPhone && (
                 <a href={`tel:${chefPhone}`} className="bg-green-500 text-white text-sm font-semibold px-3 py-2 rounded-lg text-center hover:bg-green-600 transition">
-                  📞 Call chef
+                  📞 Call {chef?.name || (bookingKind === 'event' ? 'provider' : 'chef')}
                 </a>
               )}
               {directionsHref && (
