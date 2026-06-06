@@ -2502,8 +2502,8 @@ export const api = {
       headers: { Authorization: `Bearer ${token}` },
     }),
 
-  markEventAdvancePaid: (eventId: string, token: string) =>
-    apiFetch<any>(`/api/v1/chef-events/${eventId}/advance-paid`, {
+  markEventAdvancePaid: (eventId: string, token: string, razorpayOrderId: string, razorpayPaymentId: string) =>
+    apiFetch<any>(`/api/v1/chef-events/${eventId}/advance-paid?razorpayOrderId=${encodeURIComponent(razorpayOrderId)}&razorpayPaymentId=${encodeURIComponent(razorpayPaymentId)}`, {
       method: 'POST',
       headers: { Authorization: `Bearer ${token}` },
     }),

@@ -201,9 +201,9 @@ export default function PanditOrderPage() {
         name: 'Safar Pandit',
         description: `${selectedPuja.label} · ${new Date(eventDate).toDateString()}`,
         order_id: order.razorpayOrderId,
-        handler: async () => {
+        handler: async (resp: any) => {
           try {
-            await api.markEventAdvancePaid(created.id, localStorage.getItem('access_token') || token);
+            await api.markEventAdvancePaid(created.id, localStorage.getItem('access_token') || token, resp.razorpay_order_id, resp.razorpay_payment_id);
             router.push(`/cooks/my-bookings/${created.id}`);
           } catch (e: any) {
             setError(e?.message || 'Payment succeeded but status update failed — contact support.');

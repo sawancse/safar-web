@@ -1323,10 +1323,10 @@ export default function MyChefBookingsPage() {
                             name: 'Safar Cooks',
                             description: `Event advance — ${payAdvanceEvent.bookingRef}`,
                             order_id: order.razorpayOrderId,
-                            handler: async function () {
+                            handler: async function (resp: any) {
                               try {
                                 const freshToken = localStorage.getItem('access_token') || token;
-                                const updated = await api.markEventAdvancePaid(payAdvanceEvent.id, freshToken);
+                                const updated = await api.markEventAdvancePaid(payAdvanceEvent.id, freshToken, resp.razorpay_order_id, resp.razorpay_payment_id);
                                 setEvents(prev => prev.map(ev => ev.id === payAdvanceEvent.id ? updated : ev));
                                 setPayAdvanceEvent(null);
                               } catch (err: any) {
