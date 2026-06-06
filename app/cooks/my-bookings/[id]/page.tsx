@@ -646,10 +646,18 @@ function ChefTab({ chef, booking, vendor }: { chef: any; booking: any; vendor?: 
           </div>
           <div className="flex-1">
             <h3 className="text-lg font-bold text-gray-900">{name}</h3>
-            <p className="text-sm text-gray-500 mt-0.5">{Noun}</p>
+            <p className="text-sm text-gray-500 mt-0.5">{Noun}{vendor.vendorCity ? ` · ${vendor.vendorCity}` : ''}</p>
             <div className="flex items-center gap-3 mt-2 text-sm flex-wrap">
-              {rating != null && rating > 0 && <span className="font-semibold text-gray-800">⭐ {rating.toFixed(1)}</span>}
-              {vendor.vendorJobsCompleted != null && <span className="text-gray-500">{vendor.vendorJobsCompleted} job{vendor.vendorJobsCompleted === 1 ? '' : 's'} completed</span>}
+              {rating != null && rating > 0 && (
+                <span className="font-semibold text-gray-800">
+                  ⭐ {rating.toFixed(1)}
+                  {vendor.vendorRatingCount != null && vendor.vendorRatingCount > 0 && (
+                    <span className="font-normal text-gray-500"> ({vendor.vendorRatingCount} review{vendor.vendorRatingCount === 1 ? '' : 's'})</span>
+                  )}
+                </span>
+              )}
+              {/* Only show jobs when the vendor has actually completed some — "0 jobs" reads as a red flag next to a rating */}
+              {vendor.vendorJobsCompleted != null && vendor.vendorJobsCompleted > 0 && <span className="text-gray-500">{vendor.vendorJobsCompleted} job{vendor.vendorJobsCompleted === 1 ? '' : 's'} completed</span>}
               {vendor.status && <span className="text-[11px] px-2 py-0.5 rounded-full bg-blue-50 text-blue-700">{STATUS_LABEL[vendor.status] || vendor.status}</span>}
             </div>
           </div>
@@ -668,6 +676,11 @@ function ChefTab({ chef, booking, vendor }: { chef: any; booking: any; vendor?: 
             </a>
           )}
         </div>
+        {vendor.vendorSlug && (
+          <Link href={`/services/storefront/${vendor.vendorSlug}`} className="inline-block mt-4 text-sm text-orange-600 font-semibold hover:underline">
+            View full profile &amp; reviews →
+          </Link>
+        )}
       </div>
     );
   }
