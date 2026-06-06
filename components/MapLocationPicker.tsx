@@ -187,11 +187,20 @@ function MapInner({ lat, lng, onLocationChange, className }: Props) {
     const map = RL.useMap();
     useEffect(() => {
       mapRef.current = map;
-      // Force recalculate size after mount so tiles render correctly
-      // Multiple delays to handle step/tab conditional rendering timing
-      setTimeout(() => map.invalidateSize(), 100);
-      setTimeout(() => map.invalidateSize(), 500);
-      setTimeout(() => map.invalidateSize(), 1000);
+      // Force recalculate size after mount so tiles render correctly.
+      // Multiple delays handle step/tab conditional-rendering timing — but the
+      // map can be torn down before a delayed call fires, so guard against a
+      // removed pane (invalidateSize throws "_leaflet_pos of undefined") and
+      // clear the timers on unmount.
+      const safeInvalidate = () => {
+        try {
+          if ((map as any)?._mapPane && map.getContainer()?.isConnected) {
+            map.invalidateSize();
+          }
+        } catch { /* map already removed — ignore */ }
+      };
+      const timers = [100, 500, 1000].map(d => setTimeout(safeInvalidate, d));
+      return () => timers.forEach(clearTimeout);
     }, [map]);
     // Fly to new coords when lat/lng change from outside
     useEffect(() => {
