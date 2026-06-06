@@ -1,8 +1,11 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
+
+const useIsoLayoutEffect = typeof window !== 'undefined' ? useLayoutEffect : useEffect;
 
 type ChangeEvent = { target: { value: string } };
 
@@ -36,6 +39,11 @@ function formatDisplay(iso?: string): string {
   return d.toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' });
 }
 
+// react-datepicker single month ≈ 290×340 incl. dropdown headers
+const POPUP_W_PER_MONTH = 300;
+const POPUP_H = 360;
+const GAP = 8;
+
 export default function DateField({
   value = '',
   onChange,
@@ -49,21 +57,55 @@ export default function DateField({
   monthsShown = 1,
 }: Props) {
   const [open, setOpen] = useState(false);
-  const wrapRef = useRef<HTMLDivElement>(null);
+  const [mounted, setMounted] = useState(false);
+  const [pos, setPos] = useState<{ top: number; left: number } | null>(null);
+  const btnRef = useRef<HTMLButtonElement>(null);
+  const popRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => { setMounted(true); }, []);
+
+  function updatePosition() {
+    if (!btnRef.current) return;
+    const rect = btnRef.current.getBoundingClientRect();
+    const popW = POPUP_W_PER_MONTH * monthsShown + 16; // + p-2 padding
+    let left = rect.left;
+    let top = rect.bottom + GAP;
+    if (left + popW > window.innerWidth - GAP) {
+      left = Math.max(GAP, window.innerWidth - popW - GAP);
+    }
+    if (top + POPUP_H > window.innerHeight - GAP) {
+      const flipped = rect.top - POPUP_H - GAP;
+      if (flipped >= GAP) top = flipped;
+    }
+    setPos({ top, left });
+  }
+
+  useIsoLayoutEffect(() => {
+    if (open) updatePosition();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, monthsShown]);
 
   useEffect(() => {
     if (!open) return;
     function onClickOutside(e: MouseEvent) {
-      if (wrapRef.current && !wrapRef.current.contains(e.target as Node)) setOpen(false);
+      const target = e.target as Node;
+      if (btnRef.current?.contains(target)) return;
+      if (popRef.current?.contains(target)) return;
+      setOpen(false);
     }
     function onKey(e: KeyboardEvent) {
       if (e.key === 'Escape') setOpen(false);
     }
+    function onViewport() { updatePosition(); }
     document.addEventListener('mousedown', onClickOutside);
     document.addEventListener('keydown', onKey);
+    window.addEventListener('scroll', onViewport, true);
+    window.addEventListener('resize', onViewport);
     return () => {
       document.removeEventListener('mousedown', onClickOutside);
       document.removeEventListener('keydown', onKey);
+      window.removeEventListener('scroll', onViewport, true);
+      window.removeEventListener('resize', onViewport);
     };
   }, [open]);
 
@@ -71,8 +113,9 @@ export default function DateField({
   const isPlaceholder = !value;
 
   return (
-    <div ref={wrapRef} className="relative">
+    <>
       <button
+        ref={btnRef}
         id={id}
         type="button"
         disabled={disabled}
@@ -85,8 +128,12 @@ export default function DateField({
           <path strokeLinecap="round" strokeLinejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5" />
         </svg>
       </button>
-      {open && !disabled && (
-        <div className="absolute z-[1100] mt-2 left-0 bg-white rounded-2xl shadow-2xl border border-gray-100 p-2">
+      {mounted && open && !disabled && pos && createPortal(
+        <div
+          ref={popRef}
+          style={{ position: 'fixed', top: pos.top, left: pos.left, zIndex: 1100 }}
+          className="bg-white rounded-2xl shadow-2xl border border-gray-100 p-2"
+        >
           <DatePicker
             selected={isoToDate(value)}
             onChange={(d) => {
@@ -104,8 +151,9 @@ export default function DateField({
             scrollableYearDropdown
             inline
           />
-        </div>
+        </div>,
+        document.body
       )}
-    </div>
+    </>
   );
 }

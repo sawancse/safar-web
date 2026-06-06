@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { api } from '@/lib/api';
 import { formatPaise } from '@/lib/utils';
 import PhoneInput from '@/components/PhoneInput';
+import RazorpayButton from '@/components/RazorpayButton';
 import type { Booking } from '@/types';
 
 const STATUS_LABEL: Record<string, { label: string; color: string }> = {
@@ -59,6 +60,8 @@ export default function DashboardPage() {
   const [reviewCategoryComments, setReviewCategoryComments] = useState<Record<string, string>>({});
   const [submittingReview, setSubmittingReview] = useState(false);
   const [reviewedBookings, setReviewedBookings] = useState<Set<string>>(new Set());
+  // Balance payment modal (for PARTIAL_PREPAID bookings with outstanding balance)
+  const [payBalanceModal, setPayBalanceModal] = useState<{ open: boolean; bookingId: string; ref: string; amountPaise: number }>({ open: false, bookingId: '', ref: '', amountPaise: 0 });
   // Guest management
   const [guestModal, setGuestModal] = useState<{ open: boolean; bookingId: string; ref: string }>({ open: false, bookingId: '', ref: '' });
   const [guestList, setGuestList] = useState<any[]>([]);
@@ -450,6 +453,14 @@ export default function DashboardPage() {
                           Complete Payment
                         </Link>
                       )}
+                      {booking.status === 'CONFIRMED'
+                        && booking.paymentMode === 'PARTIAL_PREPAID'
+                        && (booking.dueAtPropertyPaise ?? 0) > 0 && (
+                        <button onClick={() => setPayBalanceModal({ open: true, bookingId: booking.id, ref: booking.bookingRef, amountPaise: booking.dueAtPropertyPaise ?? 0 })}
+                          className="text-xs px-3 py-1.5 rounded-lg bg-orange-500 text-white hover:bg-orange-600 font-medium transition">
+                          Pay balance {formatPaise(booking.dueAtPropertyPaise ?? 0)}
+                        </button>
+                      )}
                       {(() => {
                         const isReviewed = booking.hasReview || reviewedBookings.has(booking.id);
                         const isReviewable = booking.status === 'COMPLETED' || booking.status === 'CONFIRMED';
@@ -492,6 +503,36 @@ export default function DashboardPage() {
               </div>
             );
           })}
+        </div>
+      )}
+
+      {/* Pay Balance Modal */}
+      {payBalanceModal.open && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={() => setPayBalanceModal({ open: false, bookingId: '', ref: '', amountPaise: 0 })}>
+          <div className="bg-white rounded-2xl max-w-sm w-full p-6" onClick={(e) => e.stopPropagation()}>
+            <h3 className="text-lg font-bold mb-1">Pay remaining balance</h3>
+            <p className="text-sm text-gray-500 mb-4">Booking {payBalanceModal.ref}</p>
+            <div className="bg-orange-50 border border-orange-200 rounded-xl px-4 py-3 mb-5 text-center">
+              <p className="text-xs text-orange-700 font-semibold uppercase tracking-wider">Balance due</p>
+              <p className="text-2xl font-bold text-orange-700 mt-1">{formatPaise(payBalanceModal.amountPaise)}</p>
+            </div>
+            <RazorpayButton
+              bookingId={payBalanceModal.bookingId}
+              amountPaise={payBalanceModal.amountPaise}
+              token={token}
+              description={`Balance for ${payBalanceModal.ref}`}
+              onSuccess={() => {
+                setPayBalanceModal({ open: false, bookingId: '', ref: '', amountPaise: 0 });
+                // Brief delay so the payment.captured Kafka event has a chance to flow
+                // through payment-service → booking-service before we refetch.
+                setTimeout(() => loadBookings(token), 1500);
+              }}
+            />
+            <button onClick={() => setPayBalanceModal({ open: false, bookingId: '', ref: '', amountPaise: 0 })}
+              className="w-full text-sm text-gray-500 hover:text-gray-700 mt-3 py-2">
+              Cancel
+            </button>
+          </div>
         </div>
       )}
 
