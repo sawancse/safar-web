@@ -467,8 +467,8 @@ export default function BuilderNewProjectPage() {
         locality: locality || undefined,
         pincode: pincode || undefined,
         address: address || undefined,
-        latitude: latitude ? Number(latitude) : undefined,
-        longitude: longitude ? Number(longitude) : undefined,
+        lat: latitude ? Number(latitude) : undefined,
+        lng: longitude ? Number(longitude) : undefined,
         amenities: selectedAmenities.length > 0 ? selectedAmenities : undefined,
         bankApprovals: bankApprovals.length > 0 ? bankApprovals : undefined,
         paymentPlansJson: paymentPlans.length > 0 ? JSON.stringify(paymentPlans) : undefined,
@@ -495,8 +495,6 @@ export default function BuilderNewProjectPage() {
       // Add only NEW unit types (skip existing server-side ones in edit mode)
       for (const unit of unitTypes) {
         if (!unit.name.trim()) continue;
-        // Skip existing unit types that haven't changed
-        if (isEdit && existingUnitTypeIds.has(unit.id)) continue;
 
         const isPlot = unit.unitKind === 'PLOT';
         const unitData: any = isPlot ? {
@@ -527,7 +525,13 @@ export default function BuilderNewProjectPage() {
           furnishing: unit.furnishing || undefined,
           floorPlanUrl: unit.floorPlanPreview || undefined,
         };
-        await api.addUnitType(projectId, unitData, freshToken);
+        // Existing units (edit mode) → update; new units → add. Previously
+        // existing units were skipped entirely, so price/area edits never saved.
+        if (isEdit && existingUnitTypeIds.has(unit.id)) {
+          await api.updateUnitType(unit.id, unitData, freshToken);
+        } else {
+          await api.addUnitType(projectId, unitData, freshToken);
+        }
       }
 
       router.push(`/projects/${projectId}`);

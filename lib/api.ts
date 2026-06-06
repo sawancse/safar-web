@@ -2652,6 +2652,13 @@ export const api = {
       body: JSON.stringify(data),
     }),
 
+  updateUnitType: (unitTypeId: string, data: any, token: string) =>
+    apiFetch<any>(`/api/v1/builder-projects/unit-types/${unitTypeId}`, {
+      method: 'PUT',
+      headers: { Authorization: `Bearer ${token}` },
+      body: JSON.stringify(data),
+    }),
+
   getUnitTypes: (projectId: string) =>
     apiFetch<any[]>(`/api/v1/builder-projects/${projectId}/unit-types`),
 
