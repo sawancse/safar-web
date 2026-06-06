@@ -1075,11 +1075,30 @@ function TrackingPanel({ bookingId, booking, bookingKind, chef, onBookingUpdated
     (hasLoc && (eta != null && eta <= 2)) ? 'arrived' :
     hasLoc ? 'enroute' : 'confirmed';
 
+  // Service-aware "in progress" stage — a pandit/decor/cake/singer booking
+  // shouldn't read "Cooking 🔥".
+  const startedMeta = (() => {
+    if (booking?.menuDescription) {
+      try {
+        switch (JSON.parse(booking.menuDescription)?.type) {
+          case 'PANDIT_PUJA':      return { label: 'Puja',       icon: '🪔' };
+          case 'EVENT_DECOR':      return { label: 'Setup',      icon: '🌸' };
+          case 'DESIGNER_CAKE':
+          case 'CAKE_DESIGNER':    return { label: 'Baking',     icon: '🎂' };
+          case 'LIVE_MUSIC':       return { label: 'Performing', icon: '🎤' };
+          case 'STAFF_HIRE':       return { label: 'On duty',    icon: '🧑‍🍳' };
+          case 'APPLIANCE_RENTAL': return { label: 'In use',     icon: '🍳' };
+        }
+      } catch { /* ignore */ }
+    }
+    return { label: 'Cooking', icon: '🔥' };
+  })();
+
   const stages: { key: TrackingStage; label: string; icon: string }[] = [
     { key: 'confirmed', label: 'Confirmed',   icon: '✓' },
     { key: 'enroute',   label: 'On the way',  icon: '🛵' },
     { key: 'arrived',   label: 'Arrived',     icon: '📍' },
-    { key: 'started',   label: 'Cooking',     icon: '🔥' },
+    { key: 'started',   label: startedMeta.label, icon: startedMeta.icon },
     { key: 'done',      label: 'Completed',   icon: '🎉' },
   ];
   const currentIdx = stages.findIndex(s => s.key === current);
