@@ -94,6 +94,14 @@ export default function AgreementDetailPage() {
     }
   }
 
+  async function handleViewDraft() {
+    try {
+      await api.viewAgreementDraftPdf(id, token);
+    } catch (e: any) {
+      alert(e?.message || 'Failed to open draft PDF');
+    }
+  }
+
   if (loading) {
     return <div className="max-w-3xl mx-auto px-4 py-16 text-center text-gray-500 text-sm">Loading…</div>;
   }
@@ -191,10 +199,10 @@ export default function AgreementDetailPage() {
           </a>
         )}
         {draftUrl ? (
-          <a href={draftUrl} target="_blank" rel="noopener noreferrer"
+          <button onClick={handleViewDraft}
              className="bg-slate-900 text-white text-sm font-semibold px-4 py-2.5 rounded-xl hover:bg-slate-800 transition">
             View draft PDF
-          </a>
+          </button>
         ) : (
           <button onClick={handleGenerate} disabled={generating}
                   className="bg-orange-500 text-white text-sm font-semibold px-4 py-2.5 rounded-xl hover:bg-orange-600 disabled:opacity-50 transition">

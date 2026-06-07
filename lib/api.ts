@@ -2711,6 +2711,16 @@ export const api = {
     apiFetch<any>('/api/v1/agreements', { method: 'POST', ...(token ? { headers: { Authorization: `Bearer ${token}` } } : {}), body: JSON.stringify(data) }),
   getSaleAgreement: (id: string, token: string) =>
     apiFetch<any>(`/api/v1/agreements/${id}`, { headers: { Authorization: `Bearer ${token}` } }),
+  viewAgreementDraftPdf: async (id: string, token: string): Promise<void> => {
+    const res = await fetch(`${API_URL}/api/v1/agreements/${id}/document/draft.pdf`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!res.ok) throw new Error('Failed to load draft PDF');
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    window.open(url, '_blank');
+    setTimeout(() => URL.revokeObjectURL(url), 60000);
+  },
   getMyAgreements: (token: string) =>
     apiFetch<any>('/api/v1/agreements/my', { headers: { Authorization: `Bearer ${token}` } }),
   addAgreementParty: (agreementId: string, data: any, token: string) =>
