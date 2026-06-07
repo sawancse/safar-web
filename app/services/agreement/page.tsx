@@ -11,8 +11,8 @@ function formatPaise(paise: number): string {
 const AGREEMENT_TYPES = [
   { value: 'SALE_AGREEMENT', label: 'Sale Agreement', desc: 'For property purchase between buyer and seller. Includes terms, timelines, and payment schedule.', icon: '📋' },
   { value: 'SALE_DEED', label: 'Sale Deed', desc: 'Final transfer of ownership document. Legally required for registration at sub-registrar office.', icon: '📜' },
-  { value: 'RENTAL', label: 'Rental Agreement', desc: 'Standard 11-month rental agreement with terms, rent, deposit and maintenance details.', icon: '🏠' },
-  { value: 'LEAVE_AND_LICENSE', label: 'Leave & License', desc: 'Maharashtra-style leave and license agreement. Mandatory e-registration in MH.', icon: '📝' },
+  { value: 'RENTAL_AGREEMENT', label: 'Rental Agreement', desc: 'Standard 11-month rental agreement with terms, rent, deposit and maintenance details.', icon: '🏠' },
+  { value: 'LEAVE_LICENSE', label: 'Leave & License', desc: 'Maharashtra-style leave and license agreement. Mandatory e-registration in MH.', icon: '📝' },
   { value: 'PG_AGREEMENT', label: 'PG Agreement', desc: 'Paying guest agreement with house rules, notice period, and shared amenity terms.', icon: '🏢' },
 ];
 
