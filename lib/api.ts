@@ -2727,6 +2727,8 @@ export const api = {
     apiFetch<any>(`/api/v1/agreements/${agreementId}/parties`, { method: 'POST', headers: { Authorization: `Bearer ${token}` }, body: JSON.stringify(data) }),
   generateAgreementDraft: (id: string, token: string) =>
     apiFetch<any>(`/api/v1/agreements/${id}/generate-draft`, { method: 'POST', headers: { Authorization: `Bearer ${token}` } }),
+  updateAgreementTerms: (id: string, body: any, token: string) =>
+    apiFetch<any>(`/api/v1/agreements/${id}/terms`, { method: 'PATCH', headers: { Authorization: `Bearer ${token}` }, body: JSON.stringify(body) }),
   payAgreement: (id: string, paymentId: string, token: string) =>
     apiFetch<any>(`/api/v1/agreements/${id}/pay?paymentId=${paymentId}`, { method: 'POST', headers: { Authorization: `Bearer ${token}` } }),
   signAgreement: (id: string, partyId: string, token: string) =>

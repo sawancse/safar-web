@@ -60,6 +60,9 @@ export default function AgreementDetailPage() {
   const [error, setError] = useState('');
   const [token, setToken] = useState('');
   const [generating, setGenerating] = useState(false);
+  const [editOpen, setEditOpen] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [form, setForm] = useState<any>({});
 
   useEffect(() => {
     const t = typeof window !== 'undefined' ? (localStorage.getItem('access_token') || '') : '';
@@ -99,6 +102,46 @@ export default function AgreementDetailPage() {
       await api.viewAgreementDraftPdf(id, token);
     } catch (e: any) {
       alert(e?.message || 'Failed to open draft PDF');
+    }
+  }
+
+  function openEdit() {
+    setForm({
+      agreementType: agreement.agreementType || 'RENTAL_AGREEMENT',
+      city: agreement.city || '',
+      state: agreement.state || '',
+      agreementDate: (agreement.agreementDate || '').slice(0, 10),
+      startDate: (agreement.startDate || '').slice(0, 10),
+      endDate: (agreement.endDate || '').slice(0, 10),
+      monthlyRentInr: agreement.monthlyRentPaise != null ? String(agreement.monthlyRentPaise / 100) : '',
+      securityDepositInr: agreement.securityDepositPaise != null ? String(agreement.securityDepositPaise / 100) : '',
+      saleValueInr: agreement.saleConsiderationPaise != null ? String(agreement.saleConsiderationPaise / 100) : '',
+    });
+    setEditOpen(true);
+  }
+
+  async function handleSaveEdit() {
+    setSaving(true);
+    try {
+      const num = (v: any) => (v !== '' && v != null ? Math.round(Number(v) * 100) : undefined);
+      const body = {
+        agreementType: form.agreementType || undefined,
+        city: form.city || undefined,
+        state: form.state || undefined,
+        agreementDate: form.agreementDate || undefined,
+        startDate: form.startDate || undefined,
+        endDate: form.endDate || undefined,
+        monthlyRentPaise: num(form.monthlyRentInr),
+        securityDepositPaise: num(form.securityDepositInr),
+        saleConsiderationPaise: num(form.saleValueInr),
+      };
+      const updated = await api.updateAgreementTerms(id, body, token);
+      setAgreement(updated);
+      setEditOpen(false);
+    } catch (e: any) {
+      alert(e?.message || 'Failed to save changes');
+    } finally {
+      setSaving(false);
     }
   }
 
@@ -169,6 +212,20 @@ export default function AgreementDetailPage() {
         </Section>
       )}
 
+      {/* Terms */}
+      {(agreement.agreementDate || agreement.startDate || agreement.monthlyRentPaise || agreement.saleConsiderationPaise) && (
+        <Section title="Terms">
+          <div className="text-sm">
+            {agreement.agreementDate && <Row label="Agreement date" value={new Date(agreement.agreementDate).toLocaleDateString('en-IN')} />}
+            {agreement.startDate && <Row label="Start date" value={new Date(agreement.startDate).toLocaleDateString('en-IN')} />}
+            {agreement.endDate && <Row label="End date" value={new Date(agreement.endDate).toLocaleDateString('en-IN')} />}
+            {agreement.monthlyRentPaise ? <Row label="Monthly rent" value={formatPaise(agreement.monthlyRentPaise)} /> : null}
+            {agreement.securityDepositPaise ? <Row label="Security deposit" value={formatPaise(agreement.securityDepositPaise)} /> : null}
+            {agreement.saleConsiderationPaise ? <Row label="Sale / property value" value={formatPaise(agreement.saleConsiderationPaise)} /> : null}
+          </div>
+        </Section>
+      )}
+
       {/* Parties */}
       {Array.isArray(agreement.parties) && agreement.parties.length > 0 && (
         <Section title="Parties">
@@ -192,6 +249,12 @@ export default function AgreementDetailPage() {
 
       {/* Documents / actions */}
       <div className="bg-white border border-gray-200 rounded-2xl p-5 flex flex-wrap items-center gap-3">
+        {agreement.status === 'DRAFT' && (
+          <button onClick={openEdit}
+             className="bg-white border border-gray-300 text-gray-800 text-sm font-semibold px-4 py-2.5 rounded-xl hover:bg-gray-50 transition">
+            Edit draft
+          </button>
+        )}
         {signedUrl && (
           <a href={signedUrl} target="_blank" rel="noopener noreferrer"
              className="bg-green-600 text-white text-sm font-semibold px-4 py-2.5 rounded-xl hover:bg-green-700 transition">
@@ -211,6 +274,51 @@ export default function AgreementDetailPage() {
         )}
         <Link href="/services/agreement" className="text-sm text-gray-500 hover:text-gray-700 px-2 py-2.5">Back</Link>
       </div>
+
+      {/* Edit draft modal */}
+      {editOpen && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={() => !saving && setEditOpen(false)}>
+          <div className="bg-white rounded-2xl max-w-lg w-full p-6 max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+            <h3 className="text-lg font-bold text-slate-900 mb-4">Edit draft</h3>
+            <div className="grid grid-cols-2 gap-3">
+              <label className="col-span-2 text-xs text-gray-500">Agreement type
+                <select value={form.agreementType} onChange={e => setForm({ ...form, agreementType: e.target.value })} className="mt-1 w-full border rounded-lg px-3 py-2 text-sm">
+                  {['SALE_AGREEMENT', 'SALE_DEED', 'RENTAL_AGREEMENT', 'LEAVE_LICENSE', 'PG_AGREEMENT'].map(t => <option key={t} value={t}>{t.replace(/_/g, ' ')}</option>)}
+                </select>
+              </label>
+              <label className="text-xs text-gray-500">City
+                <input value={form.city} onChange={e => setForm({ ...form, city: e.target.value })} className="mt-1 w-full border rounded-lg px-3 py-2 text-sm" />
+              </label>
+              <label className="text-xs text-gray-500">State
+                <input value={form.state} onChange={e => setForm({ ...form, state: e.target.value })} className="mt-1 w-full border rounded-lg px-3 py-2 text-sm" />
+              </label>
+              <label className="text-xs text-gray-500">Agreement date
+                <input type="date" value={form.agreementDate} onChange={e => setForm({ ...form, agreementDate: e.target.value })} className="mt-1 w-full border rounded-lg px-3 py-2 text-sm" />
+              </label>
+              <label className="text-xs text-gray-500">Start date
+                <input type="date" value={form.startDate} onChange={e => setForm({ ...form, startDate: e.target.value })} className="mt-1 w-full border rounded-lg px-3 py-2 text-sm" />
+              </label>
+              <label className="text-xs text-gray-500">End date
+                <input type="date" value={form.endDate} onChange={e => setForm({ ...form, endDate: e.target.value })} className="mt-1 w-full border rounded-lg px-3 py-2 text-sm" />
+              </label>
+              <label className="text-xs text-gray-500">Monthly rent (₹)
+                <input type="number" min={0} value={form.monthlyRentInr} onChange={e => setForm({ ...form, monthlyRentInr: e.target.value })} className="mt-1 w-full border rounded-lg px-3 py-2 text-sm" />
+              </label>
+              <label className="text-xs text-gray-500">Security deposit (₹)
+                <input type="number" min={0} value={form.securityDepositInr} onChange={e => setForm({ ...form, securityDepositInr: e.target.value })} className="mt-1 w-full border rounded-lg px-3 py-2 text-sm" />
+              </label>
+              <label className="col-span-2 text-xs text-gray-500">Sale / property value (₹)
+                <input type="number" min={0} value={form.saleValueInr} onChange={e => setForm({ ...form, saleValueInr: e.target.value })} className="mt-1 w-full border rounded-lg px-3 py-2 text-sm" />
+              </label>
+            </div>
+            <p className="text-[11px] text-gray-400 mt-3">Stamp duty recalculates on save — from the sale value (sale deeds) or 12× rent + deposit (rentals).</p>
+            <div className="flex gap-3 mt-5">
+              <button onClick={() => setEditOpen(false)} disabled={saving} className="flex-1 border rounded-xl py-2.5 text-sm font-medium hover:bg-gray-50 disabled:opacity-50">Cancel</button>
+              <button onClick={handleSaveEdit} disabled={saving} className="flex-1 bg-orange-500 text-white rounded-xl py-2.5 text-sm font-semibold hover:bg-orange-600 disabled:opacity-50">{saving ? 'Saving…' : 'Save changes'}</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
