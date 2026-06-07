@@ -106,6 +106,22 @@ export default function AgreementDetailPage() {
   }
 
   function openEdit() {
+    let parties: any[] = [];
+    try {
+      const arr = agreement.partyDetailsJson ? JSON.parse(agreement.partyDetailsJson) : [];
+      if (Array.isArray(arr)) {
+        parties = arr.map((p: any) => ({
+          name: p.name || '', role: p.role || 'BUYER', phone: p.phone || '',
+          email: p.email || '', pan: p.panNumber || p.pan || '', address: p.address || '',
+        }));
+      }
+    } catch { /* ignore */ }
+    if (parties.length === 0) {
+      parties = [
+        { name: '', role: 'SELLER', phone: '', email: '', pan: '', address: '' },
+        { name: '', role: 'BUYER', phone: '', email: '', pan: '', address: '' },
+      ];
+    }
     setForm({
       agreementType: agreement.agreementType || 'RENTAL_AGREEMENT',
       city: agreement.city || '',
@@ -116,8 +132,23 @@ export default function AgreementDetailPage() {
       monthlyRentInr: agreement.monthlyRentPaise != null ? String(agreement.monthlyRentPaise / 100) : '',
       securityDepositInr: agreement.securityDepositPaise != null ? String(agreement.securityDepositPaise / 100) : '',
       saleValueInr: agreement.saleConsiderationPaise != null ? String(agreement.saleConsiderationPaise / 100) : '',
+      parties,
     });
     setEditOpen(true);
+  }
+
+  function setParty(i: number, field: string, value: string) {
+    setForm((f: any) => {
+      const parties = [...(f.parties || [])];
+      parties[i] = { ...parties[i], [field]: value };
+      return { ...f, parties };
+    });
+  }
+  function addParty(role: string) {
+    setForm((f: any) => ({ ...f, parties: [...(f.parties || []), { name: '', role, phone: '', email: '', pan: '', address: '' }] }));
+  }
+  function removeParty(i: number) {
+    setForm((f: any) => ({ ...f, parties: (f.parties || []).filter((_: any, idx: number) => idx !== i) }));
   }
 
   async function handleSaveEdit() {
@@ -134,6 +165,13 @@ export default function AgreementDetailPage() {
         monthlyRentPaise: num(form.monthlyRentInr),
         securityDepositPaise: num(form.securityDepositInr),
         saleConsiderationPaise: num(form.saleValueInr),
+        partyDetailsJson: Array.isArray(form.parties)
+          ? JSON.stringify(
+              form.parties
+                .filter((p: any) => (p.name || '').trim())
+                .map((p: any) => ({ name: p.name, role: p.role, panNumber: p.pan, address: p.address, phone: p.phone, email: p.email }))
+            )
+          : undefined,
       };
       const updated = await api.updateAgreementTerms(id, body, token);
       setAgreement(updated);
@@ -311,6 +349,37 @@ export default function AgreementDetailPage() {
                 <input type="number" min={0} value={form.saleValueInr} onChange={e => setForm({ ...form, saleValueInr: e.target.value })} className="mt-1 w-full border rounded-lg px-3 py-2 text-sm" />
               </label>
             </div>
+
+            {/* Parties */}
+            <div className="mt-5">
+              <div className="flex items-center justify-between mb-2">
+                <h4 className="text-sm font-semibold text-slate-900">Parties</h4>
+                <div className="flex gap-2">
+                  <button type="button" onClick={() => addParty('BUYER')} className="text-xs text-orange-600 border border-orange-200 rounded-lg px-2.5 py-1 hover:bg-orange-50">+ Party</button>
+                  <button type="button" onClick={() => addParty('WITNESS')} className="text-xs text-gray-600 border border-gray-200 rounded-lg px-2.5 py-1 hover:bg-gray-50">+ Witness</button>
+                </div>
+              </div>
+              <div className="space-y-3">
+                {(form.parties || []).map((p: any, i: number) => (
+                  <div key={i} className="border rounded-xl p-3">
+                    <div className="grid grid-cols-2 gap-2">
+                      <select value={p.role} onChange={e => setParty(i, 'role', e.target.value)} className="border rounded-lg px-2 py-1.5 text-sm">
+                        {['BUYER', 'SELLER', 'TENANT', 'LANDLORD', 'WITNESS'].map(r => <option key={r} value={r}>{r.charAt(0) + r.slice(1).toLowerCase()}</option>)}
+                      </select>
+                      <input value={p.name} onChange={e => setParty(i, 'name', e.target.value)} placeholder="Full name" className="border rounded-lg px-2 py-1.5 text-sm" />
+                      <input value={p.phone} onChange={e => setParty(i, 'phone', e.target.value)} placeholder="Phone" className="border rounded-lg px-2 py-1.5 text-sm" />
+                      <input value={p.email} onChange={e => setParty(i, 'email', e.target.value)} placeholder="Email" className="border rounded-lg px-2 py-1.5 text-sm" />
+                      <input value={p.pan} onChange={e => setParty(i, 'pan', e.target.value.toUpperCase())} placeholder="PAN" maxLength={10} className="border rounded-lg px-2 py-1.5 text-sm" />
+                      <input value={p.address} onChange={e => setParty(i, 'address', e.target.value)} placeholder="Address" className="border rounded-lg px-2 py-1.5 text-sm" />
+                    </div>
+                    {(form.parties || []).length > 1 && (
+                      <button type="button" onClick={() => removeParty(i)} className="text-[11px] text-red-500 hover:text-red-600 mt-2">Remove</button>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+
             <p className="text-[11px] text-gray-400 mt-3">Stamp duty recalculates on save — from the sale value (sale deeds) or 12× rent + deposit (rentals).</p>
             <div className="flex gap-3 mt-5">
               <button onClick={() => setEditOpen(false)} disabled={saving} className="flex-1 border rounded-xl py-2.5 text-sm font-medium hover:bg-gray-50 disabled:opacity-50">Cancel</button>
