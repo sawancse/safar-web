@@ -768,7 +768,7 @@ export default function HostPage() {
 
       {/* ── Settlement Tab ──────────────────────────────── */}
       {activeTab === 'settlement' && listings.length > 0 && (
-        <HostSettlementTab listingId={listings[0].id} />
+        <HostSettlementTab listings={listings.map(l => ({ id: l.id, title: l.title }))} />
       )}
 
       {/* ── Payouts Tab ──────────────────────────────────── */}

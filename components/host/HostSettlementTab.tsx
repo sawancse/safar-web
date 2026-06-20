@@ -49,7 +49,7 @@ const CATEGORY_LABELS: Record<string, string> = {
   OTHER: 'Other',
 };
 
-export default function HostSettlementTab({ listingId }: { listingId: string }) {
+export default function HostSettlementTab({ listings }: { listings: { id: string; title: string }[] }) {
   const token = typeof window !== 'undefined' ? localStorage.getItem('access_token') ?? '' : '';
 
   const [tenancies, setTenancies] = useState<any[]>([]);
@@ -75,13 +75,28 @@ export default function HostSettlementTab({ listingId }: { listingId: string }) 
     deductionPaise: 0,
   });
 
-  useEffect(() => { loadData(); }, [listingId]);
+  const listingIds = listings.map(l => l.id).join(',');
+
+  useEffect(() => { loadData(); }, [listingIds]);
 
   async function loadData() {
     setLoading(true);
     try {
-      const res = await api.getPgTenancies('listingId=' + listingId, token);
-      const all: any[] = res.content || [];
+      // Fetch tenancies across ALL of the host's listings, not just the first one.
+      // A move-out can belong to any PG listing the host owns.
+      const titleById: Record<string, string> = {};
+      listings.forEach(l => { titleById[l.id] = l.title; });
+      const perListing = await Promise.all(
+        listings.map(async (l) => {
+          try {
+            const res = await api.getPgTenancies('listingId=' + l.id, token);
+            return (res.content || []).map((t: any) => ({ ...t, listingTitle: titleById[l.id] }));
+          } catch {
+            return [];
+          }
+        })
+      );
+      const all: any[] = perListing.flat();
       // Show tenancies in NOTICE_PERIOD or those that may have settlements
       const relevant = all.filter(
         (t: any) => t.status === 'NOTICE_PERIOD' || t.status === 'VACATED' || t.status === 'TERMINATED'
@@ -286,13 +301,16 @@ export default function HostSettlementTab({ listingId }: { listingId: string }) 
                     </span>
                   )}
                 </div>
+                {t.listingTitle && (
+                  <div className="text-sm text-gray-600 mt-1">{t.listingTitle}</div>
+                )}
                 <div className="text-sm text-gray-500 mt-1">
                   Move-in: {t.moveInDate}
                   {t.moveOutDate && ` · Move-out: ${t.moveOutDate}`}
                 </div>
               </div>
               <div className="flex gap-2">
-                {!settlement && t.status === 'NOTICE_PERIOD' && (
+                {!settlement && (t.status === 'NOTICE_PERIOD' || t.status === 'VACATED') && (
                   <button
                     onClick={() => handleInitiateSettlement(t)}
                     disabled={actionLoading}
