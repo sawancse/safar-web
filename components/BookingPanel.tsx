@@ -525,13 +525,13 @@ export default function BookingPanel({ listing, selectedRoomType, roomSelections
       </div>
 
       {/* Reserve button */}
-      <button onClick={handleBook} disabled={!canBook}
+      <button onClick={handleBook} disabled={!roomCapacityOk}
         className="w-full bg-orange-500 hover:bg-orange-600 text-white font-semibold py-3 rounded-xl disabled:opacity-50 transition">
-        {!canBook
-          ? (!roomCapacityOk
-              ? 'Fully booked for selected room'
-              : isCommercial ? 'Select date & time' : isMonthly ? 'Select move-in date' : 'Select dates')
-          : isMonthly ? `Rent Now · ${formatPaise(totalPaise)}/mo` : `Reserve · ${formatPaise(totalPaise)}`
+        {!roomCapacityOk
+          ? 'Fully booked for selected room'
+          : !datesOk
+            ? 'Check availability'
+            : isMonthly ? `Rent Now · ${formatPaise(totalPaise)}/mo` : `Reserve · ${formatPaise(totalPaise)}`
         }
       </button>
 
