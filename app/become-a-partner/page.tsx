@@ -78,12 +78,12 @@ export default function BecomePartnerPage() {
       <section className="max-w-5xl mx-auto px-4 pt-12 pb-10 text-center">
         <p className="text-xs font-bold text-orange-600 uppercase tracking-[0.2em] mb-3">For partners</p>
         <h1 className="text-4xl sm:text-5xl font-bold text-gray-900 mb-3 leading-tight">
-          Earn on Safar.
+          Earn on BhramanKaro.
           <br />
           <span className="text-orange-500">Pick your craft.</span>
         </h1>
         <p className="text-base text-gray-600 max-w-2xl mx-auto">
-          Six ways to grow your business with Safar — from home cooking to wedding decor.
+          Six ways to grow your business with BhramanKaro — from home cooking to wedding decor.
           Set your own prices, calendar, and service area. Free to join.
         </p>
       </section>
@@ -140,7 +140,7 @@ export default function BecomePartnerPage() {
       <section className="max-w-5xl mx-auto px-4 py-12 text-center">
         <p className="text-sm text-gray-500 mb-2">Have a property to rent out instead?</p>
         <Link href="/host" className="text-orange-600 font-semibold hover:underline">
-          List your property on Safar →
+          List your property on BhramanKaro →
         </Link>
       </section>
     </div>

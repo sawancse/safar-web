@@ -80,7 +80,7 @@ export default function MyFlightsPage() {
   ];
 
   const EMPTY_MESSAGES: Record<TabKey, { icon: string; title: string; subtitle: string }> = {
-    upcoming: { icon: '&#x2708;&#xFE0F;', title: 'No upcoming flights', subtitle: 'Book your next adventure on Safar!' },
+    upcoming: { icon: '&#x2708;&#xFE0F;', title: 'No upcoming flights', subtitle: 'Book your next adventure on BhramanKaro!' },
     past: { icon: '&#x1F30D;', title: 'No past flights', subtitle: 'Your travel history will appear here.' },
     cancelled: { icon: '&#x274C;', title: 'No cancelled flights', subtitle: 'Good news - nothing cancelled.' },
   };

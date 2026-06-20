@@ -163,7 +163,7 @@ export default function DecorOrderPage() {
         key: order.razorpayKeyId,
         amount: order.amountPaise,
         currency: 'INR',
-        name: 'Safar Decor',
+        name: 'BhramanKaro Decor',
         description: `${selectedDecor.label} · ${new Date(eventDate).toDateString()}`,
         order_id: order.razorpayOrderId,
         handler: async (resp: any) => {

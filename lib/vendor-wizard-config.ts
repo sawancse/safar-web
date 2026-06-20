@@ -71,7 +71,7 @@ export const WIZARD_CONFIGS: Record<string, WizardConfig> = {
   CAKE_DESIGNER: {
     serviceType: 'CAKE_DESIGNER',
     displayName: 'Cake Designer',
-    hero: { emoji: '🎂', tagline: 'Sell bespoke cakes through Safar' },
+    hero: { emoji: '🎂', tagline: 'Sell bespoke cakes through BhramanKaro' },
     pricingPattern: 'PER_UNIT_TIERED',
     calendarMode: 'DAY_GRAIN',
     defaultLeadTimeHours: 48,
@@ -129,7 +129,7 @@ export const WIZARD_CONFIGS: Record<string, WizardConfig> = {
       {
         key: 'kyc',
         title: 'KYC documents',
-        description: 'FSSAI is legally required to sell food on Safar (Food Safety Act). Aadhaar + PAN are standard ID + tax docs.',
+        description: 'FSSAI is legally required to sell food on BhramanKaro (Food Safety Act). Aadhaar + PAN are standard ID + tax docs.',
         fields: [
           { key: 'aadhaar', label: 'Aadhaar', type: 'kyc-doc', documentType: 'AADHAAR', required: true },
           { key: 'pan',     label: 'PAN',     type: 'kyc-doc', documentType: 'PAN',     required: true },
@@ -206,7 +206,7 @@ export const WIZARD_CONFIGS: Record<string, WizardConfig> = {
   PANDIT: {
     serviceType: 'PANDIT',
     displayName: 'Pandit / Acharya',
-    hero: { emoji: '🪔', tagline: 'Offer pujas through Safar' },
+    hero: { emoji: '🪔', tagline: 'Offer pujas through BhramanKaro' },
     pricingPattern: 'FLAT_PER_ITEM',
     calendarMode: 'DAY_GRAIN',
     defaultLeadTimeHours: 24,

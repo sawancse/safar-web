@@ -85,7 +85,7 @@ export default function ServicesPage() {
       {/* Hero */}
       <section className="bg-[#003B95] text-white">
         <div className="max-w-3xl mx-auto px-4 py-16 md:py-24 text-center">
-          <h1 className="text-4xl md:text-5xl font-bold mb-4">Safar Services</h1>
+          <h1 className="text-4xl md:text-5xl font-bold mb-4">BhramanKaro Services</h1>
           <p className="text-base md:text-lg text-white/80 leading-relaxed">
             Property paperwork, home loans, legal verification, interiors &mdash; and everything
             you need for celebrations: cooks, cake, decor, pandit, music, staff.

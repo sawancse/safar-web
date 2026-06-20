@@ -8,7 +8,7 @@ interface Props {
 
 export default function PhotoShareMenu({ imageUrl, listingName, onClose }: Props) {
   const shareToWhatsApp = () => {
-    window.open(`https://wa.me/?text=${encodeURIComponent(`Check out ${listingName} on Safar: ${imageUrl}`)}`, '_blank');
+    window.open(`https://wa.me/?text=${encodeURIComponent(`Check out ${listingName} on BhramanKaro: ${imageUrl}`)}`, '_blank');
   };
 
   const copyLink = async () => {

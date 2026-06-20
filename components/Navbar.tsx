@@ -140,7 +140,7 @@ export default function Navbar() {
       <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
         {/* Logo */}
         <Link href="/" className={`flex items-center gap-2 font-bold text-xl ${isInHostMode ? 'text-orange-400' : 'text-white'}`}>
-          Safar{isInHostMode && <span className="text-xs font-normal text-gray-400 ml-1">hosting</span>}
+          BhramanKaro{isInHostMode && <span className="text-xs font-normal text-gray-400 ml-1">hosting</span>}
         </Link>
 
         {/* Desktop center links */}
@@ -182,7 +182,7 @@ export default function Navbar() {
                   <Link href="/cooks" className="flex items-center gap-3 px-4 py-2.5 hover:bg-orange-50 transition">
                     <span className="text-lg">👨‍🍳</span>
                     <div>
-                      <p className="text-sm font-medium text-gray-900">Safar Cooks</p>
+                      <p className="text-sm font-medium text-gray-900">BhramanKaro Cooks</p>
                       <p className="text-[11px] text-gray-400">Home cooks & caterers</p>
                     </div>
                   </Link>
@@ -474,7 +474,7 @@ export default function Navbar() {
                     <span className="w-5 text-center">🎉</span> House Parties
                   </Link>
                   <Link href="/cooks" className="flex items-center gap-3 py-2 text-gray-700 hover:text-orange-500" onClick={() => setMenuOpen(false)}>
-                    <span className="w-5 text-center">{'\u{1F468}\u{200D}\u{1F373}'}</span> Safar Cooks
+                    <span className="w-5 text-center">{'\u{1F468}\u{200D}\u{1F373}'}</span> BhramanKaro Cooks
                   </Link>
                   <Link href="/experiences" className="flex items-center gap-3 py-2 text-gray-700 hover:text-orange-500" onClick={() => setMenuOpen(false)}>
                     <span className="w-5 text-center">{'\u{2728}'}</span> Experiences
@@ -527,7 +527,7 @@ export default function Navbar() {
                 <span className="w-5 text-center">🎉</span> House Parties
               </Link>
               <Link href="/cooks" className="flex items-center gap-3 py-2 text-gray-700 hover:text-orange-500" onClick={() => setMenuOpen(false)}>
-                <span className="w-5 text-center">{'\u{1F468}\u{200D}\u{1F373}'}</span> Safar Cooks
+                <span className="w-5 text-center">{'\u{1F468}\u{200D}\u{1F373}'}</span> BhramanKaro Cooks
               </Link>
               <Link href="/experiences" className="flex items-center gap-3 py-2 text-gray-700 hover:text-orange-500" onClick={() => setMenuOpen(false)}>
                 <span className="w-5 text-center">{'\u{2728}'}</span> Experiences

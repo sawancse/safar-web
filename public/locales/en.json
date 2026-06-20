@@ -38,9 +38,9 @@
   },
   "home": {
     "trendingIn": "Trending in {city}",
-    "beFirst": "Be the first to list your property on Safar!",
+    "beFirst": "Be the first to list your property on BhramanKaro!",
     "listSpace": "List your space",
-    "whyHosts": "Why hosts choose Safar",
+    "whyHosts": "Why hosts choose BhramanKaro",
     "zeroCommission": "0% commission",
     "zeroCommissionDesc": "Keep 100% of every booking. Pay a flat monthly subscription.",
     "aiAutopilot": "AI autopilot",
@@ -98,6 +98,6 @@
     "hi": "हिन्दी"
   },
   "footer": {
-    "copyright": "Safar India Pvt. Ltd. · Zero commission, 100% yours."
+    "copyright": "BhramanKaro India Pvt. Ltd. · Zero commission, 100% yours."
   }
 }

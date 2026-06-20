@@ -38,9 +38,9 @@
   },
   "home": {
     "trendingIn": "{city} में ट्रेंडिंग",
-    "beFirst": "Safar पर अपनी प्रॉपर्टी लिस्ट करने वाले पहले व्यक्ति बनें!",
+    "beFirst": "BhramanKaro पर अपनी प्रॉपर्टी लिस्ट करने वाले पहले व्यक्ति बनें!",
     "listSpace": "अपनी जगह लिस्ट करें",
-    "whyHosts": "होस्ट Safar क्यों चुनते हैं",
+    "whyHosts": "होस्ट BhramanKaro क्यों चुनते हैं",
     "zeroCommission": "0% कमीशन",
     "zeroCommissionDesc": "हर बुकिंग का 100% अपने पास रखें। फ्लैट मासिक सब्सक्रिप्शन दें।",
     "aiAutopilot": "AI ऑटोपायलट",
@@ -98,6 +98,6 @@
     "hi": "हिन्दी"
   },
   "footer": {
-    "copyright": "Safar India Pvt. Ltd. · शून्य कमीशन, 100% आपका।"
+    "copyright": "BhramanKaro India Pvt. Ltd. · शून्य कमीशन, 100% आपका।"
   }
 }

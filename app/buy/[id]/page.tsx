@@ -906,7 +906,7 @@ export default function BuyPropertyDetailPage() {
             {property.linkedListingId && (
               <div className="bg-white border border-slate-200 rounded-xl p-6">
                 <h2 className="text-lg font-bold text-slate-900 mb-4">Rental History</h2>
-                <p className="text-xs text-slate-400 mb-4">This property was previously listed for rent on Safar</p>
+                <p className="text-xs text-slate-400 mb-4">This property was previously listed for rent on BhramanKaro</p>
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
                   {property.rentalAvgRating != null && (
                     <div className="text-center p-3 bg-orange-50 rounded-xl">

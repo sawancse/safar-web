@@ -7,7 +7,7 @@ interface Props {
   title?: string;
 }
 
-export default function ExpandableText({ text, title = 'About this Safar' }: Props) {
+export default function ExpandableText({ text, title = 'About this BhramanKaro' }: Props) {
   const [expanded, setExpanded] = useState(false);
 
   if (!text) return null;

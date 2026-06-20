@@ -1,6 +1,6 @@
 import Link from 'next/link';
 
-export const metadata = { title: 'Help Center | Safar' };
+export const metadata = { title: 'Help Center | BhramanKaro' };
 
 export default function HelpPage() {
   const faqs = [

@@ -1,4 +1,4 @@
-export const metadata = { title: 'Terms of Service | Safar' };
+export const metadata = { title: 'Terms of Service | BhramanKaro' };
 
 export default function TermsPage() {
   return (
@@ -11,10 +11,10 @@ export default function TermsPage() {
       </section>
       <div className="max-w-4xl mx-auto px-4 sm:px-6 py-12">
         <h2 className="text-xl font-bold text-gray-900 mt-8 mb-3">1. Acceptance of Terms</h2>
-        <p className="text-gray-600 leading-relaxed mb-4">By accessing or using Safar (bhramankaro.com), you agree to be bound by these Terms of Service. If you do not agree, please do not use our platform.</p>
+        <p className="text-gray-600 leading-relaxed mb-4">By accessing or using BhramanKaro (bhramankaro.com), you agree to be bound by these Terms of Service. If you do not agree, please do not use our platform.</p>
 
         <h2 className="text-xl font-bold text-gray-900 mt-8 mb-3">2. Platform Description</h2>
-        <p className="text-gray-600 leading-relaxed mb-4">Safar is a marketplace that connects property hosts with travellers. We facilitate bookings but are not a party to the rental agreement between hosts and guests. Safar also offers cook/chef bookings, experiences, and value-added services.</p>
+        <p className="text-gray-600 leading-relaxed mb-4">BhramanKaro is a marketplace that connects property hosts with travellers. We facilitate bookings but are not a party to the rental agreement between hosts and guests. BhramanKaro also offers cook/chef bookings, experiences, and value-added services.</p>
 
         <h2 className="text-xl font-bold text-gray-900 mt-8 mb-3">3. User Accounts</h2>
         <p className="text-gray-600 leading-relaxed mb-4">You must provide accurate information when creating an account. You are responsible for maintaining the confidentiality of your credentials. You must be at least 18 years old to use our services.</p>
@@ -37,10 +37,10 @@ export default function TermsPage() {
         <p className="text-gray-600 leading-relaxed mb-4">Reviews must be honest and based on actual experiences. We use a double-blind review system — both reviews are hidden until both parties submit or the 14-day deadline passes. Fake or malicious reviews will be removed.</p>
 
         <h2 className="text-xl font-bold text-gray-900 mt-8 mb-3">8. Intellectual Property</h2>
-        <p className="text-gray-600 leading-relaxed mb-4">All content on Safar, including design, logos, and text, is owned by Safar India Pvt. Ltd. Users retain ownership of content they upload but grant Safar a licence to display it on the platform.</p>
+        <p className="text-gray-600 leading-relaxed mb-4">All content on BhramanKaro, including design, logos, and text, is owned by BhramanKaro India Pvt. Ltd. Users retain ownership of content they upload but grant BhramanKaro a licence to display it on the platform.</p>
 
         <h2 className="text-xl font-bold text-gray-900 mt-8 mb-3">9. Limitation of Liability</h2>
-        <p className="text-gray-600 leading-relaxed mb-4">Safar acts as a marketplace and is not liable for the actions of hosts, guests, cooks, or other service providers. Our liability is limited to the fees paid for the specific transaction in question.</p>
+        <p className="text-gray-600 leading-relaxed mb-4">BhramanKaro acts as a marketplace and is not liable for the actions of hosts, guests, cooks, or other service providers. Our liability is limited to the fees paid for the specific transaction in question.</p>
 
         <h2 className="text-xl font-bold text-gray-900 mt-8 mb-3">10. Governing Law</h2>
         <p className="text-gray-600 leading-relaxed mb-4">These terms are governed by the laws of India. Any disputes shall be subject to the exclusive jurisdiction of courts in Hyderabad, Telangana.</p>

@@ -26,9 +26,9 @@ const JOBS = [
   { role: 'Business Development Executive', team: 'Sales', dept: 'sales', loc: 'Pan-India (Field)', type: 'Full-time', exp: '1-3 years',
     desc: 'On-ground sales to onboard PGs, hotels, and homestays. Meet targets, conduct property visits, and close deals.' },
   { role: 'Digital Marketing Manager', team: 'Marketing', dept: 'sales', loc: 'Hyderabad / Remote', type: 'Full-time', exp: '3-5 years',
-    desc: 'Own SEO, SEM, social media, and performance marketing. Drive organic traffic and paid acquisition for Safar.' },
+    desc: 'Own SEO, SEM, social media, and performance marketing. Drive organic traffic and paid acquisition for BhramanKaro.' },
   { role: 'Content & Social Media Lead', team: 'Marketing', dept: 'sales', loc: 'Hyderabad / Remote', type: 'Full-time', exp: '2-4 years',
-    desc: 'Create compelling travel content, manage Instagram/YouTube, build the Safar brand story across India.' },
+    desc: 'Create compelling travel content, manage Instagram/YouTube, build the BhramanKaro brand story across India.' },
   { role: 'Partnership Manager — Builder & VAS', team: 'Sales', dept: 'sales', loc: 'Hyderabad / Mumbai', type: 'Full-time', exp: '3-6 years',
     desc: 'Forge partnerships with builders, banks, legal firms, and interior designers for our value-added services.' },
   { role: 'Growth Marketing Analyst', team: 'Marketing', dept: 'sales', loc: 'Hyderabad / Remote', type: 'Full-time', exp: '1-3 years',
@@ -38,7 +38,7 @@ const JOBS = [
   { role: 'Customer Success Lead', team: 'Operations', dept: 'operations', loc: 'Hyderabad', type: 'Full-time', exp: '2-4 years',
     desc: 'Support hosts and guests. Handle escalations, improve CSAT scores, and build help center content.' },
   { role: 'City Launch Manager', team: 'Operations', dept: 'operations', loc: 'New Cities (Relocate)', type: 'Full-time', exp: '3-5 years',
-    desc: 'Launch Safar in new Indian cities. Set up local supply, partnerships, and go-to-market strategy.' },
+    desc: 'Launch BhramanKaro in new Indian cities. Set up local supply, partnerships, and go-to-market strategy.' },
 ];
 
 const TECH_STACK = ['Java 17', 'Spring Boot', 'Next.js 14', 'React Native', 'PostgreSQL', 'Elasticsearch', 'Redis', 'Kafka', 'AWS ECS', 'Python/FastAPI', 'Terraform', 'Docker'];
@@ -48,7 +48,7 @@ const PERKS = [
   { icon: '🏠', title: 'Remote Friendly', desc: 'Work from anywhere in India for most roles' },
   { icon: '🏥', title: 'Health Insurance', desc: 'Comprehensive cover for you and your family' },
   { icon: '📚', title: 'Learning Budget', desc: '₹50K/year for courses, conferences, and books' },
-  { icon: '✈️', title: 'Travel Credits', desc: 'Free Safar stays for team offsites and personal travel' },
+  { icon: '✈️', title: 'Travel Credits', desc: 'Free BhramanKaro stays for team offsites and personal travel' },
   { icon: '🚀', title: 'Fast Growth', desc: 'Early-stage startup with massive India TAM' },
 ];
 
@@ -93,7 +93,7 @@ export default function CareersPage() {
           <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold leading-tight">
             Build the future of travel
             <br />
-            <span className="text-[#FFB700]">with Safar</span>
+            <span className="text-[#FFB700]">with BhramanKaro</span>
           </h1>
           <p className="mt-4 text-white/70 text-lg max-w-2xl">
             Join India's first zero-commission stay platform. We're looking for passionate people
@@ -121,7 +121,7 @@ export default function CareersPage() {
       <div className="max-w-5xl mx-auto px-4 sm:px-6 py-12 space-y-14">
         {/* Perks */}
         <section>
-          <h2 className="text-2xl font-bold text-gray-900 mb-6">Why join Safar?</h2>
+          <h2 className="text-2xl font-bold text-gray-900 mb-6">Why join BhramanKaro?</h2>
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
             {PERKS.map(p => (
               <div key={p.title} className="border border-gray-100 rounded-xl p-5 hover:shadow-md hover:border-[#003B95]/20 transition">
@@ -318,7 +318,7 @@ export default function CareersPage() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Cover Letter / Why Safar?</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Cover Letter / Why BhramanKaro?</label>
                   <textarea value={formData.coverLetter}
                     onChange={e => setFormData(f => ({ ...f, coverLetter: e.target.value }))}
                     rows={3}

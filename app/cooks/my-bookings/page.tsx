@@ -107,11 +107,11 @@ export default function MyChefBookingsPage() {
   }
 
   function otpShareMessage(b: any) {
-    return `Hi ${b.chefName || 'Chef'}, my Safar Cook start-job OTP is *${b.startJobOtp}*. Please enter it when you arrive. Booking ref: ${b.bookingRef ?? ''}.`;
+    return `Hi ${b.chefName || 'Chef'}, my BhramanKaro Cook start-job OTP is *${b.startJobOtp}*. Please enter it when you arrive. Booking ref: ${b.bookingRef ?? ''}.`;
   }
 
   function eventOtpShareMessage(e: any, recipient: string) {
-    return `Hi ${recipient}, my Safar event start-job OTP is *${e.startJobOtp}*. Please enter it when you arrive. Booking ref: ${e.bookingRef ?? ''}.`;
+    return `Hi ${recipient}, my BhramanKaro event start-job OTP is *${e.startJobOtp}*. Please enter it when you arrive. Booking ref: ${e.bookingRef ?? ''}.`;
   }
 
   function formatBookedOn(iso?: string): string {
@@ -813,7 +813,7 @@ export default function MyChefBookingsPage() {
                             key: order.razorpayKeyId,
                             amount: order.amountPaise,
                             currency: 'INR',
-                            name: 'Safar',
+                            name: 'BhramanKaro',
                             description: `Balance — ${e.bookingRef}`,
                             order_id: order.razorpayOrderId,
                             handler: async (resp: any) => {
@@ -1320,7 +1320,7 @@ export default function MyChefBookingsPage() {
                             key: order.razorpayKeyId,
                             amount: order.amountPaise,
                             currency: 'INR',
-                            name: 'Safar Cooks',
+                            name: 'BhramanKaro Cooks',
                             description: `Event advance — ${payAdvanceEvent.bookingRef}`,
                             order_id: order.razorpayOrderId,
                             handler: async function (resp: any) {
@@ -1411,7 +1411,7 @@ td,th{padding:8px 12px;text-align:left;border-bottom:1px solid #eee}th{backgroun
 .total{font-weight:700;font-size:18px}.right{text-align:right}.badge{background:#f97316;color:#fff;padding:2px 8px;border-radius:12px;font-size:12px}
 @media print{button{display:none}}</style></head><body>
 <div style="display:flex;justify-content:space-between;align-items:center">
-<div><h1>Safar</h1><p style="margin:4px 0;color:#888">${inv.company}</p><p style="margin:0;font-size:12px;color:#aaa">GSTIN: ${inv.gstin}</p></div>
+<div><h1>BhramanKaro</h1><p style="margin:4px 0;color:#888">${inv.company}</p><p style="margin:0;font-size:12px;color:#aaa">GSTIN: ${inv.gstin}</p></div>
 <div style="text-align:right"><h2 style="margin:0">INVOICE</h2><p style="margin:4px 0;font-size:14px">${inv.invoiceNumber}</p>
 <span class="badge">${inv.status}</span></div></div><hr>
 <table><tr><td><strong>Customer:</strong> ${inv.customerName || '-'}</td><td><strong>Chef:</strong> ${inv.chefName || '-'}</td></tr>
@@ -1426,7 +1426,7 @@ ${inv.staffPaise > 0 ? `<tr><td>Staff</td><td class="right">${fmt(inv.staffPaise
 <tr><td><strong>Total</strong></td><td class="right total">${fmt(inv.totalPaise)}</td></tr>
 <tr><td>Advance Paid</td><td class="right" style="color:green">${fmt(inv.advancePaidPaise)}</td></tr>
 <tr><td><strong>Balance Due</strong></td><td class="right" style="color:#f97316">${fmt(inv.balanceDuePaise)}</td></tr></table>
-<p style="text-align:center;color:#aaa;margin-top:40px;font-size:12px">Thank you for choosing Safar Cooks!</p>
+<p style="text-align:center;color:#aaa;margin-top:40px;font-size:12px">Thank you for choosing BhramanKaro Cooks!</p>
 <button onclick="window.print()" style="margin:20px auto;display:block;padding:8px 24px;background:#f97316;color:#fff;border:none;border-radius:8px;cursor:pointer">Print Invoice</button>
 </body></html>`;
 }

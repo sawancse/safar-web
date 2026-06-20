@@ -939,7 +939,7 @@ export default function AccountPage() {
                       className="mt-0.5 accent-orange-500"
                     />
                     <span className="text-xs text-gray-600 leading-relaxed">
-                      I confirm that I&apos;m authorized to provide the personal data of any co-traveler (including children) to Safar for this service. In addition, I confirm that I&apos;ve informed the other travelers that I&apos;m providing their personal data to Safar.
+                      I confirm that I&apos;m authorized to provide the personal data of any co-traveler (including children) to BhramanKaro for this service. In addition, I confirm that I&apos;ve informed the other travelers that I&apos;m providing their personal data to BhramanKaro.
                     </span>
                   </label>
 
@@ -1009,7 +1009,7 @@ export default function AccountPage() {
           {activeSection === 'display' && (
             <div>
               <h2 className="text-xl font-bold mb-1">Display settings</h2>
-              <p className="text-sm text-gray-500 mb-6">Customize how you see and interact with Safar.</p>
+              <p className="text-sm text-gray-500 mb-6">Customize how you see and interact with BhramanKaro.</p>
 
               <div className="border rounded-2xl divide-y">
                 <div className="p-5 flex items-center justify-between">
@@ -1374,7 +1374,7 @@ export default function AccountPage() {
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="text-sm font-medium text-gray-800">Marketing emails</p>
-                      <p className="text-xs text-gray-400 mt-0.5">Receive offers, travel inspiration, and updates from Safar.</p>
+                      <p className="text-xs text-gray-400 mt-0.5">Receive offers, travel inspiration, and updates from BhramanKaro.</p>
                     </div>
                     <label className="relative inline-flex items-center cursor-pointer">
                       <input type="checkbox" defaultChecked className="sr-only peer" />
@@ -1396,7 +1396,7 @@ export default function AccountPage() {
                 </div>
                 <div className="p-5">
                   <p className="text-sm font-medium text-gray-800 mb-1">Download your data</p>
-                  <p className="text-xs text-gray-400 mb-3">Request a copy of all the data Safar holds about you.</p>
+                  <p className="text-xs text-gray-400 mb-3">Request a copy of all the data BhramanKaro holds about you.</p>
                   <button className="text-sm text-orange-500 border border-orange-200 px-4 py-2 rounded-lg hover:bg-orange-50 transition font-medium">Request data download</button>
                 </div>
                 <div className="p-5">

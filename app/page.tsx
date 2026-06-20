@@ -107,13 +107,13 @@ export default async function HomePage() {
         <Recommendations />
       </div>
 
-      {/* ── Why Safar Section ── */}
+      {/* ── Why BhramanKaro Section ── */}
       <section className="bg-gradient-to-b from-slate-50 to-white py-20 px-4">
         <div className="max-w-6xl mx-auto">
           <div className="text-center mb-14">
             <p className="text-orange-500 text-sm font-semibold tracking-wide uppercase mb-2">For hosts</p>
             <h2 className="text-3xl sm:text-4xl font-extrabold text-slate-900">
-              Why hosts choose Safar
+              Why hosts choose BhramanKaro
             </h2>
             <p className="text-slate-500 mt-3 max-w-lg mx-auto">
               Zero commission. AI-powered tools. Full control over your property.

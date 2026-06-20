@@ -155,7 +155,7 @@ export default function StaffHireOrderPage() {
         key: order.razorpayKeyId,
         amount: order.amountPaise,
         currency: 'INR',
-        name: `Safar ${spec.label}s`,
+        name: `BhramanKaro ${spec.label}s`,
         description: `${count} × ${spec.label.toLowerCase()}${count > 1 ? 's' : ''} · ${hours} hrs`,
         order_id: order.razorpayOrderId,
         handler: async (resp: any) => {

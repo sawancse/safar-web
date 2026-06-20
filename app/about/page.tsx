@@ -1,13 +1,13 @@
 import Link from 'next/link';
 
-export const metadata = { title: 'About Safar | India\'s Zero-Commission Stay Platform' };
+export const metadata = { title: 'About BhramanKaro | India\'s Zero-Commission Stay Platform' };
 
 export default function AboutPage() {
   return (
     <div className="min-h-screen bg-white">
       <section className="bg-[#003B95] text-white py-16">
         <div className="max-w-4xl mx-auto px-4 sm:px-6">
-          <h1 className="text-3xl sm:text-4xl font-bold">About Safar</h1>
+          <h1 className="text-3xl sm:text-4xl font-bold">About BhramanKaro</h1>
           <p className="mt-3 text-white/80 text-lg">India's first zero-commission property rental marketplace.</p>
         </div>
       </section>
@@ -15,7 +15,7 @@ export default function AboutPage() {
         <section>
           <h2 className="text-2xl font-bold text-gray-900 mb-3">Our Mission</h2>
           <p className="text-gray-600 leading-relaxed">
-            Safar was built with a simple belief: property hosts should keep 100% of what they earn. Unlike traditional platforms that charge 15-20% commission per booking, Safar operates on a flat monthly subscription model. This means more money for hosts and better prices for travellers.
+            BhramanKaro was built with a simple belief: property hosts should keep 100% of what they earn. Unlike traditional platforms that charge 15-20% commission per booking, BhramanKaro operates on a flat monthly subscription model. This means more money for hosts and better prices for travellers.
           </p>
         </section>
         <section>

@@ -70,7 +70,7 @@ export default function DesignerRegistrationPage() {
 
         <div className="bg-white rounded-2xl border shadow-sm p-8">
           <h1 className="text-2xl font-bold text-gray-900 mb-2">Register as an Interior Designer</h1>
-          <p className="text-gray-500 mb-6">Join Safar's network of home interior professionals. Get clients, showcase your portfolio, and grow your business.</p>
+          <p className="text-gray-500 mb-6">Join BhramanKaro's network of home interior professionals. Get clients, showcase your portfolio, and grow your business.</p>
 
           <div className="flex gap-2 mb-8">
             {[1, 2, 3].map(s => (

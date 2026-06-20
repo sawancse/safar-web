@@ -20,7 +20,7 @@ export default function ShareButton({ title, city, state, price, priceUnit = 'ni
   const modalRef = useRef<HTMLDivElement>(null);
 
   const shareUrl = `${BASE_URL}/listings/${listingId}?utm_source=share&utm_medium=social`;
-  const shareText = `Check out "${title}" in ${city}, ${state} on Safar — ${price}/${priceUnit}`;
+  const shareText = `Check out "${title}" in ${city}, ${state} on BhramanKaro — ${price}/${priceUnit}`;
 
   useEffect(() => {
     function handleClick(e: MouseEvent) {
@@ -84,7 +84,7 @@ export default function ShareButton({ title, city, state, price, priceUnit = 'ni
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
         </svg>
       ),
-      action: () => window.open(`mailto:?subject=${encodeURIComponent(`Check out this stay on Safar: ${title}`)}&body=${encodeURIComponent(shareText + '\n\n' + shareUrl)}`, '_blank'),
+      action: () => window.open(`mailto:?subject=${encodeURIComponent(`Check out this stay on BhramanKaro: ${title}`)}&body=${encodeURIComponent(shareText + '\n\n' + shareUrl)}`, '_blank'),
     },
     {
       label: 'Messages',

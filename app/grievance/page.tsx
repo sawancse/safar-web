@@ -1,4 +1,4 @@
-export const metadata = { title: 'Grievance Officer | Safar' };
+export const metadata = { title: 'Grievance Officer | BhramanKaro' };
 
 export default function GrievancePage() {
   return (
@@ -13,9 +13,9 @@ export default function GrievancePage() {
         <section className="bg-blue-50 border border-blue-200 rounded-xl p-6">
           <h2 className="text-xl font-bold text-gray-900 mb-4">Grievance Officer Details</h2>
           <div className="space-y-2 text-gray-700">
-            <p><strong>Name:</strong> Grievance Officer, Safar India Pvt. Ltd.</p>
+            <p><strong>Name:</strong> Grievance Officer, BhramanKaro India Pvt. Ltd.</p>
             <p><strong>Email:</strong> <a href="mailto:grievance@bhramankaro.com" className="text-[#003B95] hover:underline">grievance@bhramankaro.com</a></p>
-            <p><strong>Address:</strong> Safar India Pvt. Ltd., Hyderabad, Telangana, India</p>
+            <p><strong>Address:</strong> BhramanKaro India Pvt. Ltd., Hyderabad, Telangana, India</p>
             <p><strong>Working Hours:</strong> Monday to Friday, 10:00 AM to 6:00 PM IST</p>
           </div>
         </section>

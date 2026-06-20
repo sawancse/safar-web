@@ -36,7 +36,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       : undefined;
 
     return {
-      title: `${listing.title} — Safar`,
+      title: `${listing.title} — BhramanKaro`,
       description,
       openGraph: {
         title: listing.title,
@@ -44,7 +44,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
         type: 'website',
         url: `/listings/${params.id}`,
         ...(imageUrl ? { images: [{ url: imageUrl, width: 1200, height: 630, alt: listing.title }] } : {}),
-        siteName: 'Safar',
+        siteName: 'BhramanKaro',
       },
       twitter: {
         card: 'summary_large_image',
@@ -54,7 +54,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       },
     };
   } catch {
-    return { title: 'Listing — Safar' };
+    return { title: 'Listing — BhramanKaro' };
   }
 }
 
@@ -102,7 +102,7 @@ export default async function ListingDetailPage({ params }: Props) {
         <div className="flex flex-wrap gap-2 mb-2">
           {listing.status === 'VERIFIED' && (
             <span className="bg-green-100 text-green-700 text-xs font-semibold px-2 py-1 rounded-full">
-              ✓ Verified by Safar
+              ✓ Verified by BhramanKaro
             </span>
           )}
           {listing.instantBook && (
@@ -271,7 +271,7 @@ export default async function ListingDetailPage({ params }: Props) {
             </div>
           )}
 
-          {/* About this Safar */}
+          {/* About this BhramanKaro */}
           <ExpandableText text={listing.description} />
 
           {/* Hosted By */}

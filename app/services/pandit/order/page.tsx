@@ -198,7 +198,7 @@ export default function PanditOrderPage() {
         key: order.razorpayKeyId,
         amount: order.amountPaise,
         currency: 'INR',
-        name: 'Safar Pandit',
+        name: 'BhramanKaro Pandit',
         description: `${selectedPuja.label} · ${new Date(eventDate).toDateString()}`,
         order_id: order.razorpayOrderId,
         handler: async (resp: any) => {

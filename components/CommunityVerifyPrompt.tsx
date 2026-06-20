@@ -19,7 +19,7 @@ export default function CommunityVerifyPrompt({ listingId, onComplete }: Props) 
     if (submitted) {
       return (
         <div className="bg-green-50 border border-green-200 rounded-xl p-4 text-center">
-          <p className="text-green-700 font-semibold">Thanks for verifying! You earned {milesEarned} Safar Miles</p>
+          <p className="text-green-700 font-semibold">Thanks for verifying! You earned {milesEarned} BhramanKaro Miles</p>
         </div>
       );
     }

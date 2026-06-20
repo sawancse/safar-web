@@ -139,7 +139,7 @@ export default function ChefProfilePage() {
       {/* Breadcrumb */}
       <div className="max-w-4xl mx-auto px-4 pt-6 pb-2">
         <nav className="text-sm text-gray-500 flex items-center gap-2">
-          <Link href="/cooks" className="hover:text-[#003B95]">Safar Cooks</Link>
+          <Link href="/cooks" className="hover:text-[#003B95]">BhramanKaro Cooks</Link>
           <span>/</span>
           <span className="text-gray-900 font-medium">{chef.name}</span>
         </nav>

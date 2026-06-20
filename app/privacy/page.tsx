@@ -1,4 +1,4 @@
-export const metadata = { title: 'Privacy Notice | Safar' };
+export const metadata = { title: 'Privacy Notice | BhramanKaro' };
 
 export default function PrivacyPage() {
   return (

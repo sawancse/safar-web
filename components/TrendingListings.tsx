@@ -35,7 +35,7 @@ export default function TrendingListings() {
       ) : (
         <div className="text-center py-16 text-gray-400">
           <p className="text-4xl mb-4">&#x1F3E0;</p>
-          <p>Be the first to list your property on Safar!</p>
+          <p>Be the first to list your property on BhramanKaro!</p>
           <a
             href="/host"
             className="mt-4 inline-block bg-orange-500 text-white px-6 py-2 rounded-xl font-semibold hover:bg-orange-600"

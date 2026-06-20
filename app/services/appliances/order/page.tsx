@@ -161,7 +161,7 @@ export default function ApplianceOrderPage() {
         key: order.razorpayKeyId,
         amount: order.amountPaise,
         currency: 'INR',
-        name: 'Safar Appliance Rental',
+        name: 'BhramanKaro Appliance Rental',
         description: `${totalItems} items × ${rentalDays} day(s)`,
         order_id: order.razorpayOrderId,
         handler: async (resp: any) => {

@@ -1080,7 +1080,7 @@ export default function BuyPage() {
         <div className="max-w-6xl mx-auto">
           <div className="text-center mb-12">
             <p className="text-orange-500 text-sm font-semibold tracking-wide uppercase mb-2">Advantages</p>
-            <h2 className="text-2xl sm:text-3xl font-extrabold text-gray-900">Why Buy on Safar?</h2>
+            <h2 className="text-2xl sm:text-3xl font-extrabold text-gray-900">Why Buy on BhramanKaro?</h2>
             <p className="text-gray-500 mt-3 max-w-md mx-auto text-sm">
               A smarter way to find and buy your next property
             </p>
@@ -1102,7 +1102,7 @@ export default function BuyPage() {
       {/* ================================================================ */}
       <section className="bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 py-16 px-4">
         <div className="max-w-5xl mx-auto text-center mb-10">
-          <h2 className="text-2xl sm:text-3xl font-bold text-white mb-2">List on Safar</h2>
+          <h2 className="text-2xl sm:text-3xl font-bold text-white mb-2">List on BhramanKaro</h2>
           <p className="text-slate-400 text-sm">Reach thousands of verified buyers and tenants across India</p>
         </div>
         <div className="max-w-5xl mx-auto grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">

@@ -799,7 +799,7 @@ function OtpTab({ booking, chef, userId }: { booking: any; chef: any; userId: st
   const waPhone = partnerPhone.replace(/\D/g, '').replace(/^0+/, '');
   const waNumber = waPhone.length === 10 ? `91${waPhone}` : waPhone;
   const shareMsg = otp
-    ? `Hi ${partnerName}, my Safar start-job OTP is *${otp}*. Please enter this when you arrive to begin the job. Booking ref: ${booking.bookingRef ?? ''}.`
+    ? `Hi ${partnerName}, my BhramanKaro start-job OTP is *${otp}*. Please enter this when you arrive to begin the job. Booking ref: ${booking.bookingRef ?? ''}.`
     : '';
   const waLink = otp && waNumber
     ? `https://wa.me/${waNumber}?text=${encodeURIComponent(shareMsg)}`
@@ -916,7 +916,7 @@ function PayTab({ booking, bookingKind, token, totalPaise, advancePaise, balance
         key: order.razorpayKeyId,
         amount: order.amountPaise,
         currency: 'INR',
-        name: 'Safar',
+        name: 'BhramanKaro',
         description: `Balance — ${ref}`,
         order_id: order.razorpayOrderId,
         handler: async (resp: any) => {
@@ -1187,7 +1187,7 @@ function TrackingPanel({ bookingId, booking, bookingKind, chef, onBookingUpdated
   // useful than the generic "shortly" line.
   const inProgressNoLoc = booking.status === 'IN_PROGRESS' && !hasLoc;
   const subtitle =
-    current === 'done'     ? 'Thank you for booking with Safar.' :
+    current === 'done'     ? 'Thank you for booking with BhramanKaro.' :
     current === 'started'  ? (hasLoc
                                 ? `${providerLabel} has started the job.`
                                 : `${providerLabel} has started the job. Tap “Nudge for live location” if you'd like to track them.`) :
@@ -1199,7 +1199,7 @@ function TrackingPanel({ bookingId, booking, bookingKind, chef, onBookingUpdated
   const vendorPhone: string | null = chef?.phone || booking.chefPhone || null;
   const nudgeWa = vendorPhone
     ? `https://wa.me/${vendorPhone.replace(/\D/g, '').replace(/^0+/, '').replace(/^(?!91)/, '91')}?text=${encodeURIComponent(
-        `Hi, please share your live location on Safar for booking ${booking.bookingRef ?? ''} so I can track your arrival.`
+        `Hi, please share your live location on BhramanKaro for booking ${booking.bookingRef ?? ''} so I can track your arrival.`
       )}`
     : null;
 

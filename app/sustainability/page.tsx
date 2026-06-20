@@ -1,4 +1,4 @@
-export const metadata = { title: 'Sustainability | Safar' };
+export const metadata = { title: 'Sustainability | BhramanKaro' };
 
 export default function SustainabilityPage() {
   return (
@@ -12,7 +12,7 @@ export default function SustainabilityPage() {
       <div className="max-w-4xl mx-auto px-4 sm:px-6 py-12 space-y-10">
         <section>
           <h2 className="text-2xl font-bold text-gray-900 mb-3">Our Approach</h2>
-          <p className="text-gray-600 leading-relaxed">Safar is committed to promoting sustainable travel in India. We believe that technology can help reduce the environmental impact of tourism while empowering local communities.</p>
+          <p className="text-gray-600 leading-relaxed">BhramanKaro is committed to promoting sustainable travel in India. We believe that technology can help reduce the environmental impact of tourism while empowering local communities.</p>
         </section>
         <section>
           <h2 className="text-2xl font-bold text-gray-900 mb-4">Initiatives</h2>

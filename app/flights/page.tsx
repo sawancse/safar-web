@@ -218,9 +218,9 @@ export default function FlightsPage() {
       {/* Hero Section */}
       <div className="bg-gradient-to-br from-[#003B95] to-[#0052CC] text-white">
         <div className="max-w-6xl mx-auto px-4 pt-12 pb-20">
-          <h1 className="text-4xl md:text-5xl font-bold mb-3">Book Flights with Safar</h1>
+          <h1 className="text-4xl md:text-5xl font-bold mb-3">Book Flights with BhramanKaro</h1>
           <p className="text-lg text-blue-100 mb-10 max-w-2xl">
-            Compare prices, earn Safar Miles, and seamlessly connect your flights with stays and cooks.
+            Compare prices, earn BhramanKaro Miles, and seamlessly connect your flights with stays and cooks.
           </p>
 
           {/* Search Form */}
@@ -457,17 +457,17 @@ export default function FlightsPage() {
         </div>
       </div>
 
-      {/* Why book with Safar */}
+      {/* Why book with BhramanKaro */}
       <div className="max-w-6xl mx-auto px-4 pb-16">
-        <h2 className="text-2xl font-bold text-gray-900 mb-8 text-center">Why Book Flights with Safar?</h2>
+        <h2 className="text-2xl font-bold text-gray-900 mb-8 text-center">Why Book Flights with BhramanKaro?</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 text-center">
             <div className="w-14 h-14 bg-blue-50 rounded-2xl flex items-center justify-center mx-auto mb-4">
               <span className="text-2xl">&#x2B50;</span>
             </div>
-            <h3 className="font-semibold text-gray-900 mb-2">Earn Safar Miles</h3>
+            <h3 className="font-semibold text-gray-900 mb-2">Earn BhramanKaro Miles</h3>
             <p className="text-sm text-gray-500">
-              Every flight booked earns you Safar Miles. Redeem them for discounts on stays, cooks, and future flights.
+              Every flight booked earns you BhramanKaro Miles. Redeem them for discounts on stays, cooks, and future flights.
             </p>
           </div>
           <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 text-center">

@@ -364,9 +364,9 @@ export default function ChefDashboardPage() {
         <div className="w-20 h-20 bg-orange-100 rounded-full flex items-center justify-center mx-auto mb-5">
           <span className="text-4xl">👨‍🍳</span>
         </div>
-        <h2 className="text-2xl font-bold text-gray-900 mb-3">Become a Safar Cook</h2>
+        <h2 className="text-2xl font-bold text-gray-900 mb-3">Become a BhramanKaro Cook</h2>
         <p className="text-gray-500 mb-2">You haven't registered as a cook yet.</p>
-        <p className="text-sm text-gray-400 mb-8">Join hundreds of home cooks and professional chefs earning on Safar. Set your own hours, menu, and pricing.</p>
+        <p className="text-sm text-gray-400 mb-8">Join hundreds of home cooks and professional chefs earning on BhramanKaro. Set your own hours, menu, and pricing.</p>
         <div className="flex flex-col sm:flex-row gap-3 justify-center">
           <Link href="/cooks/register"
             className="bg-orange-500 hover:bg-orange-600 text-white font-semibold px-8 py-3 rounded-xl transition text-center">
@@ -420,7 +420,7 @@ export default function ChefDashboardPage() {
           <span className="text-4xl">⛔</span>
         </div>
         <h2 className="text-2xl font-bold text-gray-900 mb-3">Account Suspended</h2>
-        <p className="text-gray-600 mb-2">Your chef account has been suspended by Safar admin.</p>
+        <p className="text-gray-600 mb-2">Your chef account has been suspended by BhramanKaro admin.</p>
         <p className="text-sm text-gray-400 mb-8">You cannot accept new bookings or appear in search results. If you believe this is a mistake, please reach out to our support team.</p>
         <div className="flex flex-col sm:flex-row gap-3 justify-center">
           <a href="mailto:support@safar.com?subject=Chef%20Account%20Suspension%20Appeal"

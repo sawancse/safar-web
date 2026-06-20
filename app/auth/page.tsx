@@ -809,7 +809,7 @@ export default function AuthPage() {
             {/* == Step: Email or Phone Input == */}
             {step === 'input' && (
               <div className="space-y-4">
-                <p className="text-sm text-gray-600">Welcome to Safar</p>
+                <p className="text-sm text-gray-600">Welcome to BhramanKaro</p>
 
                 {/* Input field with country code */}
                 <div className="border rounded-xl overflow-hidden focus-within:ring-2 focus-within:ring-orange-500 focus-within:border-orange-500">
@@ -948,7 +948,7 @@ export default function AuthPage() {
 
                 {/* Terms */}
                 <p className="text-xs text-gray-400 text-center pt-2">
-                  By continuing, you agree to Safar&apos;s{' '}
+                  By continuing, you agree to BhramanKaro&apos;s{' '}
                   <a href="/terms" className="text-orange-500 underline">Terms of Service</a> and{' '}
                   <a href="/privacy" className="text-orange-500 underline">Privacy Policy</a>.
                 </p>
@@ -1271,7 +1271,7 @@ export default function AuthPage() {
                 </button>
 
                 <p className="text-xs text-gray-400 text-center">
-                  By selecting Agree and continue, I agree to Safar&apos;s Terms of Service and Privacy Policy.
+                  By selecting Agree and continue, I agree to BhramanKaro&apos;s Terms of Service and Privacy Policy.
                 </p>
               </div>
             )}

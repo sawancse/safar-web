@@ -1,4 +1,4 @@
-export const metadata = { title: 'How We Work | Safar' };
+export const metadata = { title: 'How We Work | BhramanKaro' };
 
 export default function HowWeWorkPage() {
   return (
@@ -12,7 +12,7 @@ export default function HowWeWorkPage() {
       <div className="max-w-4xl mx-auto px-4 sm:px-6 py-12 space-y-10">
         <section>
           <h2 className="text-2xl font-bold text-gray-900 mb-3">Zero Commission Model</h2>
-          <p className="text-gray-600 leading-relaxed">Traditional platforms charge 15-20% per booking. Safar charges hosts a flat monthly subscription instead. This means hosts earn more and can offer better prices to guests.</p>
+          <p className="text-gray-600 leading-relaxed">Traditional platforms charge 15-20% per booking. BhramanKaro charges hosts a flat monthly subscription instead. This means hosts earn more and can offer better prices to guests.</p>
           <div className="grid sm:grid-cols-4 gap-4 mt-6">
             {[
               { tier: 'Starter', rate: '18%', fee: '999' },

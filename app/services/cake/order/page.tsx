@@ -171,7 +171,7 @@ export default function DesignerCakeOrderPage() {
         key: order.razorpayKeyId,
         amount: order.amountPaise,
         currency: 'INR',
-        name: 'Safar Cakes',
+        name: 'BhramanKaro Cakes',
         description: `${selectedCake.label} · ${selectedWeight.label}`,
         order_id: order.razorpayOrderId,
         handler: async (resp: any) => {

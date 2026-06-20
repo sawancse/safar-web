@@ -9,8 +9,8 @@ import { I18nProvider } from '@/lib/i18n';
 export const metadata: Metadata = {
   metadataBase: new URL('https://bhramankaro.com'),
   title: {
-    default: 'Safar — Find Your Perfect Stay in India',
-    template: '%s | Safar',
+    default: 'BhramanKaro — Find Your Perfect Stay in India',
+    template: '%s | BhramanKaro',
   },
   description:
     'Book homes, PGs, hotels, villas, and unique stays across India. Zero commission for hosts. Instant UPI payments. AI-powered pricing.',
@@ -19,28 +19,28 @@ export const metadata: Metadata = {
     'hotel booking india', 'villa rental', 'co-living india', 'safar', 'ysafar',
     'budget stays india', 'furnished rooms', 'short term rental',
   ],
-  authors: [{ name: 'Safar India Pvt. Ltd.' }],
-  creator: 'Safar',
-  publisher: 'Safar India Pvt. Ltd.',
+  authors: [{ name: 'BhramanKaro India Pvt. Ltd.' }],
+  creator: 'BhramanKaro',
+  publisher: 'BhramanKaro India Pvt. Ltd.',
   openGraph: {
     type: 'website',
     locale: 'en_IN',
     url: 'https://bhramankaro.com',
-    siteName: 'Safar',
-    title: 'Safar — Find Your Perfect Stay in India',
+    siteName: 'BhramanKaro',
+    title: 'BhramanKaro — Find Your Perfect Stay in India',
     description: 'Book homes, PGs, hotels, villas across India. Zero commission for hosts.',
     images: [
       {
         url: '/og-image.png',
         width: 1200,
         height: 630,
-        alt: 'Safar — Property Rental Marketplace India',
+        alt: 'BhramanKaro — Property Rental Marketplace India',
       },
     ],
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Safar — Find Your Perfect Stay in India',
+    title: 'BhramanKaro — Find Your Perfect Stay in India',
     description: 'Book homes, PGs, hotels, villas across India. Zero commission for hosts.',
     images: ['/og-image.png'],
   },
@@ -133,7 +133,7 @@ export default function RootLayout({
                 <div>
                   <h4 className="font-bold text-gray-900 mb-3">About</h4>
                   <ul className="space-y-2 text-gray-600">
-                    <li><a href="/about" className="hover:text-[#003B95] transition">About Safar</a></li>
+                    <li><a href="/about" className="hover:text-[#003B95] transition">About BhramanKaro</a></li>
                     <li><a href="/how-we-work" className="hover:text-[#003B95] transition">How We Work</a></li>
                     <li><a href="/sustainability" className="hover:text-[#003B95] transition">Sustainability</a></li>
                     <li><a href="/careers" className="hover:text-[#003B95] transition">Careers</a></li>
@@ -146,7 +146,7 @@ export default function RootLayout({
               <div className="mt-10 pt-6 border-t border-gray-200">
                 <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
                   <div className="flex items-center gap-3">
-                    <span className="text-lg font-bold text-[#003B95]">Safar</span>
+                    <span className="text-lg font-bold text-[#003B95]">BhramanKaro</span>
                     <span className="text-xs text-gray-400">|</span>
                     <span className="text-xs text-gray-500">Zero commission platform</span>
                   </div>
@@ -155,10 +155,10 @@ export default function RootLayout({
                   </div>
                 </div>
                 <p className="text-xs text-gray-400 text-center mt-4">
-                  Safar is India's zero-commission property rental marketplace. Hosts keep 100% of earnings.
+                  BhramanKaro is India's zero-commission property rental marketplace. Hosts keep 100% of earnings.
                 </p>
                 <p className="text-xs text-gray-400 text-center mt-1">
-                  &copy; {new Date().getFullYear()} Safar India Pvt. Ltd. All rights reserved.
+                  &copy; {new Date().getFullYear()} BhramanKaro India Pvt. Ltd. All rights reserved.
                 </p>
               </div>
             </div>

@@ -161,7 +161,7 @@ export default function CooksServicesLandingPage() {
       <section className="relative overflow-hidden bg-gradient-to-br from-orange-50 via-amber-50 to-red-50">
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-orange-100/40 via-transparent to-transparent" />
         <div className="max-w-6xl mx-auto px-4 pt-14 pb-14 sm:pt-20 sm:pb-20 relative text-center">
-          <p className="text-xs font-semibold tracking-[0.25em] text-orange-600 uppercase mb-3">Safar Cooks · House-Party Services</p>
+          <p className="text-xs font-semibold tracking-[0.25em] text-orange-600 uppercase mb-3">BhramanKaro Cooks · House-Party Services</p>
           <h1 className="text-4xl sm:text-6xl font-bold text-gray-900 tracking-tight leading-[1.05]">
             India's home for<br className="hidden sm:block" />
             <span className="bg-gradient-to-r from-orange-500 to-red-500 bg-clip-text text-transparent"> house&nbsp;parties.</span>

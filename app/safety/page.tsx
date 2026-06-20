@@ -1,4 +1,4 @@
-export const metadata = { title: 'Safety Resource Center | Safar' };
+export const metadata = { title: 'Safety Resource Center | BhramanKaro' };
 
 export default function SafetyPage() {
   return (
@@ -48,7 +48,7 @@ export default function SafetyPage() {
             <p className="text-gray-700"><strong>Police:</strong> 100</p>
             <p className="text-gray-700"><strong>Women Helpline:</strong> 181</p>
             <p className="text-gray-700"><strong>Ambulance:</strong> 108</p>
-            <p className="text-gray-700"><strong>Safar Emergency:</strong> <a href="mailto:safety@bhramankaro.com" className="text-[#003B95] hover:underline">safety@bhramankaro.com</a></p>
+            <p className="text-gray-700"><strong>BhramanKaro Emergency:</strong> <a href="mailto:safety@bhramankaro.com" className="text-[#003B95] hover:underline">safety@bhramankaro.com</a></p>
           </div>
         </section>
       </div>

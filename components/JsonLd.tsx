@@ -2,7 +2,7 @@ export function OrganizationJsonLd() {
   const schema = {
     '@context': 'https://schema.org',
     '@type': 'Organization',
-    name: 'Safar',
+    name: 'BhramanKaro',
     url: 'https://bhramankaro.com',
     logo: 'https://bhramankaro.com/logo.png',
     description: 'India\'s zero-commission property rental marketplace. Book homes, PGs, hotels, villas, and unique stays.',
@@ -26,7 +26,7 @@ export function WebsiteJsonLd() {
   const schema = {
     '@context': 'https://schema.org',
     '@type': 'WebSite',
-    name: 'Safar',
+    name: 'BhramanKaro',
     url: 'https://bhramankaro.com',
     potentialAction: {
       '@type': 'SearchAction',

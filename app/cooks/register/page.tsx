@@ -142,7 +142,7 @@ export default function RegisterCookPage() {
   return (
     <div className="max-w-2xl mx-auto px-4 py-8">
       <h1 className="text-2xl font-bold text-gray-900 mb-2">Register as a Cook</h1>
-      <p className="text-gray-500 mb-6">Join Safar Cooks and start earning by cooking for guests</p>
+      <p className="text-gray-500 mb-6">Join BhramanKaro Cooks and start earning by cooking for guests</p>
 
       {checkingProfile && (
         <div className="text-center py-12 text-gray-400">Checking profile...</div>

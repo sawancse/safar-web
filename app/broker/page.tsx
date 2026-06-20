@@ -157,7 +157,7 @@ export default function BrokerPage() {
             <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tight text-white">
               Become a{' '}
               <span className="text-[#FFB700]">
-                Safar Broker
+                BhramanKaro Broker
               </span>
             </h1>
 
@@ -204,7 +204,7 @@ export default function BrokerPage() {
 
       {/* Benefits */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
-        <h2 className="text-3xl font-bold text-center mb-4">Why Brokers Love Safar</h2>
+        <h2 className="text-3xl font-bold text-center mb-4">Why Brokers Love BhramanKaro</h2>
         <p className="text-gray-500 text-center max-w-2xl mx-auto mb-12">
           Everything you need to grow your real estate business, all in one platform.
         </p>
@@ -229,7 +229,7 @@ export default function BrokerPage() {
         <div className="max-w-2xl mx-auto">
           <h2 className="text-3xl font-bold text-center mb-2">Register as a Broker</h2>
           <p className="text-gray-500 text-center mb-8">
-            Fill in your details to join the Safar broker network.
+            Fill in your details to join the BhramanKaro broker network.
           </p>
 
           {!isLoggedIn ? (
@@ -263,7 +263,7 @@ export default function BrokerPage() {
               </svg>
               <h3 className="text-xl font-bold text-green-400 mb-2">Registration Successful!</h3>
               <p className="text-gray-500 mb-4">
-                Welcome to the Safar broker network. You can now start listing properties.
+                Welcome to the BhramanKaro broker network. You can now start listing properties.
               </p>
               <Link
                 href="/host?tab=sales"
@@ -469,7 +469,7 @@ export default function BrokerPage() {
       {/* CTA */}
       <section className="border-t border-gray-100 bg-blue-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 text-center">
-          <h2 className="text-2xl font-bold mb-3">Already a Safar Broker?</h2>
+          <h2 className="text-2xl font-bold mb-3">Already a BhramanKaro Broker?</h2>
           <p className="text-gray-500 mb-6">Access your dashboard to manage listings and track your deals.</p>
           <Link
             href="/host?tab=sales"

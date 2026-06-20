@@ -1712,7 +1712,7 @@ export const api = {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `Safar-Agreement-${tenancyId}.pdf`;
+    a.download = `BhramanKaro-Agreement-${tenancyId}.pdf`;
     a.click();
     URL.revokeObjectURL(url);
   },
@@ -2152,7 +2152,7 @@ export const api = {
       headers: { Authorization: `Bearer ${token}` },
     }),
 
-  // ── Safar Cooks ────────────────────────────────────────────────────────
+  // ── BhramanKaro Cooks ────────────────────────────────────────────────────────
   searchChefs: (params: Record<string, string>) =>
     apiFetch<any>(`/api/v1/chefs/search?${new URLSearchParams(params)}`),
 

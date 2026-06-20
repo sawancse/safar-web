@@ -31,7 +31,7 @@ function CertificateContent() {
 
   const handleWhatsAppShare = useCallback(() => {
     const msg = encodeURIComponent(
-      `I received a Certificate of Generosity from Safar Aashray for donating \u20B9${amount.toLocaleString('en-IN')} to help house displaced families. You can donate too: https://www.bhramankaro.com/aashray/donate`
+      `I received a Certificate of Generosity from BhramanKaro Aashray for donating \u20B9${amount.toLocaleString('en-IN')} to help house displaced families. You can donate too: https://www.bhramankaro.com/aashray/donate`
     );
     window.open(`https://wa.me/?text=${msg}`, '_blank');
   }, [amount]);
@@ -52,7 +52,7 @@ function CertificateContent() {
       const imgData = canvas.toDataURL('image/png');
       const pdf = new jsPDF({ orientation: 'landscape', unit: 'px', format: [canvas.width, canvas.height] });
       pdf.addImage(imgData, 'PNG', 0, 0, canvas.width, canvas.height);
-      pdf.save(`Safar-Aashray-Certificate-${donationRef}.pdf`);
+      pdf.save(`BhramanKaro-Aashray-Certificate-${donationRef}.pdf`);
     } catch {
       alert('Download failed. Use Print > "Save as PDF" instead.');
       window.print();
@@ -145,7 +145,7 @@ function CertificateContent() {
               <div className="flex items-center justify-center gap-3 mb-2">
                 <div className="h-px w-16 bg-gradient-to-r from-transparent to-amber-400" />
                 <span className="text-amber-600 text-sm font-semibold tracking-[0.3em] uppercase">
-                  Safar Aashray
+                  BhramanKaro Aashray
                 </span>
                 <div className="h-px w-16 bg-gradient-to-l from-transparent to-amber-400" />
               </div>
@@ -180,7 +180,7 @@ function CertificateContent() {
               </div>
 
               <p className="text-gray-500 text-lg max-w-md mx-auto">
-                to Safar Aashray, helping provide safe shelter to displaced families across India.
+                to BhramanKaro Aashray, helping provide safe shelter to displaced families across India.
               </p>
 
               {dedicatedTo && (
@@ -228,7 +228,7 @@ function CertificateContent() {
             <div className="flex items-end justify-between mt-10 pt-6 border-t border-gray-200">
               <div className="text-center">
                 <div className="h-px w-40 bg-gray-400 mb-1" />
-                <p className="text-xs text-gray-400">Safar Aashray Foundation</p>
+                <p className="text-xs text-gray-400">BhramanKaro Aashray Foundation</p>
               </div>
               <div className="text-center">
                 <p className="text-xs text-gray-400 italic">

@@ -66,7 +66,7 @@ export default function LawyerRegistrationPage() {
 
         <div className="bg-white rounded-2xl border shadow-sm p-8">
           <h1 className="text-2xl font-bold text-gray-900 mb-2">Register as a Legal Professional</h1>
-          <p className="text-gray-500 mb-6">Join Safar's network of property lawyers. Your profile goes live immediately — verification badge added after review.</p>
+          <p className="text-gray-500 mb-6">Join BhramanKaro's network of property lawyers. Your profile goes live immediately — verification badge added after review.</p>
 
           {/* Step indicator */}
           <div className="flex gap-2 mb-8">

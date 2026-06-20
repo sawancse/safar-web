@@ -453,7 +453,7 @@ export default function EventBookingPage() {
       <div className="max-w-5xl mx-auto px-4 py-8">
         {/* Breadcrumb */}
         <nav className="text-sm text-gray-500 mb-6 flex items-center gap-2">
-          <button onClick={() => router.push('/cooks')} className="hover:text-orange-500">Safar Cooks</button>
+          <button onClick={() => router.push('/cooks')} className="hover:text-orange-500">BhramanKaro Cooks</button>
           <span>/</span>
           <button onClick={() => router.push('/services')} className="hover:text-orange-500">Services</button>
           <span>/</span>

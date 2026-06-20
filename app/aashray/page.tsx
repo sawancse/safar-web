@@ -55,7 +55,7 @@ export default function AashrayPage() {
       <section className="bg-[#003B95] text-white py-20 px-4">
         <div className="max-w-4xl mx-auto text-center">
           <div className="inline-block bg-white/15 backdrop-blur rounded-full px-4 py-1.5 text-sm font-medium mb-6">
-            Safar Aashray — Shelter for Every Journey
+            BhramanKaro Aashray — Shelter for Every Journey
           </div>
           <h1 className="text-4xl md:text-5xl font-bold mb-4">
             Everyone deserves a safe place to stay
@@ -93,9 +93,9 @@ export default function AashrayPage() {
       {/* What is Aashray */}
       <section className="max-w-5xl mx-auto px-4 py-16">
         <div className="text-center mb-12">
-          <h2 className="text-3xl font-bold mb-3">What is Safar Aashray?</h2>
+          <h2 className="text-3xl font-bold mb-3">What is BhramanKaro Aashray?</h2>
           <p className="text-gray-500 max-w-2xl mx-auto">
-            A module within Safar that connects three groups: property hosts who have spare rooms,
+            A module within BhramanKaro that connects three groups: property hosts who have spare rooms,
             refugee families who need safe housing, and NGOs/governments who fund the stays.
           </p>
         </div>

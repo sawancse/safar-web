@@ -343,7 +343,7 @@ export default function CooksPage() {
           <div className="text-white">
             <h2 className="text-2xl sm:text-3xl font-bold">Are you a cook or chef?</h2>
             <p className="text-white/70 mt-2 max-w-md">
-              Join Safar Cooks and connect with thousands of customers. Get bookings for daily meals, parties & events.
+              Join BhramanKaro Cooks and connect with thousands of customers. Get bookings for daily meals, parties & events.
             </p>
             <div className="flex gap-4 mt-4 text-sm text-white/50">
               <span>Free registration</span>

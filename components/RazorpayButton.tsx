@@ -56,7 +56,7 @@ export default function RazorpayButton({ bookingId, amountPaise, token, descript
         key: order.razorpayKeyId,
         amount: order.amountPaise,
         currency: 'INR',
-        name: 'Safar',
+        name: 'BhramanKaro',
         description: description || 'Property Booking',
         order_id: order.razorpayOrderId,
         handler: async function (response: any) {

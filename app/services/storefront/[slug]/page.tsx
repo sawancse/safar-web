@@ -45,7 +45,7 @@ const TYPE_EMOJI: Record<string, string> = {
 
 const TRUST_BADGE: Record<string, { label: string; class: string }> = {
   LISTED:         { label: 'Listed',          class: 'bg-gray-100 text-gray-700' },
-  SAFAR_VERIFIED: { label: '✓ Safar Verified', class: 'bg-blue-100 text-blue-800' },
+  SAFAR_VERIFIED: { label: '✓ BhramanKaro Verified', class: 'bg-blue-100 text-blue-800' },
   TOP_RATED:      { label: '★ Top Rated',      class: 'bg-amber-100 text-amber-800' },
 };
 

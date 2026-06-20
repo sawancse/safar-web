@@ -69,7 +69,7 @@ const STORIES = [
   {
     name: 'Roshni & daughters',
     origin: 'Climate displaced, Assam',
-    quote: 'Floods took our house twice. Safar Aashray gave us stability while we rebuild our lives.',
+    quote: 'Floods took our house twice. BhramanKaro Aashray gave us stability while we rebuild our lives.',
     months: 3,
     before: 'Government relief camp',
     after: 'Private room in host\'s home',
@@ -172,7 +172,7 @@ export default function AashrayDonatePage() {
         key: order.razorpayKeyId,
         amount: order.amountPaise,
         currency: 'INR',
-        name: 'Safar Aashray',
+        name: 'BhramanKaro Aashray',
         description: isMonthly ? 'Monthly Aashray SIP' : 'Aashray Donation',
         ...(order.razorpayOrderId ? { order_id: order.razorpayOrderId } : {}),
         ...(order.razorpaySubscriptionId ? { subscription_id: order.razorpaySubscriptionId } : {}),
@@ -226,7 +226,7 @@ export default function AashrayDonatePage() {
   // ── Thank You Screen ───────────────────────────────────────
   if (submitted) {
     const whatsappMsg = encodeURIComponent(
-      `I just donated ${'\u20B9'}${effectiveAmount.toLocaleString('en-IN')} to help house a displaced family through Safar Aashray. You can too: https://www.bhramankaro.com/aashray/donate`
+      `I just donated ${'\u20B9'}${effectiveAmount.toLocaleString('en-IN')} to help house a displaced family through BhramanKaro Aashray. You can too: https://www.bhramankaro.com/aashray/donate`
     );
     return (
       <div className="min-h-screen bg-gradient-to-b from-teal-50 to-white flex items-center justify-center px-4">
@@ -308,7 +308,7 @@ export default function AashrayDonatePage() {
         <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiNmZmZmZmYiIGZpbGwtb3BhY2l0eT0iMC4wNSI+PHBhdGggZD0iTTM2IDM0djItSDJ2LTJoMzR6TTAgMzR2Mkgydi0ySDEweiIvPjwvZz48L2c+PC9zdmc+')] opacity-30" />
         <div className="max-w-4xl mx-auto text-center relative">
           <div className="inline-block bg-white/20 backdrop-blur rounded-full px-4 py-1.5 text-sm font-medium mb-5">
-            Safar Aashray — Fund a Stay
+            BhramanKaro Aashray — Fund a Stay
           </div>
           <h1 className="text-4xl md:text-5xl font-bold mb-4">
             Give the gift of shelter
@@ -492,7 +492,7 @@ export default function AashrayDonatePage() {
                   <p className="text-sm font-semibold text-amber-800">
                     You'll earn the "{donorTier.name}" badge
                   </p>
-                  <p className="text-xs text-amber-600">Displayed on your Safar profile (optional)</p>
+                  <p className="text-xs text-amber-600">Displayed on your BhramanKaro profile (optional)</p>
                 </div>
               </div>
             )}
@@ -709,10 +709,10 @@ export default function AashrayDonatePage() {
           <h2 className="text-2xl font-bold text-center mb-10">Frequently Asked Questions</h2>
           <div className="space-y-3">
             {[
-              { q: 'Is my donation tax-deductible?', a: 'Yes. All donations to Safar Aashray are eligible for 50% deduction under Section 80G of the Income Tax Act. You\'ll receive an automatic 80G certificate via email within 24 hours.' },
+              { q: 'Is my donation tax-deductible?', a: 'Yes. All donations to BhramanKaro Aashray are eligible for 50% deduction under Section 80G of the Income Tax Act. You\'ll receive an automatic 80G certificate via email within 24 hours.' },
               { q: 'Can I donate anonymously?', a: 'Yes. Name, email, and PAN fields are optional. However, you\'ll need to provide PAN to receive the 80G tax certificate.' },
               { q: 'How is my money used?', a: '70% goes directly to rent and security deposits for Aashray hosts. 15% covers essential supplies (bedding, kitchenware). 10% supports NGO case workers. 5% covers platform and payment processing costs.' },
-              { q: 'What is Aashray SIP?', a: 'Like a mutual fund SIP, Aashray SIP is a monthly recurring donation. Your card/UPI is charged automatically each month. You can cancel anytime from your Safar dashboard. Monthly giving provides predictable funding for long-term housing placements.' },
+              { q: 'What is Aashray SIP?', a: 'Like a mutual fund SIP, Aashray SIP is a monthly recurring donation. Your card/UPI is charged automatically each month. You can cancel anytime from your BhramanKaro dashboard. Monthly giving provides predictable funding for long-term housing placements.' },
               { q: 'Which payment methods are accepted?', a: 'UPI (GPay, PhonePe, Paytm), Credit/Debit Cards, Net Banking, and Wallets — all processed securely through Razorpay.' },
               { q: 'Can I dedicate my donation?', a: 'Yes! You can dedicate your donation in honor of someone — their name will appear on the 80G certificate.' },
               { q: 'Does my employer match donations?', a: 'Many Indian IT companies and MNCs match employee charitable donations. Check with your HR team — this could double your impact at no extra cost to you.' },

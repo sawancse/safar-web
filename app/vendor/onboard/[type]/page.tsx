@@ -86,7 +86,7 @@ export default function VendorOnboardPage() {
       <div className="max-w-2xl mx-auto px-4 py-16 text-center">
         <h1 className="text-2xl font-bold text-gray-900 mb-2">Invite link expired</h1>
         <p className="text-gray-500 mb-6">{inviteError}</p>
-        <p className="text-xs text-gray-400">Ask your Safar contact for a new invite, or onboard directly:</p>
+        <p className="text-xs text-gray-400">Ask your BhramanKaro contact for a new invite, or onboard directly:</p>
         <a href={`/vendor/onboard/${slug}`} className="inline-block mt-3 text-orange-500 hover:underline">
           Continue without invite →
         </a>
@@ -108,7 +108,7 @@ export default function VendorOnboardPage() {
         <div className="max-w-3xl mx-auto px-4 mt-6">
           <div className="bg-orange-50 border border-orange-200 rounded-xl px-4 py-3 text-sm text-orange-800">
             👋 Welcome{inviteWelcome.businessName ? `, ${inviteWelcome.businessName}` : ''}! Your phone is pre-filled
-            from the Safar invite. Walk through the steps below to get listed.
+            from the BhramanKaro invite. Walk through the steps below to get listed.
           </div>
         </div>
       )}

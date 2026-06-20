@@ -145,7 +145,7 @@ export default function AashrayHostPage() {
         <ul className="text-sm text-blue-800 space-y-2">
           <li>• NGO case workers search for Aashray-ready listings and book 30-360 day stays</li>
           <li>• You receive monthly payments directly from the NGO — guaranteed and on time</li>
-          <li>• Safar charges 0% commission on Aashray stays</li>
+          <li>• BhramanKaro charges 0% commission on Aashray stays</li>
           <li>• Damage protection is provided by the NGO's guarantee fund</li>
           <li>• You can disable Aashray anytime — existing bookings are honored</li>
         </ul>
