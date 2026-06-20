@@ -59,16 +59,11 @@ export default function HostTransactionsTab({ token }: { token: string }) {
             });
           }
         }
-        if (b.status === 'CANCELLED' && b.totalAmountPaise > 0) {
-          txs.push({
-            id: `rf-${b.id}`,
-            date: b.updatedAt || b.createdAt,
-            type: 'REFUND',
-            description: `Refund for #${b.bookingRef}`,
-            amountPaise: b.totalAmountPaise,
-            isCredit: false,
-          });
-        }
+        // A cancelled booking has ZERO impact on the host's earnings ledger: the host
+        // never received the guest's payment (GST/insurance/deposit/commission pass
+        // through), so it must not debit the host. Previously this debited the full
+        // totalAmountPaise (incl. the security deposit), wrecking the running balance.
+        // The guest-side refund is handled by payment-service, not the host P&L.
       });
 
       // GST invoices -> TDS entries
