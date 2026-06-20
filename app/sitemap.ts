@@ -1,6 +1,6 @@
 import type { MetadataRoute } from 'next';
 
-const BASE = 'https://ysafar.com';
+const BASE = 'https://bhramankaro.com';
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   // Static pages

@@ -31,7 +31,7 @@ function CertificateContent() {
 
   const handleWhatsAppShare = useCallback(() => {
     const msg = encodeURIComponent(
-      `I received a Certificate of Generosity from Safar Aashray for donating \u20B9${amount.toLocaleString('en-IN')} to help house displaced families. You can donate too: https://www.ysafar.com/aashray/donate`
+      `I received a Certificate of Generosity from Safar Aashray for donating \u20B9${amount.toLocaleString('en-IN')} to help house displaced families. You can donate too: https://www.bhramankaro.com/aashray/donate`
     );
     window.open(`https://wa.me/?text=${msg}`, '_blank');
   }, [amount]);

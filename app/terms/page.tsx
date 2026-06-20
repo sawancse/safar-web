@@ -11,7 +11,7 @@ export default function TermsPage() {
       </section>
       <div className="max-w-4xl mx-auto px-4 sm:px-6 py-12">
         <h2 className="text-xl font-bold text-gray-900 mt-8 mb-3">1. Acceptance of Terms</h2>
-        <p className="text-gray-600 leading-relaxed mb-4">By accessing or using Safar (ysafar.com), you agree to be bound by these Terms of Service. If you do not agree, please do not use our platform.</p>
+        <p className="text-gray-600 leading-relaxed mb-4">By accessing or using Safar (bhramankaro.com), you agree to be bound by these Terms of Service. If you do not agree, please do not use our platform.</p>
 
         <h2 className="text-xl font-bold text-gray-900 mt-8 mb-3">2. Platform Description</h2>
         <p className="text-gray-600 leading-relaxed mb-4">Safar is a marketplace that connects property hosts with travellers. We facilitate bookings but are not a party to the rental agreement between hosts and guests. Safar also offers cook/chef bookings, experiences, and value-added services.</p>
@@ -46,7 +46,7 @@ export default function TermsPage() {
         <p className="text-gray-600 leading-relaxed mb-4">These terms are governed by the laws of India. Any disputes shall be subject to the exclusive jurisdiction of courts in Hyderabad, Telangana.</p>
 
         <h2 className="text-xl font-bold text-gray-900 mt-8 mb-3">11. Contact</h2>
-        <p className="text-gray-600 leading-relaxed">For questions about these terms, contact <a href="mailto:legal@ysafar.com" className="text-[#003B95] hover:underline">legal@ysafar.com</a>.</p>
+        <p className="text-gray-600 leading-relaxed">For questions about these terms, contact <a href="mailto:legal@bhramankaro.com" className="text-[#003B95] hover:underline">legal@bhramankaro.com</a>.</p>
       </div>
     </div>
   );

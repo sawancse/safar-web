@@ -7,7 +7,7 @@ import GoogleAnalytics from '@/components/GoogleAnalytics';
 import { I18nProvider } from '@/lib/i18n';
 
 export const metadata: Metadata = {
-  metadataBase: new URL('https://ysafar.com'),
+  metadataBase: new URL('https://bhramankaro.com'),
   title: {
     default: 'Safar — Find Your Perfect Stay in India',
     template: '%s | Safar',
@@ -25,7 +25,7 @@ export const metadata: Metadata = {
   openGraph: {
     type: 'website',
     locale: 'en_IN',
-    url: 'https://ysafar.com',
+    url: 'https://bhramankaro.com',
     siteName: 'Safar',
     title: 'Safar — Find Your Perfect Stay in India',
     description: 'Book homes, PGs, hotels, villas across India. Zero commission for hosts.',
@@ -56,7 +56,7 @@ export const metadata: Metadata = {
     },
   },
   alternates: {
-    canonical: 'https://ysafar.com',
+    canonical: 'https://bhramankaro.com',
   },
   verification: {
     google: 'ihAn2Blazat810vtBxw4DjN5n1qjSJxh6epX5jryCv8',
@@ -91,7 +91,7 @@ export default function RootLayout({
                   <h4 className="font-bold text-gray-900 mb-3">Support</h4>
                   <ul className="space-y-2 text-gray-600">
                     <li><a href="/dashboard/bookings" className="hover:text-[#003B95] transition">Manage your trips</a></li>
-                    <li><a href="mailto:support@ysafar.com" className="hover:text-[#003B95] transition">Contact Customer Service</a></li>
+                    <li><a href="mailto:support@bhramankaro.com" className="hover:text-[#003B95] transition">Contact Customer Service</a></li>
                     <li><a href="/safety" className="hover:text-[#003B95] transition">Safety Resource Center</a></li>
                     <li><a href="/help" className="hover:text-[#003B95] transition">Help Center</a></li>
                   </ul>

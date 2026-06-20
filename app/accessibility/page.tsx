@@ -35,7 +35,7 @@ export default function AccessibilityPage() {
         </section>
         <section>
           <h2 className="text-xl font-bold text-gray-900 mb-3">Feedback</h2>
-          <p className="text-gray-600 leading-relaxed">We welcome your feedback on the accessibility of Safar. If you encounter any barriers, please contact us at <a href="mailto:accessibility@ysafar.com" className="text-[#003B95] hover:underline">accessibility@ysafar.com</a>.</p>
+          <p className="text-gray-600 leading-relaxed">We welcome your feedback on the accessibility of Safar. If you encounter any barriers, please contact us at <a href="mailto:accessibility@bhramankaro.com" className="text-[#003B95] hover:underline">accessibility@bhramankaro.com</a>.</p>
         </section>
       </div>
     </div>

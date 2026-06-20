@@ -202,7 +202,7 @@ export default function CareersPage() {
           <p className="text-gray-700 font-medium">Don't see your role?</p>
           <p className="text-sm text-gray-500 mt-1">
             Send your resume to{' '}
-            <a href="mailto:careers@ysafar.com" className="text-[#003B95] font-medium hover:underline">careers@ysafar.com</a>
+            <a href="mailto:careers@bhramankaro.com" className="text-[#003B95] font-medium hover:underline">careers@bhramankaro.com</a>
             {' '}— we're always looking for talented people.
           </p>
         </section>

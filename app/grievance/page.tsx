@@ -14,7 +14,7 @@ export default function GrievancePage() {
           <h2 className="text-xl font-bold text-gray-900 mb-4">Grievance Officer Details</h2>
           <div className="space-y-2 text-gray-700">
             <p><strong>Name:</strong> Grievance Officer, Safar India Pvt. Ltd.</p>
-            <p><strong>Email:</strong> <a href="mailto:grievance@ysafar.com" className="text-[#003B95] hover:underline">grievance@ysafar.com</a></p>
+            <p><strong>Email:</strong> <a href="mailto:grievance@bhramankaro.com" className="text-[#003B95] hover:underline">grievance@bhramankaro.com</a></p>
             <p><strong>Address:</strong> Safar India Pvt. Ltd., Hyderabad, Telangana, India</p>
             <p><strong>Working Hours:</strong> Monday to Friday, 10:00 AM to 6:00 PM IST</p>
           </div>
@@ -22,7 +22,7 @@ export default function GrievancePage() {
         <section>
           <h2 className="text-xl font-bold text-gray-900 mb-3">How to File a Grievance</h2>
           <ol className="text-gray-600 space-y-3 list-decimal pl-5">
-            <li>Send an email to <a href="mailto:grievance@ysafar.com" className="text-[#003B95] hover:underline">grievance@ysafar.com</a> with a clear description of your complaint.</li>
+            <li>Send an email to <a href="mailto:grievance@bhramankaro.com" className="text-[#003B95] hover:underline">grievance@bhramankaro.com</a> with a clear description of your complaint.</li>
             <li>Include your registered email, booking reference (if applicable), and supporting documents.</li>
             <li>You will receive an acknowledgment within 24 hours.</li>
             <li>We aim to resolve all grievances within 15 business days of receipt.</li>
@@ -30,7 +30,7 @@ export default function GrievancePage() {
         </section>
         <section>
           <h2 className="text-xl font-bold text-gray-900 mb-3">Escalation</h2>
-          <p className="text-gray-600 leading-relaxed">If you are not satisfied with the resolution, you may escalate to the Nodal Officer at <a href="mailto:nodal@ysafar.com" className="text-[#003B95] hover:underline">nodal@ysafar.com</a>. Further appeals can be made to the appropriate Consumer Disputes Redressal Forum.</p>
+          <p className="text-gray-600 leading-relaxed">If you are not satisfied with the resolution, you may escalate to the Nodal Officer at <a href="mailto:nodal@bhramankaro.com" className="text-[#003B95] hover:underline">nodal@bhramankaro.com</a>. Further appeals can be made to the appropriate Consumer Disputes Redressal Forum.</p>
         </section>
       </div>
     </div>

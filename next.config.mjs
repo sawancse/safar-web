@@ -5,7 +5,7 @@ const nextConfig = {
     domains: [
       'localhost',
       'd1pei2hufbgxoj.cloudfront.net',
-      'media.ysafar.com',
+      'media.bhramankaro.com',
       process.env.NEXT_PUBLIC_CDN_DOMAIN ?? '',
     ].filter(Boolean),
   },

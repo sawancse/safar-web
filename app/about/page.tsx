@@ -55,9 +55,9 @@ export default function AboutPage() {
         <section>
           <h2 className="text-2xl font-bold text-gray-900 mb-3">Contact Us</h2>
           <p className="text-gray-600">
-            Email: <a href="mailto:hello@ysafar.com" className="text-[#003B95] hover:underline">hello@ysafar.com</a><br />
-            Support: <a href="mailto:support@ysafar.com" className="text-[#003B95] hover:underline">support@ysafar.com</a><br />
-            Website: <a href="https://ysafar.com" className="text-[#003B95] hover:underline">ysafar.com</a>
+            Email: <a href="mailto:hello@bhramankaro.com" className="text-[#003B95] hover:underline">hello@bhramankaro.com</a><br />
+            Support: <a href="mailto:support@bhramankaro.com" className="text-[#003B95] hover:underline">support@bhramankaro.com</a><br />
+            Website: <a href="https://bhramankaro.com" className="text-[#003B95] hover:underline">bhramankaro.com</a>
           </p>
         </section>
       </div>

@@ -226,7 +226,7 @@ export default function AashrayDonatePage() {
   // ── Thank You Screen ───────────────────────────────────────
   if (submitted) {
     const whatsappMsg = encodeURIComponent(
-      `I just donated ${'\u20B9'}${effectiveAmount.toLocaleString('en-IN')} to help house a displaced family through Safar Aashray. You can too: https://www.ysafar.com/aashray/donate`
+      `I just donated ${'\u20B9'}${effectiveAmount.toLocaleString('en-IN')} to help house a displaced family through Safar Aashray. You can too: https://www.bhramankaro.com/aashray/donate`
     );
     return (
       <div className="min-h-screen bg-gradient-to-b from-teal-50 to-white flex items-center justify-center px-4">

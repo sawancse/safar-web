@@ -26,7 +26,7 @@ export default function HelpPage() {
         <div className="grid sm:grid-cols-3 gap-4 mb-12">
           {[
             { label: 'Manage Bookings', href: '/dashboard/bookings', icon: '📋' },
-            { label: 'Contact Support', href: 'mailto:support@ysafar.com', icon: '💬' },
+            { label: 'Contact Support', href: 'mailto:support@bhramankaro.com', icon: '💬' },
             { label: 'Host Help', href: '/host', icon: '🏠' },
           ].map(item => (
             <Link key={item.label} href={item.href}
@@ -54,7 +54,7 @@ export default function HelpPage() {
 
         <div className="mt-12 bg-blue-50 rounded-xl p-6 text-center">
           <p className="text-gray-700 font-medium">Still need help?</p>
-          <p className="text-sm text-gray-500 mt-1">Email us at <a href="mailto:support@ysafar.com" className="text-[#003B95] hover:underline">support@ysafar.com</a> and we'll get back to you within 24 hours.</p>
+          <p className="text-sm text-gray-500 mt-1">Email us at <a href="mailto:support@bhramankaro.com" className="text-[#003B95] hover:underline">support@bhramankaro.com</a> and we'll get back to you within 24 hours.</p>
         </div>
       </div>
     </div>

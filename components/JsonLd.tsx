@@ -3,8 +3,8 @@ export function OrganizationJsonLd() {
     '@context': 'https://schema.org',
     '@type': 'Organization',
     name: 'Safar',
-    url: 'https://ysafar.com',
-    logo: 'https://ysafar.com/logo.png',
+    url: 'https://bhramankaro.com',
+    logo: 'https://bhramankaro.com/logo.png',
     description: 'India\'s zero-commission property rental marketplace. Book homes, PGs, hotels, villas, and unique stays.',
     foundingDate: '2026',
     address: {
@@ -27,12 +27,12 @@ export function WebsiteJsonLd() {
     '@context': 'https://schema.org',
     '@type': 'WebSite',
     name: 'Safar',
-    url: 'https://ysafar.com',
+    url: 'https://bhramankaro.com',
     potentialAction: {
       '@type': 'SearchAction',
       target: {
         '@type': 'EntryPoint',
-        urlTemplate: 'https://ysafar.com/search?query={search_term_string}',
+        urlTemplate: 'https://bhramankaro.com/search?query={search_term_string}',
       },
       'query-input': 'required name=search_term_string',
     },
@@ -54,7 +54,7 @@ export function ListingJsonLd({ listing }: { listing: any }) {
     '@type': 'LodgingBusiness',
     name: listing.title,
     description: listing.description?.slice(0, 300),
-    url: `https://ysafar.com/listings/${listing.id}`,
+    url: `https://bhramankaro.com/listings/${listing.id}`,
     address: {
       '@type': 'PostalAddress',
       addressLocality: listing.city,
@@ -98,7 +98,7 @@ export function ExperienceJsonLd({ experience }: { experience: any }) {
     '@type': 'TouristAttraction',
     name: experience.title,
     description: experience.description?.slice(0, 300),
-    url: `https://ysafar.com/experiences/${experience.id}`,
+    url: `https://bhramankaro.com/experiences/${experience.id}`,
     address: {
       '@type': 'PostalAddress',
       addressLocality: experience.city,

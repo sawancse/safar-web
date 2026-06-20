@@ -38,7 +38,7 @@ export default function PressPage() {
             {[
               { date: 'April 2026', title: 'Safar launches Cooks & Chefs marketplace', desc: 'Hire verified home cooks and event caterers directly through the platform.' },
               { date: 'March 2026', title: 'Aashray Phase 2: 80G donations & gift certificates', desc: 'Donors can now receive tax certificates and send gift certificates to beneficiaries.' },
-              { date: 'March 2026', title: 'Platform goes live on ysafar.com', desc: 'All 12 microservices deployed on AWS ECS with full production infrastructure.' },
+              { date: 'March 2026', title: 'Platform goes live on bhramankaro.com', desc: 'All 12 microservices deployed on AWS ECS with full production infrastructure.' },
               { date: 'March 2026', title: 'Value-Added Services launch', desc: 'Sale agreements, home loans, legal services, and interior design now available.' },
             ].map(item => (
               <div key={item.title} className="border rounded-xl p-5">
@@ -53,7 +53,7 @@ export default function PressPage() {
           <h2 className="text-2xl font-bold text-gray-900 mb-3">Media Contact</h2>
           <p className="text-gray-600">For press inquiries, interviews, or media resources:</p>
           <p className="text-gray-600 mt-2">
-            <a href="mailto:press@ysafar.com" className="text-[#003B95] hover:underline font-medium">press@ysafar.com</a>
+            <a href="mailto:press@bhramankaro.com" className="text-[#003B95] hover:underline font-medium">press@bhramankaro.com</a>
           </p>
         </section>
       </div>

@@ -9,6 +9,6 @@ export default function robots(): MetadataRoute.Robots {
         disallow: ['/dashboard/', '/host/', '/auth', '/api/'],
       },
     ],
-    sitemap: 'https://ysafar.com/sitemap.xml',
+    sitemap: 'https://bhramankaro.com/sitemap.xml',
   };
 }

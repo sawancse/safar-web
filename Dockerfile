@@ -8,8 +8,8 @@ WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
-ENV NEXT_PUBLIC_API_URL=https://api.ysafar.com
-ENV NEXT_PUBLIC_CDN_DOMAIN=media.ysafar.com
+ENV NEXT_PUBLIC_API_URL=https://api.bhramankaro.com
+ENV NEXT_PUBLIC_CDN_DOMAIN=media.bhramankaro.com
 ENV NEXT_TELEMETRY_DISABLED=1
 
 RUN npm run build

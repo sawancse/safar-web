@@ -44,7 +44,7 @@ export default function PrivacyPage() {
         <p className="text-gray-600 leading-relaxed mb-4">We use essential cookies for authentication and session management, and analytics cookies (Google Analytics) to understand usage patterns. You can manage cookie preferences in your browser settings.</p>
 
         <h2 className="text-xl font-bold text-gray-900 mt-8 mb-3">8. Contact</h2>
-        <p className="text-gray-600 leading-relaxed">For privacy-related queries, contact our Data Protection Officer at <a href="mailto:privacy@ysafar.com" className="text-[#003B95] hover:underline">privacy@ysafar.com</a>.</p>
+        <p className="text-gray-600 leading-relaxed">For privacy-related queries, contact our Data Protection Officer at <a href="mailto:privacy@bhramankaro.com" className="text-[#003B95] hover:underline">privacy@bhramankaro.com</a>.</p>
       </div>
     </div>
   );
