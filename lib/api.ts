@@ -2330,6 +2330,19 @@ export const api = {
       body: JSON.stringify(criteria),
     }),
 
+  // ── Service-listing (services-leg) availability calendar (public read, vendor write) ──
+  getServiceListingAvailability: (listingId: string, from: string, to: string) =>
+    apiFetch<any[]>(`/api/v1/services/listings/${listingId}/availability?from=${from}&to=${to}`),
+
+  setServiceListingAvailability: (
+    listingId: string, dates: string[], status: string, notes: string | undefined, token: string,
+  ) =>
+    apiFetch<any[]>(`/api/v1/services/listings/${listingId}/availability`, {
+      method: 'PUT',
+      headers: { Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ dates, status, notes }),
+    }),
+
   getMyEventBookings: (token: string) =>
     apiFetch<any[]>('/api/v1/chef-events/my', {
       headers: { Authorization: `Bearer ${token}` },

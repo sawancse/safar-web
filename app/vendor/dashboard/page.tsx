@@ -492,6 +492,10 @@ export default function VendorDashboardPage() {
                     className="text-xs text-orange-600 hover:underline font-medium">
                     Manage items →
                   </Link>
+                  <Link href={`/vendor/listings/${l.id}/availability`}
+                    className="text-xs text-orange-600 hover:underline font-medium">
+                    Availability →
+                  </Link>
                 </div>
               </div>
             </div>
