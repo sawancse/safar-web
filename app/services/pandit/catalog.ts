@@ -378,3 +378,17 @@ export const PUJAS: PujaService[] = [
 export function pujasForOccasion(key: string): PujaService[] {
   return PUJAS.filter(p => p.tags.includes(key));
 }
+
+/** Pandits needed — read off the inclusions ("2 pandits", "1 senior pandit"). Defaults to 1. */
+export function panditCountFor(puja: PujaService): number {
+  for (const inc of puja.inclusions) {
+    const m = inc.match(/(\d+)\s*(?:senior\s+|experienced\s+)?pandits?/i);
+    if (m) return Math.max(1, parseInt(m[1], 10));
+  }
+  return 1;
+}
+
+/** Samagri quality tier (BASIC | STANDARD | PREMIUM) derived from the puja tier. */
+export function samagriTierFor(puja: PujaService): 'BASIC' | 'STANDARD' | 'PREMIUM' {
+  return puja.tier === 'STANDARD' ? 'BASIC' : puja.tier === 'PREMIUM' ? 'STANDARD' : 'PREMIUM';
+}

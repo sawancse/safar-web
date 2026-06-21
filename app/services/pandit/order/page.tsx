@@ -9,7 +9,7 @@ import PhoneInput from '@/components/PhoneInput';
 import { api } from '@/lib/api';
 import { isValidPhone } from '@/lib/phone';
 import { formatPaise } from '@/lib/utils';
-import { PUJAS, OCCASIONS, ARRIVAL_SLOTS, LANGUAGES, formatSlot, pujasForOccasion } from '../catalog';
+import { PUJAS, OCCASIONS, ARRIVAL_SLOTS, LANGUAGES, formatSlot, pujasForOccasion, panditCountFor, samagriTierFor } from '../catalog';
 
 const GST_RATE = 0.18;
 const ADVANCE_PCT = 0.60;
@@ -187,6 +187,8 @@ export default function PanditOrderPage() {
     setError('');
     setProcessing(true);
     try {
+      const panditCount = panditCountFor(selectedPuja);
+      const samagriTier = samagriTierFor(selectedPuja);
       const menuDescription = JSON.stringify({
         type: 'PANDIT_PUJA',
         occasion,
@@ -198,6 +200,8 @@ export default function PanditOrderPage() {
         inclusions: selectedPuja.inclusions,
         samagri: selectedPuja.samagri,
         durationHours: selectedPuja.durationHours,
+        panditCount,
+        samagriTier,
         language,
         gotra,
         familyNames,
@@ -222,6 +226,8 @@ export default function PanditOrderPage() {
         cakeRequired: false,
         staffRequired: false,
         specialRequests,
+        panditCount,
+        samagriTier,
       }, token || undefined);
 
       const order = await api.createPaymentOrder(created.id, priceBreakdown.advance, token);
@@ -528,7 +534,10 @@ export default function PanditOrderPage() {
                 <div className="flex items-start gap-2 text-sm">
                   <span className="text-gray-400 text-lg">🙏</span>
                   <p className="text-gray-900">
-                    {preferredPandit ? <>Preferred pandit: <strong>{preferredPandit.businessName}</strong></> : '1 Pandit will arrive'} · language: <strong>{language}</strong>
+                    {preferredPandit
+                      ? <>Preferred pandit: <strong>{preferredPandit.businessName}</strong></>
+                      : <>{panditCountFor(selectedPuja)} Pandit{panditCountFor(selectedPuja) > 1 ? 's' : ''} will arrive</>}
+                    {' · '}language: <strong>{language}</strong>
                   </p>
                 </div>
                 <div className="flex items-start gap-2 text-sm">
@@ -556,7 +565,7 @@ export default function PanditOrderPage() {
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-bold text-gray-900">{selectedPuja.label}</p>
-                  <p className="text-[11px] text-gray-500 mt-0.5">{selectedPuja.tier} · {selectedPuja.durationHours}h · Samagri included</p>
+                  <p className="text-[11px] text-gray-500 mt-0.5">{selectedPuja.tier} · {selectedPuja.durationHours}h · {samagriTierFor(selectedPuja).charAt(0) + samagriTierFor(selectedPuja).slice(1).toLowerCase()} samagri kit</p>
                   <ul className="text-[11px] text-gray-600 mt-1 space-y-0.5">
                     {selectedPuja.inclusions.slice(0, 3).map((it, i) => <li key={i}>• {it}</li>)}
                   </ul>
