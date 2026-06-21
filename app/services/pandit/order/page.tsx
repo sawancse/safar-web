@@ -94,17 +94,27 @@ export default function PanditOrderPage() {
     if (!pujaKey || !language) { setMatchedPandits([]); setMatchLoaded(false); return; }
     let cancelled = false;
     setMatchLoading(true);
-    setPreferredPanditId('');
-    api.matchPandits({
-      occasion,
-      language,
-      gotra: gotra.trim() || undefined,
-      city: city.trim() || undefined,
-    })
-      .then((list: any[]) => { if (!cancelled) { setMatchedPandits(Array.isArray(list) ? list : []); setMatchLoaded(true); } })
-      .catch(() => { if (!cancelled) { setMatchedPandits([]); setMatchLoaded(true); } })
-      .finally(() => { if (!cancelled) setMatchLoading(false); });
-    return () => { cancelled = true; };
+    // Debounce so typing gotra doesn't fire a request per keystroke.
+    const handle = setTimeout(() => {
+      api.matchPandits({
+        occasion,
+        language,
+        gotra: gotra.trim() || undefined,
+        city: city.trim() || undefined,
+      })
+        .then((list: any[]) => {
+          if (cancelled) return;
+          const arr = Array.isArray(list) ? list : [];
+          setMatchedPandits(arr);
+          setMatchLoaded(true);
+          // Keep the customer's pick if it's still in the refreshed list (e.g. city
+          // auto-fills in step 2); only clear it when it no longer matches.
+          setPreferredPanditId(prev => (prev && arr.some(p => p.listingId === prev) ? prev : ''));
+        })
+        .catch(() => { if (!cancelled) { setMatchedPandits([]); setMatchLoaded(true); } })
+        .finally(() => { if (!cancelled) setMatchLoading(false); });
+    }, 400);
+    return () => { cancelled = true; clearTimeout(handle); };
   }, [occasion, pujaKey, language, gotra, city]);
 
   const preferredPandit = matchedPandits.find(p => p.listingId === preferredPanditId) || null;
