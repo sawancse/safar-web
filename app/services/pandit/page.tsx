@@ -157,7 +157,7 @@ export default function PanditLandingPage() {
             {activePujas.map(p => (
               <Link
                 key={p.key}
-                href={`/services/pandit/order?puja=${p.key}`}
+                href={`/services/pandit/${p.key}`}
                 className="group bg-white rounded-2xl overflow-hidden border border-gray-100 hover:shadow-xl hover:border-orange-200 transition-all"
               >
                 <div className="aspect-video overflow-hidden relative bg-gradient-to-br from-amber-100 via-orange-100 to-red-100 flex items-center justify-center">
