@@ -53,6 +53,12 @@ export default function PanditOrderPage() {
   const [customerEmail, setCustomerEmail] = useState('');
   const [specialRequests, setSpecialRequests] = useState('');
 
+  // Pandit matcher — ranked verified pandits for the chosen puja/language/gotra.
+  const [matchedPandits, setMatchedPandits] = useState<any[]>([]);
+  const [matchLoading, setMatchLoading] = useState(false);
+  const [matchLoaded, setMatchLoaded] = useState(false);
+  const [preferredPanditId, setPreferredPanditId] = useState<string>('');
+
   const [couponApplied, setCouponApplied] = useState(false);
   const [couponInput, setCouponInput] = useState('');
   const [couponError, setCouponError] = useState('');
@@ -80,6 +86,28 @@ export default function PanditOrderPage() {
       if (p?.address) setAddress(prev       => prev || p.address);
     }).catch(() => { /* anonymous browse — leave fields empty */ });
   }, []);
+
+  // Fetch a ranked pandit shortlist once the customer has chosen a puja + language.
+  // Criteria change resets any earlier preference. Failures are silent (the panel
+  // simply falls back to "we'll assign a verified pandit").
+  useEffect(() => {
+    if (!pujaKey || !language) { setMatchedPandits([]); setMatchLoaded(false); return; }
+    let cancelled = false;
+    setMatchLoading(true);
+    setPreferredPanditId('');
+    api.matchPandits({
+      occasion,
+      language,
+      gotra: gotra.trim() || undefined,
+      city: city.trim() || undefined,
+    })
+      .then((list: any[]) => { if (!cancelled) { setMatchedPandits(Array.isArray(list) ? list : []); setMatchLoaded(true); } })
+      .catch(() => { if (!cancelled) { setMatchedPandits([]); setMatchLoaded(true); } })
+      .finally(() => { if (!cancelled) setMatchLoading(false); });
+    return () => { cancelled = true; };
+  }, [occasion, pujaKey, language, gotra, city]);
+
+  const preferredPandit = matchedPandits.find(p => p.listingId === preferredPanditId) || null;
 
   const tomorrowIso = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().split('T')[0];
 
@@ -163,6 +191,8 @@ export default function PanditOrderPage() {
         language,
         gotra,
         familyNames,
+        preferredPanditId: preferredPanditId || undefined,
+        preferredPanditName: preferredPandit?.businessName || undefined,
         breakdown: priceBreakdown,
       });
       const created: any = await api.createEventBooking({
@@ -348,6 +378,65 @@ export default function PanditOrderPage() {
                 </div>
               </div>
 
+              {/* Recommended pandits (matcher) */}
+              {pujaKey && language && (
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <label className="block text-sm font-semibold text-gray-900">Recommended pandits for you</label>
+                    {matchLoading && <span className="text-[11px] text-gray-400">Finding pandits…</span>}
+                  </div>
+
+                  {matchLoaded && matchedPandits.length === 0 ? (
+                    <p className="text-xs text-gray-500 bg-gray-50 border rounded-lg px-3 py-2.5">
+                      🙏 A verified pandit matched to your puja, language{gotra.trim() ? ' and gotra' : ''} will be assigned after you book.
+                    </p>
+                  ) : (
+                    <div className="space-y-2">
+                      {/* No-preference default */}
+                      <button type="button" onClick={() => setPreferredPanditId('')}
+                              className={`w-full text-left rounded-xl border px-3 py-2.5 text-sm transition ${preferredPanditId === '' ? 'border-orange-500 ring-2 ring-orange-200 bg-orange-50' : 'border-gray-200 hover:border-orange-300'}`}>
+                        <span className="font-semibold text-gray-900">No preference</span>
+                        <span className="text-gray-500"> — assign the best-matched pandit</span>
+                      </button>
+
+                      {matchedPandits.map(p => {
+                        const on = preferredPanditId === p.listingId;
+                        return (
+                          <button key={p.listingId} type="button" onClick={() => setPreferredPanditId(p.listingId)}
+                                  className={`w-full text-left rounded-xl border p-3 flex gap-3 transition ${on ? 'border-orange-500 ring-2 ring-orange-200 bg-orange-50' : 'border-gray-200 hover:border-orange-300'}`}>
+                            <div className="w-12 h-12 rounded-full bg-gradient-to-br from-amber-100 to-orange-200 overflow-hidden flex items-center justify-center shrink-0 relative">
+                              <span className="text-xl opacity-50">🧑‍🦱</span>
+                              {p.heroImageUrl && <img src={p.heroImageUrl} alt="" onError={e => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }} className="absolute inset-0 w-full h-full object-cover" />}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <span className="text-sm font-bold text-gray-900">{p.businessName}</span>
+                                {p.trustTier === 'TOP_RATED' && <span className="text-[9px] font-bold bg-purple-100 text-purple-700 rounded px-1.5 py-0.5">TOP RATED</span>}
+                                {p.trustTier === 'SAFAR_VERIFIED' && <span className="text-[9px] font-bold bg-blue-100 text-blue-700 rounded px-1.5 py-0.5">VERIFIED</span>}
+                              </div>
+                              <p className="text-[11px] text-gray-500 mt-0.5">
+                                {p.rating ? `★ ${Number(p.rating).toFixed(1)}` : 'New'}{p.reviewCount ? ` (${p.reviewCount})` : ''}
+                                {p.city ? ` · ${p.city}` : ''}
+                                {p.tradition ? ` · ${p.tradition}` : ''}
+                              </p>
+                              {Array.isArray(p.matchReasons) && p.matchReasons.length > 0 && (
+                                <div className="mt-1.5 flex flex-wrap gap-1">
+                                  {p.matchReasons.slice(0, 4).map((r: string, i: number) => (
+                                    <span key={i} className="text-[10px] bg-green-50 text-green-700 rounded-full px-2 py-0.5">✓ {r}</span>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                            {on && <span className="text-orange-600 text-lg shrink-0">✓</span>}
+                          </button>
+                        );
+                      })}
+                      <p className="text-[10px] text-gray-400">Optional — your pick is shared with our team, who confirm the pandit on a call.</p>
+                    </div>
+                  )}
+                </div>
+              )}
+
               {/* Special requests */}
               <div>
                 <label className="block text-sm font-semibold text-gray-900 mb-1.5">Special requests (optional)</label>
@@ -428,7 +517,9 @@ export default function PanditOrderPage() {
               <div className="bg-white rounded-xl border p-5 space-y-3">
                 <div className="flex items-start gap-2 text-sm">
                   <span className="text-gray-400 text-lg">🙏</span>
-                  <p className="text-gray-900">1 Pandit will arrive · language: <strong>{language}</strong></p>
+                  <p className="text-gray-900">
+                    {preferredPandit ? <>Preferred pandit: <strong>{preferredPandit.businessName}</strong></> : '1 Pandit will arrive'} · language: <strong>{language}</strong>
+                  </p>
                 </div>
                 <div className="flex items-start gap-2 text-sm">
                   <span className="text-gray-400 text-lg">🗓️</span>

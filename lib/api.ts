@@ -2320,6 +2320,16 @@ export const api = {
       body: JSON.stringify(data),
     }),
 
+  // Ranked verified pandits for the customer's puja criteria (public, no PII).
+  matchPandits: (criteria: {
+    occasion?: string; pujaType?: string; language?: string;
+    tradition?: string; gotra?: string; city?: string; onlineOk?: boolean;
+  }) =>
+    apiFetch<any[]>('/api/v1/services/pandit/match', {
+      method: 'POST',
+      body: JSON.stringify(criteria),
+    }),
+
   getMyEventBookings: (token: string) =>
     apiFetch<any[]>('/api/v1/chef-events/my', {
       headers: { Authorization: `Bearer ${token}` },
