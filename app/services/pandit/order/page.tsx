@@ -24,7 +24,7 @@ export default function PanditOrderPage() {
   const preselectedPuja = searchParams.get('puja') ?? '';
 
   const preselectedService = PUJAS.find(p => p.key === preselectedPuja) || null;
-  const preselectedOccasion = preselectedService?.tags[0] ?? 'HOUSEWARMING';
+  const preselectedOccasion = preselectedService?.tags[0] ?? searchParams.get('occasion') ?? 'HOUSEWARMING';
 
   const [step, setStep] = useState<Step>('design');
   const [occasion, setOccasion] = useState<string>(preselectedOccasion);

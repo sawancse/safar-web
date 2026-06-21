@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { OCCASIONS, PUJAS, pujasForOccasion } from './catalog';
+import { MUHURATS_2026, formatMuhuratDate, upcomingDates } from './muhurat';
 
 const INR = (p: number) => `₹${(p / 100).toLocaleString('en-IN')}`;
 
@@ -22,11 +23,17 @@ const FAQ = [
 
 export default function PanditLandingPage() {
   const [active, setActive] = useState<string>('HOUSEWARMING');
+  const [todayIso] = useState(() => new Date().toISOString().slice(0, 10));
   const activeOccasion = OCCASIONS.find(o => o.key === active)!;
   const activePujas = pujasForOccasion(active);
 
   return (
     <div className="min-h-screen bg-white">
+      {/* Welcome offer bar */}
+      <div className="bg-gradient-to-r from-orange-600 to-amber-600 text-white text-center text-xs sm:text-sm py-2 px-4 font-medium">
+        🪔 First puja with us? Use code <span className="font-bold tracking-wide">PUJABLESS</span> for ₹50 off · Samagri kit always included · Vedic-certified pandits
+      </div>
+
       {/* Breadcrumb */}
       <div className="bg-gray-50 border-b">
         <div className="max-w-6xl mx-auto px-4 py-2 text-xs text-gray-500 flex items-center gap-1.5">
@@ -90,6 +97,23 @@ export default function PanditLandingPage() {
               </div>
             </div>
           </div>
+        </div>
+      </section>
+
+      {/* Trust metrics band */}
+      <section className="bg-gray-900 text-white">
+        <div className="max-w-6xl mx-auto px-4 py-6 grid grid-cols-2 sm:grid-cols-4 gap-4 text-center">
+          {[
+            { n: '500+',     l: 'Puja & havan types' },
+            { n: '2L+',      l: 'Pujas conducted' },
+            { n: 'Vedic',    l: 'Certified pandits' },
+            { n: '11',       l: 'Languages' },
+          ].map(s => (
+            <div key={s.l}>
+              <p className="text-2xl sm:text-3xl font-bold text-amber-400">{s.n}</p>
+              <p className="text-[11px] sm:text-xs text-gray-300 uppercase tracking-wide mt-1">{s.l}</p>
+            </div>
+          ))}
         </div>
       </section>
 
@@ -174,6 +198,24 @@ export default function PanditLandingPage() {
         </div>
       </section>
 
+      {/* Why choose us */}
+      <section className="max-w-6xl mx-auto px-4 pb-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          {[
+            { icon: '🎓', title: 'Vedic-certified pandits', body: 'Trained in Vedic patashalas. Rituals follow authentic shastra procedures.' },
+            { icon: '📦', title: 'Samagri always included', body: 'Every puja ships with its full samagri kit — nothing to source yourself.' },
+            { icon: '⏱️', title: 'On-time, guaranteed',     body: 'Pandit arrives at your chosen slot, with the kit ready to begin.' },
+            { icon: '🧾', title: 'Transparent pricing',     body: 'Fixed service charge + GST shown upfront. Dakshina is recommended, never hidden.' },
+          ].map(f => (
+            <div key={f.title} className="bg-white border border-gray-100 rounded-2xl p-5 hover:shadow-lg hover:border-orange-200 transition">
+              <span className="text-3xl block mb-2">{f.icon}</span>
+              <p className="font-semibold text-gray-900">{f.title}</p>
+              <p className="text-xs text-gray-500 mt-1.5 leading-snug">{f.body}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+
       {/* How it works */}
       <section className="bg-gray-50">
         <div className="max-w-5xl mx-auto px-4 py-14 sm:py-16">
@@ -181,12 +223,14 @@ export default function PanditLandingPage() {
             <h2 className="text-2xl sm:text-3xl font-bold text-gray-900">How it works</h2>
             <p className="text-sm text-gray-500 mt-2">Book, get a verified pandit and complete your puja at peace.</p>
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
             {[
-              { n: '1', icon: '🪔', title: 'Pick your puja',         body: 'Browse by occasion. Each puja lists what samagri and rituals are included.' },
-              { n: '2', icon: '📅', title: 'Date + arrival time',    body: 'Pick date and arrival slot. We handle the pandit and samagri logistics.' },
-              { n: '3', icon: '🔒', title: 'Pay 60% advance',        body: 'Secure advance locks the pandit and date. Balance on the day.' },
-              { n: '4', icon: '🙏', title: 'Pandit arrives',         body: 'On-time, with samagri kit. They conduct the ritual in your preferred language.' },
+              { n: '1', icon: '🪔', title: 'Pick your puja',      body: 'Browse by occasion. Each puja lists samagri and rituals included.' },
+              { n: '2', icon: '📅', title: 'Date + 60% advance',  body: 'Choose date and arrival slot, pay a secure 60% advance to lock it.' },
+              { n: '3', icon: '📞', title: 'Confirmation call',   body: 'Our team calls to validate details — gotra, language and any requests.' },
+              { n: '4', icon: '🧑‍🦱', title: 'Pandit assigned',    body: 'We match a verified pandit by tradition, language and your occasion.' },
+              { n: '5', icon: '📦', title: 'Samagri arranged',    body: 'The full samagri kit is prepared. A reminder is sent a day before.' },
+              { n: '6', icon: '🙏', title: 'Pandit arrives',      body: 'On-time, conducts the ritual in your language. Balance + dakshina on the day.' },
             ].map(s => (
               <div key={s.n} className="bg-white rounded-2xl p-5 text-center border border-gray-100">
                 <span className="text-3xl block mb-2">{s.icon}</span>
@@ -197,6 +241,48 @@ export default function PanditLandingPage() {
             ))}
           </div>
         </div>
+      </section>
+
+      {/* Shubh Muhurat 2026 */}
+      <section className="max-w-6xl mx-auto px-4 py-14 sm:py-16">
+        <div className="text-center mb-10">
+          <p className="text-xs font-semibold tracking-[0.25em] text-orange-600 uppercase mb-2">Plan ahead</p>
+          <h2 className="text-2xl sm:text-3xl font-bold text-gray-900">Shubh Muhurat 2026</h2>
+          <p className="text-sm text-gray-500 mt-2 max-w-2xl mx-auto">Auspicious dates for the big moments. Indicative per Hindu Panchang — confirm the exact timing with your pandit for your gotra, nakshatra and city.</p>
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {MUHURATS_2026.map(m => {
+            const upcoming = upcomingDates(m.dates, todayIso, 6);
+            const shown = upcoming.length ? upcoming : m.dates.slice(-6); // if year's dates passed, show last few as reference
+            const allPast = upcoming.length === 0;
+            return (
+              <div key={m.key} className="bg-white border border-gray-100 rounded-2xl p-5 flex flex-col">
+                <div className="flex items-center gap-2">
+                  <span className="text-2xl">{m.icon}</span>
+                  <h3 className="font-bold text-gray-900">{m.label}</h3>
+                </div>
+                <div className="mt-3 flex flex-wrap gap-1.5">
+                  {shown.map(d => (
+                    <span key={d} className="text-xs font-semibold bg-orange-50 text-orange-700 rounded-full px-2.5 py-1">
+                      {formatMuhuratDate(d)}
+                    </span>
+                  ))}
+                </div>
+                {allPast && <p className="mt-2 text-[10px] text-gray-400">Showing recent 2026 dates for reference.</p>}
+                <p className="mt-3 text-[11px] text-gray-500 leading-snug">{m.note}</p>
+                <Link
+                  href={`/services/pandit/order${m.occasion ? `?occasion=${m.occasion}` : ''}`}
+                  className="mt-auto pt-3 text-xs text-orange-600 font-bold hover:text-orange-700"
+                >
+                  Book a pandit for this →
+                </Link>
+              </div>
+            );
+          })}
+        </div>
+        <p className="text-center text-[11px] text-gray-400 mt-6 max-w-2xl mx-auto">
+          Months with no dates (e.g. Kharmas in mid-Jan, Chaturmas Jul–Oct) reflect genuine Panchang restrictions. Always reconfirm with a qualified pandit.
+        </p>
       </section>
 
       {/* Testimonials */}
