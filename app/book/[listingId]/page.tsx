@@ -31,6 +31,11 @@ export default function BookPage() {
   const [infants, setInfants] = useState(Number(searchParams.get('infants') ?? '0'));
   const [pets, setPets] = useState(Number(searchParams.get('pets') ?? '0'));
   const [leaseMonths, setLeaseMonths] = useState(Number(searchParams.get('leaseMonths') ?? '1'));
+  // Coupon / promo code
+  const [couponInput, setCouponInput] = useState('');
+  const [appliedCoupon, setAppliedCoupon] = useState<{ code: string; discountPaise: number } | null>(null);
+  const [couponMsg, setCouponMsg] = useState('');
+  const [couponLoading, setCouponLoading] = useState(false);
   const existingBookingId = searchParams.get('bookingId');
   const preselectedRoomTypeId = searchParams.get('roomTypeId');
 
@@ -281,6 +286,9 @@ export default function BookPage() {
     : 0;
   const longStayDiscountPaise = Math.round(roomSubtotalPaise * longStayPct / 100);
   const discountedSubtotalPaise = roomSubtotalPaise - longStayDiscountPaise;
+  // Coupon discount (server-validated) deducts from the base before GST, like the backend.
+  const couponDiscountPaise = appliedCoupon?.discountPaise ?? 0;
+  const couponedBasePaise = Math.max(0, discountedSubtotalPaise - couponDiscountPaise);
   // Maintenance: monthly non-PG rentals only, prorated by nights/30 to match the backend.
   // (PG/co-living bills it via monthly invoices, not upfront.)
   const maintenancePaise = isMonthly && !isPG && !(listing?.maintenanceIncluded)
@@ -289,8 +297,26 @@ export default function BookPage() {
   // GST mirrors the backend: charged for commercial listings OR any non-monthly (short) stay;
   // exempt only for residential monthly rent. Applied to the post-discount base.
   const isCommercial = listing?.type === 'COMMERCIAL';
-  const gstPaise = (isCommercial || !isMonthly) ? Math.round(discountedSubtotalPaise * 0.18) : 0;
-  const totalPaise = discountedSubtotalPaise + cleaningFeePaise + gstPaise + maintenancePaise + insurancePaise + securityDepositPaise;
+  const gstPaise = (isCommercial || !isMonthly) ? Math.round(couponedBasePaise * 0.18) : 0;
+  const totalPaise = couponedBasePaise + cleaningFeePaise + gstPaise + maintenancePaise + insurancePaise + securityDepositPaise;
+
+  // Clear an applied coupon if the cart base changes (dates/rooms) so the displayed
+  // discount never goes stale — the guest re-applies. Backend re-validates regardless.
+  useEffect(() => { setAppliedCoupon(null); setCouponMsg(''); }, [discountedSubtotalPaise]);
+
+  async function applyCoupon() {
+    const code = couponInput.trim();
+    if (!code) return;
+    setCouponLoading(true); setCouponMsg('');
+    try {
+      const token = typeof window !== 'undefined' ? (localStorage.getItem('access_token') || undefined) : undefined;
+      const res = await api.validateCoupon({ code, listingId, subtotalPaise: discountedSubtotalPaise }, token);
+      if (res.valid) { setAppliedCoupon({ code: res.code, discountPaise: res.discountPaise }); setCouponMsg(''); }
+      else { setAppliedCoupon(null); setCouponMsg(res.message || 'Invalid coupon'); }
+    } catch {
+      setAppliedCoupon(null); setCouponMsg('Could not validate coupon');
+    } finally { setCouponLoading(false); }
+  }
 
   // Unit labels
   const unitLabel = isMonthly ? 'month' : isHourly ? 'hour' : 'night';
@@ -359,6 +385,7 @@ export default function BookPage() {
           specialRequests: specialRequests.trim() || undefined,
           arrivalTime: arrivalTime || undefined,
           paymentMode: (isPG && listing?.payAtPropertyEnabled) ? paymentMode : undefined,
+          couponCode: appliedCoupon?.code || undefined,
           selectedInclusionIds: selectedInclusionIds.length > 0 ? selectedInclusionIds : undefined,
           roomSelections: selectedRoomSelections.length > 0
             ? selectedRoomSelections.map(s => ({ roomTypeId: s.id, count: s.c, guests: s.c }))
@@ -617,6 +644,24 @@ export default function BookPage() {
             const upfrontPaise = partialActive ? Math.round(totalPaise * pct / 100) : totalPaise;
             return (
               <>
+                {!appliedCoupon ? (
+                  <div className="flex gap-2 mb-2">
+                    <input value={couponInput} onChange={e => setCouponInput(e.target.value.toUpperCase())}
+                      placeholder="Coupon code"
+                      className="flex-1 border rounded-lg px-3 py-2 text-sm uppercase placeholder:normal-case" />
+                    <button type="button" onClick={applyCoupon} disabled={couponLoading || !couponInput.trim()}
+                      className="px-4 py-2 rounded-lg bg-gray-900 hover:bg-black text-white text-sm font-semibold disabled:opacity-40">
+                      {couponLoading ? '…' : 'Apply'}
+                    </button>
+                  </div>
+                ) : (
+                  <div className="flex items-center justify-between mb-2 bg-green-50 border border-green-200 rounded-lg px-3 py-2">
+                    <span className="text-sm text-green-700 font-medium">✓ {appliedCoupon.code} applied</span>
+                    <button type="button" onClick={() => { setAppliedCoupon(null); setCouponInput(''); setCouponMsg(''); }}
+                      className="text-xs text-gray-500 underline">Remove</button>
+                  </div>
+                )}
+                {couponMsg && <p className="text-xs text-red-600 mb-2">{couponMsg}</p>}
                 {stayError && (
                   <p className="text-xs text-red-600 mb-2 text-center">{stayError}</p>
                 )}
@@ -1101,6 +1146,12 @@ export default function BookPage() {
                     <div className="flex justify-between text-green-700 font-medium">
                       <span>Long-stay discount ({longStayPct}% · {nights >= 28 ? 'monthly' : 'weekly'} rate)</span>
                       <span>− {formatPaise(longStayDiscountPaise)}</span>
+                    </div>
+                  )}
+                  {couponDiscountPaise > 0 && appliedCoupon && (
+                    <div className="flex justify-between text-green-700 font-medium">
+                      <span>Coupon ({appliedCoupon.code})</span>
+                      <span>− {formatPaise(couponDiscountPaise)}</span>
                     </div>
                   )}
                   {securityDepositPaise > 0 && hasMultiRoom && selectedRoomSelections.length > 1 ? (

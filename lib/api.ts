@@ -640,6 +640,15 @@ export const api = {
       headers: { Authorization: `Bearer ${token}` },
     }),
 
+  // Validate a coupon against the cart (public; token optional for per-user limit).
+  validateCoupon: (body: { code: string; listingId: string; subtotalPaise: number }, token?: string) =>
+    apiFetch<{ valid: boolean; code: string; message: string; discountPaise: number; discountType: string | null }>(
+      '/api/v1/coupons/validate', {
+        method: 'POST',
+        body: JSON.stringify(body),
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      }),
+
   getMyBookings: (token: string) =>
     apiFetch<Booking[]>('/api/v1/bookings/me', {
       headers: { Authorization: `Bearer ${token}` },
