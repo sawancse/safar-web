@@ -396,6 +396,7 @@ export default function BookPage() {
           arrivalTime: arrivalTime || undefined,
           paymentMode: (isPG && listing?.payAtPropertyEnabled) ? paymentMode : undefined,
           couponCode: appliedCoupon?.code || undefined,
+          tripProtection: protectionOpted,
           selectedInclusionIds: selectedInclusionIds.length > 0 ? selectedInclusionIds : undefined,
           roomSelections: selectedRoomSelections.length > 0
             ? selectedRoomSelections.map(s => ({ roomTypeId: s.id, count: s.c, guests: s.c }))

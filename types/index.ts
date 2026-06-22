@@ -336,6 +336,8 @@ export interface CreateBookingRequest {
   nonRefundable?: boolean;
   paymentMode?: string;
   selectedInclusionIds?: string[];
+  couponCode?: string;
+  tripProtection?: boolean;
 }
 
 export interface PaymentOrder {
