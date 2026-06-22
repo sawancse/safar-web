@@ -649,6 +649,18 @@ export const api = {
         headers: token ? { Authorization: `Bearer ${token}` } : {},
       }),
 
+  // ── Host coupons (per-listing promo codes) ──
+  listHostCoupons: (token: string) =>
+    apiFetch<any[]>('/api/v1/coupons/host', { headers: { Authorization: `Bearer ${token}` } }),
+  createHostCoupon: (body: any, token: string) =>
+    apiFetch<any>('/api/v1/coupons/host', {
+      method: 'POST', body: JSON.stringify(body), headers: { Authorization: `Bearer ${token}` },
+    }),
+  setHostCouponActive: (id: string, active: boolean, token: string) =>
+    apiFetch<any>(`/api/v1/coupons/host/${id}/active?active=${active}`, {
+      method: 'POST', headers: { Authorization: `Bearer ${token}` },
+    }),
+
   getMyBookings: (token: string) =>
     apiFetch<Booking[]>('/api/v1/bookings/me', {
       headers: { Authorization: `Bearer ${token}` },

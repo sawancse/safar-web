@@ -23,6 +23,7 @@ import HostPgPackagesTab from './HostPgPackagesTab';
 import HostMessagesTab from './HostMessagesTab';
 import HostRoomOccupancyTab from './HostRoomOccupancyTab';
 import HostSettlementTab from '@/components/host/HostSettlementTab';
+import HostCouponsTab from '@/components/host/HostCouponsTab';
 import HostPayoutsTab from '@/components/host/HostPayoutsTab';
 import HostSalesTab from '@/components/host/HostSalesTab';
 import HostBuilderTab from '@/components/host/HostBuilderTab';
@@ -61,9 +62,9 @@ interface UploadJob {
   mediaType: string;
 }
 
-type HostTab = 'listings' | 'bookings' | 'calendar' | 'roomTypes' | 'pricing' | 'packages' | 'reviews' | 'messages' | 'kyc' | 'earnings' | 'invoices' | 'analytics' | 'transactions' | 'occupancy' | 'roomBoard' | 'tickets' | 'settlement' | 'payouts' | 'sales' | 'builder' | 'experiences';
+type HostTab = 'listings' | 'bookings' | 'calendar' | 'roomTypes' | 'pricing' | 'packages' | 'reviews' | 'messages' | 'kyc' | 'earnings' | 'invoices' | 'analytics' | 'transactions' | 'occupancy' | 'roomBoard' | 'tickets' | 'settlement' | 'payouts' | 'sales' | 'builder' | 'experiences' | 'coupons';
 
-const VALID_TABS: HostTab[] = ['listings', 'bookings', 'calendar', 'roomTypes', 'pricing', 'packages', 'reviews', 'messages', 'kyc', 'earnings', 'invoices', 'analytics', 'transactions', 'occupancy', 'roomBoard', 'tickets', 'settlement', 'payouts', 'sales', 'builder', 'experiences'];
+const VALID_TABS: HostTab[] = ['listings', 'bookings', 'calendar', 'roomTypes', 'pricing', 'packages', 'reviews', 'messages', 'kyc', 'earnings', 'invoices', 'analytics', 'transactions', 'occupancy', 'roomBoard', 'tickets', 'settlement', 'payouts', 'sales', 'builder', 'experiences', 'coupons'];
 
 export default function HostPage() {
   const router = useRouter();
@@ -685,6 +686,14 @@ export default function HostPage() {
           Payouts
         </button>
         <button
+          onClick={() => setActiveTab('coupons')}
+          className={`flex-shrink-0 py-2 px-4 rounded-lg text-sm font-medium transition whitespace-nowrap ${
+            activeTab === 'coupons' ? 'bg-white shadow text-orange-600' : 'text-gray-500 hover:text-gray-700'
+          }`}
+        >
+          Coupons
+        </button>
+        <button
           onClick={() => setActiveTab('kyc')}
           className={`flex-shrink-0 py-2 px-4 rounded-lg text-sm font-medium transition whitespace-nowrap ${
             activeTab === 'kyc' ? 'bg-white shadow text-orange-600' : 'text-gray-500 hover:text-gray-700'
@@ -773,6 +782,7 @@ export default function HostPage() {
 
       {/* ── Payouts Tab ──────────────────────────────────── */}
       {activeTab === 'payouts' && <HostPayoutsTab token={token} />}
+      {activeTab === 'coupons' && <HostCouponsTab token={token} listings={listings} />}
 
       {/* ── KYC Tab ─────────────────────────────────────── */}
       {activeTab === 'kyc' && <HostKycTab token={token} />}
