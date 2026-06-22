@@ -77,6 +77,8 @@ export default function BookPage() {
   const [lastName, setLastName] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
+  const [protectionOpted, setProtectionOpted] = useState(false);
+  const [protectionQuote, setProtectionQuote] = useState<{ quoteId: string; premiumPaise: number; coverageHighlights: string[] } | null>(null);
   const [bookingFor, setBookingFor] = useState<'self' | 'other'>('self');
   const [travelForWork, setTravelForWork] = useState<'yes' | 'no' | ''>('');
   const [paperlessConfirm, setPaperlessConfirm] = useState(true);
@@ -298,11 +300,19 @@ export default function BookPage() {
   // exempt only for residential monthly rent. Applied to the post-discount base.
   const isCommercial = listing?.type === 'COMMERCIAL';
   const gstPaise = (isCommercial || !isMonthly) ? Math.round(couponedBasePaise * 0.18) : 0;
-  const totalPaise = couponedBasePaise + cleaningFeePaise + gstPaise + maintenancePaise + insurancePaise + securityDepositPaise;
+  const protectionPaise = protectionOpted && protectionQuote ? protectionQuote.premiumPaise : 0;
+  const totalPaise = couponedBasePaise + cleaningFeePaise + gstPaise + maintenancePaise + insurancePaise + securityDepositPaise + protectionPaise;
 
   // Clear an applied coupon if the cart base changes (dates/rooms) so the displayed
   // discount never goes stale — the guest re-applies. Backend re-validates regardless.
   useEffect(() => { setAppliedCoupon(null); setCouponMsg(''); }, [discountedSubtotalPaise]);
+
+  // Embedded trip-protection: fetch a STAY_PROTECTION quote so the opt-in shows a live premium.
+  useEffect(() => {
+    api.quoteInsurance({ coverageType: 'STAY_PROTECTION' })
+      .then(q => setProtectionQuote({ quoteId: q.quoteId, premiumPaise: q.premiumPaise, coverageHighlights: q.coverageHighlights }))
+      .catch(() => {});
+  }, []);
 
   async function applyCoupon() {
     const code = couponInput.trim();
@@ -414,6 +424,17 @@ export default function BookPage() {
   }
 
   function onPaymentSuccess() {
+    // Issue the embedded trip-protection policy, linked to this booking.
+    if (protectionOpted && protectionQuote && booking && token) {
+      api.buyInsurance({
+        quoteId: protectionQuote.quoteId,
+        coverageType: 'STAY_PROTECTION',
+        fullName: `${firstName} ${lastName}`.trim() || 'Guest',
+        contactEmail: email.trim(),
+        contactPhone: phone.trim(),
+        bookingId: booking.id,
+      }, token).catch(() => {});
+    }
     setSuccess(true);
     setTimeout(() => router.push('/dashboard'), 2000);
   }
@@ -1204,12 +1225,17 @@ export default function BookPage() {
                   {isMonthly && !isCommercial && (
                     <p className="text-[10px] text-gray-400">Residential rent is GST-exempt</p>
                   )}
-                  {/* Trip-protection upsell (placeholder → insurance hub) */}
-                  <a href="/services/insurance"
-                    className="flex items-center justify-between rounded-lg border border-orange-200 bg-orange-50 px-3 py-2 text-xs hover:bg-orange-100 transition">
-                    <span className="flex items-center gap-1.5">🛡️ <b>Add Trip Protection</b> — cancellation &amp; medical cover</span>
-                    <span className="text-orange-600 font-medium whitespace-nowrap">Add ›</span>
-                  </a>
+                  {/* Embedded trip-protection opt-in */}
+                  {protectionQuote && (
+                    <label className="flex items-start gap-2 rounded-lg border border-orange-200 bg-orange-50 px-3 py-2 text-xs cursor-pointer hover:bg-orange-100 transition">
+                      <input type="checkbox" checked={protectionOpted}
+                        onChange={e => setProtectionOpted(e.target.checked)} className="mt-0.5 accent-orange-600" />
+                      <span className="flex-1">
+                        <span className="flex justify-between"><b>🛡️ Add Trip Protection</b><span className="font-medium">{formatPaise(protectionQuote.premiumPaise)}</span></span>
+                        <span className="text-gray-500 block">{protectionQuote.coverageHighlights.slice(0, 2).join(' · ')}</span>
+                      </span>
+                    </label>
+                  )}
                   <div className="flex justify-between font-bold text-base border-t pt-2">
                     <span>Total Payable</span>
                     <span>{formatPaise(totalPaise)}</span>

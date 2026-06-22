@@ -656,7 +656,7 @@ export const api = {
   quoteInsurance: (body: { coverageType: string; tenureDays?: number; ageYears?: number }) =>
     apiFetch<{ quoteId: string; premiumPaise: number; sumInsuredPaise: number; currency: string; coverageHighlights: string[] }>(
       '/api/v1/insurance/marketplace/quote', { method: 'POST', body: JSON.stringify(body) }),
-  buyInsurance: (body: { quoteId?: string; coverageType: string; fullName: string; contactEmail: string; contactPhone: string }, token?: string) =>
+  buyInsurance: (body: { quoteId?: string; coverageType: string; fullName: string; contactEmail: string; contactPhone: string; bookingId?: string }, token?: string) =>
     apiFetch<{ policyRef: string; status: string; premiumPaise: number; certificateUrl: string }>(
       '/api/v1/insurance/marketplace/buy', {
         method: 'POST', body: JSON.stringify(body),
