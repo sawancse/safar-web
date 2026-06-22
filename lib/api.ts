@@ -2777,6 +2777,14 @@ export const api = {
     apiFetch<any>(`/api/v1/agreements/${id}/pay?paymentId=${paymentId}`, { method: 'POST', headers: { Authorization: `Bearer ${token}` } }),
   signAgreement: (id: string, partyId: string, token: string) =>
     apiFetch<any>(`/api/v1/agreements/${id}/sign/${partyId}`, { method: 'POST', headers: { Authorization: `Bearer ${token}` } }),
+  // Government e-Stamp + Aadhaar eSign
+  estampAgreement: (id: string, token: string) =>
+    apiFetch<any>(`/api/v1/agreements/${id}/estamp`, { method: 'POST', headers: { Authorization: `Bearer ${token}` } }),
+  initiateAgreementEsign: (id: string, token: string) =>
+    apiFetch<{ documentId: string; status: string; signerLinks: { partyRef: string; signingUrl: string }[] }>(
+      `/api/v1/agreements/${id}/esign`, { method: 'POST', headers: { Authorization: `Bearer ${token}` } }),
+  getAgreementEsignStatus: (id: string) =>
+    apiFetch<any>(`/api/v1/agreements/${id}/esign/status`),
 
   // ══════ VAS: Home Loan ══════
   checkLoanEligibility: (data: any, token: string) =>

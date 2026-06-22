@@ -105,6 +105,32 @@ export default function AgreementDetailPage() {
     }
   }
 
+  async function handleEstamp() {
+    try {
+      const r = await api.estampAgreement(id, token);
+      alert(`e-Stamp issued: ${r.stampCertificateNumber}`);
+      await load(token);
+    } catch (e: any) {
+      alert(e?.message || 'Failed to issue e-stamp');
+    }
+  }
+
+  async function handleEsign() {
+    try {
+      const env = await api.initiateAgreementEsign(id, token);
+      await load(token);
+      // Open each party's Aadhaar signing link (sandbox auto-completes; Digio prompts OTP).
+      (env.signerLinks || []).forEach((l, i) => {
+        const url = l.signingUrl.startsWith('http') ? l.signingUrl
+          : `${process.env.NEXT_PUBLIC_API_URL || ''}${l.signingUrl}`;
+        setTimeout(() => window.open(url, '_blank'), i * 300);
+      });
+      if (!env.signerLinks?.length) alert('eSign initiated.');
+    } catch (e: any) {
+      alert(e?.message || 'Failed to start eSign');
+    }
+  }
+
   function openEdit() {
     let parties: any[] = [];
     try {
@@ -308,6 +334,18 @@ export default function AgreementDetailPage() {
           <button onClick={handleGenerate} disabled={generating}
                   className="bg-orange-500 text-white text-sm font-semibold px-4 py-2.5 rounded-xl hover:bg-orange-600 disabled:opacity-50 transition">
             {generating ? 'Generating…' : 'Generate draft'}
+          </button>
+        )}
+        {!agreement.stampCertificateNumber && (
+          <button onClick={handleEstamp}
+                  className="bg-amber-600 text-white text-sm font-semibold px-4 py-2.5 rounded-xl hover:bg-amber-700 transition">
+            🪧 Get e-Stamp
+          </button>
+        )}
+        {agreement.status !== 'SIGNED' && agreement.status !== 'REGISTERED' && (
+          <button onClick={handleEsign}
+                  className="bg-green-600 text-white text-sm font-semibold px-4 py-2.5 rounded-xl hover:bg-green-700 transition">
+            ✍️ Sign with Aadhaar eSign
           </button>
         )}
         <Link href="/services/agreement" className="text-sm text-gray-500 hover:text-gray-700 px-2 py-2.5">Back</Link>
