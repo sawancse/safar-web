@@ -4,6 +4,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { OCCASIONS, PUJAS, pujasForOccasion } from './catalog';
 import { MUHURATS_2026, formatMuhuratDate, upcomingDates } from './muhurat';
+import { PANDIT_CITIES } from './cities';
 
 const INR = (p: number) => `₹${(p / 100).toLocaleString('en-IN')}`;
 
@@ -318,6 +319,22 @@ export default function PanditLandingPage() {
                 </summary>
                 <div className="px-5 pb-4 text-sm text-gray-600 leading-relaxed">{f.a}</div>
               </details>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* City directory (internal links for SEO) */}
+      <section className="bg-gray-50 border-t">
+        <div className="max-w-6xl mx-auto px-4 py-12">
+          <h2 className="text-xl font-bold text-gray-900">Book a pandit in your city</h2>
+          <p className="text-sm text-gray-500 mt-1">Verified pandits with samagri included, across India.</p>
+          <div className="mt-4 flex flex-wrap gap-2">
+            {PANDIT_CITIES.map(c => (
+              <Link key={c.slug} href={`/services/pandit/city/${c.slug}`}
+                className="text-sm text-gray-700 hover:text-orange-700 bg-white border border-gray-200 hover:border-orange-200 rounded-full px-3 py-1.5 transition">
+                Pandit in {c.name}
+              </Link>
             ))}
           </div>
         </div>
