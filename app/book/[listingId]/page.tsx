@@ -425,17 +425,8 @@ export default function BookPage() {
   }
 
   function onPaymentSuccess() {
-    // Issue the embedded trip-protection policy, linked to this booking.
-    if (protectionOpted && protectionQuote && booking && token) {
-      api.buyInsurance({
-        quoteId: protectionQuote.quoteId,
-        coverageType: 'STAY_PROTECTION',
-        fullName: `${firstName} ${lastName}`.trim() || 'Guest',
-        contactEmail: email.trim(),
-        contactPhone: phone.trim(),
-        bookingId: booking.id,
-      }, token).catch(() => {});
-    }
+    // Trip-protection policy is issued server-side by booking-service on payment.captured
+    // (the premium was charged as part of the booking total).
     setSuccess(true);
     setTimeout(() => router.push('/dashboard'), 2000);
   }
