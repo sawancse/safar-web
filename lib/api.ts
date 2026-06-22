@@ -649,6 +649,22 @@ export const api = {
         headers: token ? { Authorization: `Bearer ${token}` } : {},
       }),
 
+  // ── Insurance & Loans marketplace (standalone, no booking) ──
+  getInsuranceProducts: () =>
+    apiFetch<Array<{ key: string; category: string; coverageType: string | null; title: string; tagline: string; highlights: string[]; applyPath: string | null }>>(
+      '/api/v1/insurance/marketplace/products'),
+  quoteInsurance: (body: { coverageType: string; tenureDays?: number; ageYears?: number }) =>
+    apiFetch<{ quoteId: string; premiumPaise: number; sumInsuredPaise: number; currency: string; coverageHighlights: string[] }>(
+      '/api/v1/insurance/marketplace/quote', { method: 'POST', body: JSON.stringify(body) }),
+  buyInsurance: (body: { quoteId?: string; coverageType: string; fullName: string; contactEmail: string; contactPhone: string }, token?: string) =>
+    apiFetch<{ policyRef: string; status: string; premiumPaise: number; certificateUrl: string }>(
+      '/api/v1/insurance/marketplace/buy', {
+        method: 'POST', body: JSON.stringify(body),
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      }),
+  getMyInsurancePolicies: (token: string) =>
+    apiFetch<{ content: any[] }>('/api/v1/insurance/my', { headers: { Authorization: `Bearer ${token}` } }),
+
   // ── Host coupons (per-listing promo codes) ──
   listHostCoupons: (token: string) =>
     apiFetch<any[]>('/api/v1/coupons/host', { headers: { Authorization: `Bearer ${token}` } }),

@@ -1204,6 +1204,12 @@ export default function BookPage() {
                   {isMonthly && !isCommercial && (
                     <p className="text-[10px] text-gray-400">Residential rent is GST-exempt</p>
                   )}
+                  {/* Trip-protection upsell (placeholder → insurance hub) */}
+                  <a href="/services/insurance"
+                    className="flex items-center justify-between rounded-lg border border-orange-200 bg-orange-50 px-3 py-2 text-xs hover:bg-orange-100 transition">
+                    <span className="flex items-center gap-1.5">🛡️ <b>Add Trip Protection</b> — cancellation &amp; medical cover</span>
+                    <span className="text-orange-600 font-medium whitespace-nowrap">Add ›</span>
+                  </a>
                   <div className="flex justify-between font-bold text-base border-t pt-2">
                     <span>Total Payable</span>
                     <span>{formatPaise(totalPaise)}</span>
