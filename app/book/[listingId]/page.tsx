@@ -273,16 +273,24 @@ export default function BookPage() {
     ? selectedRoomSelections.reduce((s, r) => s + r.c, 0)
     : rooms;
   const cleaningFeePaise = isMonthly ? 0 : (listing?.cleaningFeePaise ?? 0);
+  // Long-stay discount (MakeMyTrip / Booking.com): weekly rate for >=7 nights, monthly for
+  // >=28 nights, off the room base. Best tier wins; nightly stays only. Matches the backend.
+  const longStayPct = (!isMonthly && !isHourly)
+    ? (nights >= 28 ? (listing?.monthlyDiscountPercent || listing?.weeklyDiscountPercent || 0)
+      : nights >= 7 ? (listing?.weeklyDiscountPercent || 0) : 0)
+    : 0;
+  const longStayDiscountPaise = Math.round(roomSubtotalPaise * longStayPct / 100);
+  const discountedSubtotalPaise = roomSubtotalPaise - longStayDiscountPaise;
   // Maintenance: monthly non-PG rentals only, prorated by nights/30 to match the backend.
   // (PG/co-living bills it via monthly invoices, not upfront.)
   const maintenancePaise = isMonthly && !isPG && !(listing?.maintenanceIncluded)
     ? monthlyUnitPaise(listing?.maintenanceChargePaise ?? 0) : 0;
   const insurancePaise = listing?.insuranceEnabled ? (listing?.insuranceAmountPaise ?? 0) : 0;
   // GST mirrors the backend: charged for commercial listings OR any non-monthly (short) stay;
-  // exempt only for residential monthly rent.
+  // exempt only for residential monthly rent. Applied to the post-discount base.
   const isCommercial = listing?.type === 'COMMERCIAL';
-  const gstPaise = (isCommercial || !isMonthly) ? Math.round(roomSubtotalPaise * 0.18) : 0;
-  const totalPaise = roomSubtotalPaise + cleaningFeePaise + gstPaise + maintenancePaise + insurancePaise + securityDepositPaise;
+  const gstPaise = (isCommercial || !isMonthly) ? Math.round(discountedSubtotalPaise * 0.18) : 0;
+  const totalPaise = discountedSubtotalPaise + cleaningFeePaise + gstPaise + maintenancePaise + insurancePaise + securityDepositPaise;
 
   // Unit labels
   const unitLabel = isMonthly ? 'month' : isHourly ? 'hour' : 'night';
@@ -1087,6 +1095,12 @@ export default function BookPage() {
                     <div className="flex justify-between text-gray-700 font-medium border-t border-dashed pt-1">
                       <span>Rent subtotal ({totalBedsSelected} bed{totalBedsSelected > 1 ? 's' : ''})</span>
                       <span>{formatPaise(roomSubtotalPaise)}</span>
+                    </div>
+                  )}
+                  {longStayDiscountPaise > 0 && (
+                    <div className="flex justify-between text-green-700 font-medium">
+                      <span>Long-stay discount ({longStayPct}% · {nights >= 28 ? 'monthly' : 'weekly'} rate)</span>
+                      <span>− {formatPaise(longStayDiscountPaise)}</span>
                     </div>
                   )}
                   {securityDepositPaise > 0 && hasMultiRoom && selectedRoomSelections.length > 1 ? (
