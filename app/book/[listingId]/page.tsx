@@ -305,7 +305,15 @@ export default function BookPage() {
     const requested = sel.rooms ?? sel.c ?? 1;
     return cap >= requested;
   });
-  const isFormValid = firstName.trim() && lastName.trim() && email.trim() && isValidPhone(phone) && (isMonthly ? leaseMonths > 0 : isHourly ? hours > 0 : nights > 0) && roomTypeSelected && selectionsWithinCapacity;
+  // Stay-length validation. Monthly requires >= 30 nights (backend hard rule); nightly
+  // must meet the listing minimum. Max stay is enforced server-side (per-date, not exposed here).
+  const minStayDays = listing?.minStayDays ?? 1;
+  const stayError =
+    isMonthly && nights > 0 && nights < 30 ? 'Monthly stays need at least 30 nights — extend your lease dates.'
+    : !isMonthly && !isHourly && nights > 0 && nights < minStayDays ? `This property has a minimum stay of ${minStayDays} night${minStayDays > 1 ? 's' : ''}.`
+    : '';
+  const stayValid = isMonthly ? (leaseMonths > 0 && nights >= 30) : isHourly ? hours > 0 : (nights >= minStayDays);
+  const isFormValid = firstName.trim() && lastName.trim() && email.trim() && isValidPhone(phone) && stayValid && roomTypeSelected && selectionsWithinCapacity;
 
   const guestLabel = [
     `${adults} adult${adults !== 1 ? 's' : ''}`,
@@ -600,14 +608,19 @@ export default function BookPage() {
             const pct = Math.min(50, Math.max(10, listing?.partialPrepaidPercent ?? 30));
             const upfrontPaise = partialActive ? Math.round(totalPaise * pct / 100) : totalPaise;
             return (
-              <button onClick={handleCreateBooking} disabled={loading || !isFormValid}
-                className="w-full bg-orange-500 hover:bg-orange-600 text-white font-semibold py-3 rounded-xl disabled:opacity-50 transition">
-                {loading
-                  ? 'Creating booking...'
-                  : partialActive
-                    ? `Pay ${formatPaise(upfrontPaise)} now · ${pct}% upfront`
-                    : `Proceed to Payment · ${formatPaise(totalPaise)}`}
-              </button>
+              <>
+                {stayError && (
+                  <p className="text-xs text-red-600 mb-2 text-center">{stayError}</p>
+                )}
+                <button onClick={handleCreateBooking} disabled={loading || !isFormValid}
+                  className="w-full bg-orange-500 hover:bg-orange-600 text-white font-semibold py-3 rounded-xl disabled:opacity-50 transition">
+                  {loading
+                    ? 'Creating booking...'
+                    : partialActive
+                      ? `Pay ${formatPaise(upfrontPaise)} now · ${pct}% upfront`
+                      : `Proceed to Payment · ${formatPaise(totalPaise)}`}
+                </button>
+              </>
             );
           })() : (
             <div className="space-y-3">
