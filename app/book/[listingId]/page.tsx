@@ -209,7 +209,12 @@ export default function BookPage() {
     ? Math.max(1, Math.ceil((new Date(checkOut).getTime() - new Date(checkIn).getTime()) / 3600000))
     : 0;
   const fullMonths = isMonthly ? leaseMonths : 0;
-  const remainingDays = 0; // prorated via lease months, no partial days
+  // Monthly base is prorated by ACTUAL nights/30 to match the backend exactly
+  // (backend: rate*floor(nights/30) + round(rate*(nights%30)/30)). `fullMonths` from
+  // the month picker is only the display label, not the price basis.
+  const monthFull = Math.floor(nights / 30);
+  const monthRemDays = nights % 30;
+  const monthlyUnitPaise = (rate: number) => rate * monthFull + Math.round((rate * monthRemDays) / 30);
   const totalGuests = adults + childrenCount;
 
   // Base rate = price per unit (per night / per month / per hour)
@@ -230,7 +235,7 @@ export default function BookPage() {
       const rt = roomTypes.find(r => r.id === sel.id);
       const price = rt?.basePricePaise ?? baseRate;
       if (isMonthly) {
-        roomSubtotalPaise += (price * fullMonths) * sel.c;
+        roomSubtotalPaise += monthlyUnitPaise(price) * sel.c;
       } else if (isHourly) {
         roomSubtotalPaise += price * hours * sel.c;
       } else {
@@ -239,7 +244,7 @@ export default function BookPage() {
     }
   } else {
     if (isMonthly) {
-      roomSubtotalPaise = (baseRate * fullMonths) * rooms;
+      roomSubtotalPaise = monthlyUnitPaise(baseRate) * rooms;
     } else if (isHourly) {
       roomSubtotalPaise = baseRate * hours * rooms;
     } else {
@@ -268,11 +273,15 @@ export default function BookPage() {
     ? selectedRoomSelections.reduce((s, r) => s + r.c, 0)
     : rooms;
   const cleaningFeePaise = isMonthly ? 0 : (listing?.cleaningFeePaise ?? 0);
-  const maintenancePaise = isMonthly && !(listing?.maintenanceIncluded) ? ((listing?.maintenanceChargePaise ?? 0) * Math.max(1, fullMonths)) : 0;
+  // Maintenance: monthly non-PG rentals only, prorated by nights/30 to match the backend.
+  // (PG/co-living bills it via monthly invoices, not upfront.)
+  const maintenancePaise = isMonthly && !isPG && !(listing?.maintenanceIncluded)
+    ? monthlyUnitPaise(listing?.maintenanceChargePaise ?? 0) : 0;
   const insurancePaise = listing?.insuranceEnabled ? (listing?.insuranceAmountPaise ?? 0) : 0;
-  // GST: only for commercial stays, NOT residential rent (monthly or otherwise)
+  // GST mirrors the backend: charged for commercial listings OR any non-monthly (short) stay;
+  // exempt only for residential monthly rent.
   const isCommercial = listing?.type === 'COMMERCIAL';
-  const gstPaise = isCommercial && !isMonthly ? Math.round(roomSubtotalPaise * 0.18) : 0;
+  const gstPaise = (isCommercial || !isMonthly) ? Math.round(roomSubtotalPaise * 0.18) : 0;
   const totalPaise = roomSubtotalPaise + cleaningFeePaise + gstPaise + maintenancePaise + insurancePaise + securityDepositPaise;
 
   // Unit labels
