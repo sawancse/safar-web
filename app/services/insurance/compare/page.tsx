@@ -5,6 +5,8 @@ import { useSearchParams } from 'next/navigation';
 import { api, type InsurancePlan } from '@/lib/api';
 
 const inr = (paise: number) => `₹${(paise / 100).toLocaleString('en-IN', { maximumFractionDigits: 0 })}`;
+const API_BASE = (typeof process !== 'undefined' && process.env.NEXT_PUBLIC_API_URL) || 'http://localhost:8080';
+const certUrl = (ref: string) => `${API_BASE}/api/v1/insurance/certificate/${ref}`;
 
 type ProductKey = 'health' | 'term' | 'motor' | 'travel';
 const PRODUCTS: Record<ProductKey, { title: string; coverageType: string; icon: string }> = {
@@ -343,8 +345,17 @@ function BuyModal({ plan, addOnCodes, coverageType, total, onClose }: { plan: In
           <div className="text-center py-4">
             <div className="text-4xl mb-2">✅</div>
             <h3 className="font-semibold text-lg text-gray-900">Policy {done.policyRef} issued</h3>
-            <p className="text-sm text-gray-600 mt-1">Your certificate has been emailed to you.</p>
-            <button onClick={onClose} className="mt-5 w-full rounded-lg bg-orange-600 text-white py-2.5 font-medium">Done</button>
+            <p className="text-sm text-gray-600 mt-1">{plan.insurer} · {plan.planName}</p>
+            <div className="mt-3 rounded-lg bg-gray-50 p-3 text-left text-sm">
+              <div className="flex justify-between"><span className="text-gray-500">Premium paid</span><span className="font-semibold">{inr(total)}</span></div>
+              <div className="flex justify-between mt-1"><span className="text-gray-500">Cover</span><span className="font-semibold">{inr(plan.sumInsuredPaise)}</span></div>
+            </div>
+            <a href={certUrl(done.policyRef)} target="_blank" rel="noreferrer"
+              className="mt-4 block w-full rounded-lg bg-orange-600 text-white py-2.5 font-medium hover:bg-orange-700 text-center">
+              View / Download Certificate
+            </a>
+            <p className="text-[11px] text-gray-400 mt-2">A copy has also been emailed to you.</p>
+            <button onClick={onClose} className="mt-3 w-full rounded-lg border border-gray-300 py-2.5 font-medium text-gray-700">Done</button>
           </div>
         ) : (
           <>

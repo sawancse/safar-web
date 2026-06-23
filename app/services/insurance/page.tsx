@@ -11,6 +11,7 @@ type Product = {
 type Quote = { quoteId: string; premiumPaise: number; sumInsuredPaise: number; currency: string; coverageHighlights: string[] };
 
 const inr = (paise: number) => `₹${(paise / 100).toLocaleString('en-IN', { maximumFractionDigits: 0 })}`;
+const API_BASE = (typeof process !== 'undefined' && process.env.NEXT_PUBLIC_API_URL) || 'http://localhost:8080';
 
 // Products with a full PolicyBazaar-style compare journey
 const COMPARE_PRODUCT: Record<string, string> = {
@@ -72,8 +73,10 @@ export default function InsuranceLoansHub() {
       </div>
 
       {result && (
-        <div className="mb-8 rounded-xl border border-green-200 bg-green-50 p-4 text-green-800">
-          ✅ Policy <b>{result.policyRef}</b> issued. Premium {inr(result.premiumPaise)}. Certificate emailed to you.
+        <div className="mb-8 rounded-xl border border-green-200 bg-green-50 p-4 text-green-800 flex flex-wrap items-center justify-between gap-2">
+          <span>✅ Policy <b>{result.policyRef}</b> issued. Premium {inr(result.premiumPaise)}. A copy has been emailed to you.</span>
+          <a href={`${API_BASE}/api/v1/insurance/certificate/${result.policyRef}`} target="_blank" rel="noreferrer"
+            className="rounded-lg bg-green-700 text-white px-4 py-1.5 text-sm font-medium hover:bg-green-800">View certificate</a>
         </div>
       )}
 
