@@ -27,6 +27,18 @@ const PRODUCTS: Record<ProductKey, { title: string; coverageType: string; icon: 
   travel: { title: 'Travel Insurance', coverageType: 'INTERNATIONAL_TRAVEL', icon: '✈️' },
 };
 
+function ProductIcon({ product, className = 'w-5 h-5' }: { product: ProductKey; className?: string }) {
+  const p = { fill: 'none', stroke: 'currentColor', strokeWidth: 1.8, strokeLinecap: 'round' as const, strokeLinejoin: 'round' as const };
+  return (
+    <svg viewBox="0 0 24 24" className={className} {...p}>
+      {product === 'health' && <path d="M3 12h3l2-5 4 10 2-5h7" />}
+      {product === 'term' && <path d="M12 3l7 3v5c0 4.5-3 7.6-7 9-4-1.4-7-4.5-7-9V6l7-3zM9.2 12l1.9 1.9L15 10" />}
+      {product === 'motor' && <><path d="M5 13l1.6-4.4A2 2 0 018.5 7h7a2 2 0 011.9 1.4L19 13v4h-2m-10 0H5v-4m0 0h14" /><circle cx="7.5" cy="17" r="1.4" /><circle cx="16.5" cy="17" r="1.4" /></>}
+      {product === 'travel' && <path d="M3 13.5l18-7.5-7.5 18-2.5-7.5L3 13.5z" />}
+    </svg>
+  );
+}
+
 function CompareInner() {
   const params = useSearchParams();
   const product = (params.get('product') as ProductKey) || 'health';
@@ -104,7 +116,9 @@ function CompareInner() {
   return (
     <div className="max-w-6xl mx-auto px-4 py-8">
       <div className="flex items-center gap-3 mb-2">
-        <span className="text-3xl">{cfg.icon}</span>
+        <span className="inline-flex items-center justify-center w-11 h-11 rounded-xl bg-orange-50 text-orange-600">
+          <ProductIcon product={product} className="w-6 h-6" />
+        </span>
         <h1 className="text-2xl font-bold text-gray-900">{cfg.title}</h1>
       </div>
       <p className="text-gray-500 text-sm mb-6">Compare plans from top insurers · powered by BhramanKaro partners</p>
@@ -113,8 +127,8 @@ function CompareInner() {
       <div className="flex gap-2 mb-8 flex-wrap">
         {(Object.keys(PRODUCTS) as ProductKey[]).map((k) => (
           <a key={k} href={`/services/insurance/compare?product=${k}`}
-             className={`px-4 py-2 rounded-full text-sm font-medium border transition ${k === product ? 'bg-orange-600 text-white border-orange-600' : 'bg-white text-gray-700 border-gray-200 hover:border-orange-400'}`}>
-            {PRODUCTS[k].icon} {PRODUCTS[k].title.split(' ')[0]}
+             className={`inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-medium border transition ${k === product ? 'bg-orange-600 text-white border-orange-600' : 'bg-white text-gray-700 border-gray-200 hover:border-orange-400'}`}>
+            <ProductIcon product={k} className="w-4 h-4" /> {PRODUCTS[k].title.split(' ')[0]}
           </a>
         ))}
       </div>
