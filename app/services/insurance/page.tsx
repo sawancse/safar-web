@@ -13,6 +13,17 @@ type Quote = { quoteId: string; premiumPaise: number; sumInsuredPaise: number; c
 const inr = (paise: number) => `₹${(paise / 100).toLocaleString('en-IN', { maximumFractionDigits: 0 })}`;
 const API_BASE = (typeof process !== 'undefined' && process.env.NEXT_PUBLIC_API_URL) || 'http://localhost:8080';
 
+function loadRazorpay(): Promise<void> {
+  return new Promise((resolve, reject) => {
+    if ((window as any).Razorpay) return resolve();
+    const s = document.createElement('script');
+    s.src = 'https://checkout.razorpay.com/v1/checkout.js';
+    s.onload = () => resolve();
+    s.onerror = () => reject(new Error('Failed to load Razorpay'));
+    document.body.appendChild(s);
+  });
+}
+
 // Products with a full PolicyBazaar-style compare journey
 const COMPARE_PRODUCT: Record<string, string> = {
   HEALTH: 'health', LIFE_TERM: 'term', MOTOR: 'motor', INTERNATIONAL_TRAVEL: 'travel',
@@ -47,21 +58,54 @@ export default function InsuranceLoansHub() {
     } catch { /* ignore */ } finally { setQuoting(null); }
   }
 
+  function finishBuy(res: { policyRef: string; premiumPaise: number }, token: string) {
+    setResult({ policyRef: res.policyRef, premiumPaise: res.premiumPaise });
+    setBuyFor(null);
+    setBuying(false);
+    api.getMyInsurancePolicies(token).then(r => setPolicies(r.content || [])).catch(() => {});
+  }
+
   async function confirmBuy() {
     if (!buyFor?.coverageType) return;
     const token = localStorage.getItem('access_token');
     if (!token) { window.location.href = '/auth?redirect=/services/insurance'; return; }
     setBuying(true);
     try {
-      const res = await api.buyInsurance({
+      const order = await api.createInsuranceOrder({
         quoteId: quotes[buyFor.key]?.quoteId,
         coverageType: buyFor.coverageType,
         fullName: form.fullName, contactEmail: form.contactEmail, contactPhone: form.contactPhone,
       }, token);
-      setResult({ policyRef: res.policyRef, premiumPaise: res.premiumPaise });
-      setBuyFor(null);
-      api.getMyInsurancePolicies(token).then(r => setPolicies(r.content || [])).catch(() => {});
-    } catch { alert('Could not complete purchase. Please try again.'); } finally { setBuying(false); }
+      if (order.razorpayEnabled && order.razorpayOrderId) {
+        await loadRazorpay();
+        const rzp = new (window as any).Razorpay({
+          key: order.razorpayKeyId,
+          amount: order.amountPaise,
+          currency: 'INR',
+          name: 'BhramanKaro',
+          description: buyFor.title,
+          order_id: order.razorpayOrderId,
+          prefill: { name: form.fullName, email: form.contactEmail, contact: form.contactPhone },
+          theme: { color: '#f97316' },
+          handler: async (response: any) => {
+            try {
+              const res = await api.confirmInsurancePayment({
+                policyId: order.policyId,
+                razorpayOrderId: response.razorpay_order_id,
+                razorpayPaymentId: response.razorpay_payment_id,
+                razorpaySignature: response.razorpay_signature,
+              }, token);
+              finishBuy(res, token);
+            } catch { alert('Payment verification failed. Please contact support.'); setBuying(false); }
+          },
+          modal: { ondismiss: () => setBuying(false) },
+        });
+        rzp.open();
+      } else {
+        const res = await api.confirmInsurancePayment({ policyId: order.policyId }, token);
+        finishBuy(res, token);
+      }
+    } catch { alert('Could not complete purchase. Please try again.'); setBuying(false); }
   }
 
   return (
