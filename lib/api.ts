@@ -694,6 +694,17 @@ export const api = {
         method: 'POST', body: JSON.stringify(body),
         headers: token ? { Authorization: `Bearer ${token}` } : {},
       }),
+  // Two-step paid buy (real Razorpay when enabled; sandbox skips checkout)
+  createInsuranceOrder: (body: { quoteId?: string; coverageType: string; fullName: string; contactEmail: string; contactPhone: string; bookingId?: string; addOnCodes?: string[] }, token: string) =>
+    apiFetch<{ policyId: string; policyRef: string; premiumPaise: number; razorpayEnabled: boolean; razorpayKeyId?: string; razorpayOrderId?: string; amountPaise?: number }>(
+      '/api/v1/insurance/marketplace/create-order', {
+        method: 'POST', body: JSON.stringify(body), headers: { Authorization: `Bearer ${token}` },
+      }),
+  confirmInsurancePayment: (body: { policyId: string; razorpayOrderId?: string; razorpayPaymentId?: string; razorpaySignature?: string }, token: string) =>
+    apiFetch<{ policyRef: string; status: string; premiumPaise: number; certificateUrl: string }>(
+      '/api/v1/insurance/marketplace/confirm-payment', {
+        method: 'POST', body: JSON.stringify(body), headers: { Authorization: `Bearer ${token}` },
+      }),
 
   // ── Host coupons (per-listing promo codes) ──
   listHostCoupons: (token: string) =>
