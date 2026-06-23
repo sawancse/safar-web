@@ -230,6 +230,25 @@ async function apiUpload<T>(path: string, formData: FormData): Promise<T> {
   return text ? JSON.parse(text) : (undefined as T);
 }
 
+export type InsuranceAddOn = { code: string; label: string; premiumPaise: number };
+export type InsurancePlan = {
+  quoteId: string;
+  insurer: string;
+  planName: string;
+  tagline: string | null;
+  premiumPaise: number;
+  sumInsuredPaise: number;
+  currency: string;
+  features: string[];
+  claimSettlementRatio: number | null;
+  cashlessCount: number | null;
+  insurerRating: number | null;
+  addOns: InsuranceAddOn[];
+  wordingUrl: string;
+  recommended: boolean;
+  sandbox: boolean;
+};
+
 export const api = {
   /* ── Search ───────────────────────────────────────────────── */
   search: async (params: Record<string, string>): Promise<SearchResponse> => {
@@ -656,7 +675,7 @@ export const api = {
   quoteInsurance: (body: { coverageType: string; tenureDays?: number; ageYears?: number }) =>
     apiFetch<{ quoteId: string; premiumPaise: number; sumInsuredPaise: number; currency: string; coverageHighlights: string[] }>(
       '/api/v1/insurance/marketplace/quote', { method: 'POST', body: JSON.stringify(body) }),
-  buyInsurance: (body: { quoteId?: string; coverageType: string; fullName: string; contactEmail: string; contactPhone: string; bookingId?: string }, token?: string) =>
+  buyInsurance: (body: { quoteId?: string; coverageType: string; fullName: string; contactEmail: string; contactPhone: string; bookingId?: string; addOnCodes?: string[] }, token?: string) =>
     apiFetch<{ policyRef: string; status: string; premiumPaise: number; certificateUrl: string }>(
       '/api/v1/insurance/marketplace/buy', {
         method: 'POST', body: JSON.stringify(body),
@@ -664,6 +683,17 @@ export const api = {
       }),
   getMyInsurancePolicies: (token: string) =>
     apiFetch<{ content: any[] }>('/api/v1/insurance/my', { headers: { Authorization: `Bearer ${token}` } }),
+
+  // ── PolicyBazaar-style compare + advisor callback ──
+  compareInsurance: (body: { coverageType: string; tenureDays?: number; ages?: number[]; originCode?: string; destinationCode?: string }) =>
+    apiFetch<{ plans: InsurancePlan[] }>(
+      '/api/v1/insurance/marketplace/compare', { method: 'POST', body: JSON.stringify(body) }),
+  insuranceAdvisorCallback: (body: { name: string; phone: string; email?: string; product?: string; coverageType?: string; city?: string; preferredTime?: string; notes?: string }, token?: string) =>
+    apiFetch<{ leadId: string; status: string }>(
+      '/api/v1/insurance/marketplace/advisor-callback', {
+        method: 'POST', body: JSON.stringify(body),
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      }),
 
   // ── Host coupons (per-listing promo codes) ──
   listHostCoupons: (token: string) =>

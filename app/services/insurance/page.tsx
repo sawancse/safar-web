@@ -12,6 +12,11 @@ type Quote = { quoteId: string; premiumPaise: number; sumInsuredPaise: number; c
 
 const inr = (paise: number) => `₹${(paise / 100).toLocaleString('en-IN', { maximumFractionDigits: 0 })}`;
 
+// Products with a full PolicyBazaar-style compare journey
+const COMPARE_PRODUCT: Record<string, string> = {
+  HEALTH: 'health', LIFE_TERM: 'term', MOTOR: 'motor', INTERNATIONAL_TRAVEL: 'travel',
+};
+
 export default function InsuranceLoansHub() {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
@@ -44,7 +49,7 @@ export default function InsuranceLoansHub() {
   async function confirmBuy() {
     if (!buyFor?.coverageType) return;
     const token = localStorage.getItem('access_token');
-    if (!token) { window.location.href = '/login?redirect=/services/insurance'; return; }
+    if (!token) { window.location.href = '/auth?redirect=/services/insurance'; return; }
     setBuying(true);
     try {
       const res = await api.buyInsurance({
@@ -77,6 +82,7 @@ export default function InsuranceLoansHub() {
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5 mb-12">
           {insurance.map(p => {
             const q = quotes[p.key];
+            const compareKey = p.coverageType ? COMPARE_PRODUCT[p.coverageType] : undefined;
             return (
               <div key={p.key} className="rounded-2xl border border-gray-200 p-5 hover:shadow-md transition bg-white flex flex-col">
                 <h3 className="font-semibold text-gray-900">{p.title}</h3>
@@ -84,7 +90,12 @@ export default function InsuranceLoansHub() {
                 <ul className="mt-3 space-y-1 flex-1">
                   {p.highlights.map((h, i) => <li key={i} className="text-xs text-gray-500 flex gap-1"><span className="text-orange-500">✓</span>{h}</li>)}
                 </ul>
-                {q ? (
+                {compareKey ? (
+                  <Link href={`/services/insurance/compare?product=${compareKey}`}
+                    className="mt-4 w-full rounded-lg bg-orange-600 text-white py-2 text-sm font-medium hover:bg-orange-700 text-center">
+                    Compare plans →
+                  </Link>
+                ) : q ? (
                   <div className="mt-4">
                     <p className="text-sm text-gray-700">From <b className="text-lg text-gray-900">{inr(q.premiumPaise)}</b> · cover {inr(q.sumInsuredPaise)}</p>
                     <button onClick={() => { setBuyFor(p); setResult(null); }}

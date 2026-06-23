@@ -222,6 +222,14 @@ export default function Navbar() {
                       <p className="text-[11px] text-gray-400">Builder developments</p>
                     </div>
                   </Link>
+                  <div className="border-t my-1" />
+                  <Link href="/services/insurance" className="flex items-center gap-3 px-4 py-2.5 hover:bg-orange-50 transition">
+                    <span className="text-lg">🛡️</span>
+                    <div>
+                      <p className="text-sm font-medium text-gray-900">Insurance & Loans</p>
+                      <p className="text-[11px] text-gray-400">Protect your trip, home & more</p>
+                    </div>
+                  </Link>
                 </div>
               </div>
             </>
@@ -491,6 +499,9 @@ export default function Navbar() {
                   <Link href="/projects" className="flex items-center gap-3 py-2 text-gray-700 hover:text-orange-500" onClick={() => setMenuOpen(false)}>
                     <span className="w-5 text-center">{'\u{1F3D7}'}</span> New Projects
                   </Link>
+                  <Link href="/services/insurance" className="flex items-center gap-3 py-2 text-gray-700 hover:text-orange-500" onClick={() => setMenuOpen(false)}>
+                    <span className="w-5 text-center">{'\u{1F6E1}'}</span> Insurance & Loans
+                  </Link>
                 </div>
               )}
 
@@ -543,6 +554,9 @@ export default function Navbar() {
               </Link>
               <Link href="/projects" className="flex items-center gap-3 py-2 text-gray-700 hover:text-orange-500" onClick={() => setMenuOpen(false)}>
                 <span className="w-5 text-center">{'\u{1F3D7}'}</span> New Projects
+              </Link>
+              <Link href="/services/insurance" className="flex items-center gap-3 py-2 text-gray-700 hover:text-orange-500" onClick={() => setMenuOpen(false)}>
+                <span className="w-5 text-center">{'\u{1F6E1}'}</span> Insurance & Loans
               </Link>
               <div className="border-t my-2" />
               <Link href="/become-a-partner" className="flex items-center gap-3 py-2.5 text-gray-700 hover:text-orange-500" onClick={() => setMenuOpen(false)}>
