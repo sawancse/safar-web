@@ -68,6 +68,7 @@ export default function InsuranceLoansHub() {
       <div className="text-center mb-10">
         <h1 className="text-3xl font-bold text-gray-900">Insurance & Loans</h1>
         <p className="text-gray-600 mt-2">Protect what matters and fund your goals — powered by trusted partners.</p>
+        <Link href="/services/insurance/claims" className="inline-block mt-3 text-sm text-orange-600 font-medium hover:underline">🛟 Need to file a claim? Get claims assistance →</Link>
       </div>
 
       {result && (

@@ -25,6 +25,7 @@ function CompareInner() {
   const [sortBy, setSortBy] = useState<'premium' | 'claim' | 'cover'>('premium');
   const [selectedAddOns, setSelectedAddOns] = useState<Record<string, string[]>>({});
   const [buyFor, setBuyFor] = useState<InsurancePlan | null>(null);
+  const [detailFor, setDetailFor] = useState<InsurancePlan | null>(null);
   const [advisorOpen, setAdvisorOpen] = useState(false);
 
   // form state (product-specific)
@@ -227,7 +228,10 @@ function CompareInner() {
                         <p className="text-2xl font-bold text-gray-900">{inr(planTotal(p))}</p>
                         <p className="text-[11px] text-gray-400">premium{codes.length ? ' incl. add-ons' : ''}</p>
                       </div>
-                      <button onClick={() => setBuyFor(p)} className="mt-2 rounded-lg bg-orange-600 text-white px-6 py-2 text-sm font-medium hover:bg-orange-700">Buy now</button>
+                      <div className="flex md:flex-col items-center md:items-end gap-2 mt-2">
+                        <button onClick={() => setBuyFor(p)} className="rounded-lg bg-orange-600 text-white px-6 py-2 text-sm font-medium hover:bg-orange-700">Buy now</button>
+                        <button onClick={() => setDetailFor(p)} className="text-xs text-orange-600 font-medium hover:underline">View details</button>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -243,6 +247,7 @@ function CompareInner() {
         📞 Talk to an advisor
       </button>
 
+      {detailFor && <DetailModal plan={detailFor} onClose={() => setDetailFor(null)} onBuy={() => { setBuyFor(detailFor); setDetailFor(null); }} />}
       {buyFor && <BuyModal plan={buyFor} addOnCodes={selectedAddOns[buyFor.quoteId] || []} coverageType={product === 'travel' ? (intl ? 'INTERNATIONAL_TRAVEL' : 'DOMESTIC_TRAVEL') : cfg.coverageType} total={planTotal(buyFor)} onClose={() => setBuyFor(null)} />}
       {advisorOpen && <AdvisorModal product={product} coverageType={cfg.coverageType} city={city} onClose={() => setAdvisorOpen(false)} />}
     </div>
@@ -251,6 +256,71 @@ function CompareInner() {
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return <label className="block text-sm text-gray-600">{label}<div className="mt-1">{children}</div></label>;
+}
+
+function DetailModal({ plan, onClose, onBuy }: { plan: InsurancePlan; onClose: () => void; onBuy: () => void }) {
+  return (
+    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4" onClick={onClose}>
+      <div className="bg-white rounded-2xl w-full max-w-lg max-h-[85vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+        <div className="p-6">
+          <div className="flex items-start justify-between">
+            <div>
+              <h3 className="font-semibold text-lg text-gray-900">{plan.planName}</h3>
+              <p className="text-sm text-gray-500">{plan.insurer}{plan.tagline ? ` · ${plan.tagline}` : ''}</p>
+            </div>
+            {plan.recommended && <span className="text-[10px] bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-semibold">RECOMMENDED</span>}
+          </div>
+
+          <div className="grid grid-cols-2 gap-3 mt-4">
+            <Stat label="Premium" value={inr(plan.premiumPaise)} />
+            <Stat label="Cover" value={inr(plan.sumInsuredPaise)} />
+            {plan.claimSettlementRatio != null && <Stat label="Claims settled" value={`${plan.claimSettlementRatio}%`} />}
+            {plan.cashlessCount != null && <Stat label="Cashless network" value={plan.cashlessCount.toLocaleString('en-IN')} />}
+            {plan.insurerRating != null && <Stat label="Insurer rating" value={`★ ${plan.insurerRating}`} />}
+          </div>
+
+          <div className="mt-5">
+            <p className="text-xs font-semibold text-gray-400 uppercase mb-2">What's covered</p>
+            <ul className="space-y-1.5">
+              {plan.features.map((f, i) => <li key={i} className="text-sm text-gray-700 flex gap-2"><span className="text-green-600">✓</span>{f}</li>)}
+            </ul>
+          </div>
+
+          {plan.addOns.length > 0 && (
+            <div className="mt-5">
+              <p className="text-xs font-semibold text-gray-400 uppercase mb-2">Available add-ons</p>
+              <ul className="space-y-1.5">
+                {plan.addOns.map((a) => (
+                  <li key={a.code} className="text-sm text-gray-700 flex justify-between">
+                    <span>{a.label}</span><span className="text-gray-500">+{inr(a.premiumPaise)}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          {plan.wordingUrl && (
+            <a href={plan.wordingUrl} target="_blank" rel="noreferrer" className="mt-4 inline-block text-sm text-orange-600 hover:underline">📄 Policy wording (PDF)</a>
+          )}
+
+          <div className="flex gap-3 mt-6">
+            <button onClick={onClose} className="flex-1 rounded-lg border border-gray-300 py-2.5 text-sm font-medium text-gray-700">Close</button>
+            <button onClick={onBuy} className="flex-1 rounded-lg bg-orange-600 text-white py-2.5 text-sm font-medium hover:bg-orange-700">Buy this plan</button>
+          </div>
+          {plan.sandbox && <p className="text-[11px] text-gray-400 mt-2 text-center">Demo data — figures illustrative until a partner insurer is live.</p>}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function Stat({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-lg bg-gray-50 px-3 py-2">
+      <p className="text-[11px] text-gray-400">{label}</p>
+      <p className="text-sm font-semibold text-gray-900">{value}</p>
+    </div>
+  );
 }
 
 function BuyModal({ plan, addOnCodes, coverageType, total, onClose }: { plan: InsurancePlan; addOnCodes: string[]; coverageType: string; total: number; onClose: () => void }) {
