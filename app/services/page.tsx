@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import LocalVendors from './_LocalVendors';
 
 const services = [
   {
@@ -169,6 +170,9 @@ export default function ServicesPage() {
           ))}
         </div>
       </section>
+
+      {/* Local vendors directory — all verified service-listing vendors */}
+      <LocalVendors heading="Local vendors on BhramanKaro" sub="Verified independent partners across cakes, decor, pandits, performers and more." />
 
       {/* Stats */}
       <section className="bg-white border-y border-gray-100">

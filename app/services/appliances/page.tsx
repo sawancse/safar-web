@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { APPLIANCES, CATEGORIES, appliancesForCategory, ApplianceCategory } from './catalog';
+import LocalVendors from '../_LocalVendors';
 
 const INR = (p: number) => `₹${(p / 100).toLocaleString('en-IN')}`;
 
@@ -152,6 +153,9 @@ export default function ApplianceLandingPage() {
           </Link>
         </div>
       </section>
+
+      {/* Local vendors */}
+      <LocalVendors serviceType="APPLIANCE_RENTAL" heading="Rental partners near you" sub="Browse verified appliance-rental partners on BhramanKaro." accentText="text-cyan-600" />
 
       {/* How it works */}
       <section className="bg-gray-50">

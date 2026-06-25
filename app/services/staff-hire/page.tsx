@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { ROLES, StaffRole } from './catalog';
+import LocalVendors from '../_LocalVendors';
 
 const INR = (p: number) => `₹${(p / 100).toLocaleString('en-IN')}`;
 
@@ -141,6 +142,9 @@ export default function StaffHireLandingPage() {
           </div>
         </div>
       </section>
+
+      {/* Local vendors */}
+      <LocalVendors serviceType="STAFF_HIRE" heading="Event-staff agencies near you" sub="Browse verified staffing partners on BhramanKaro." accentText="text-emerald-600" />
 
       {/* How it works */}
       <section className="bg-gray-50">

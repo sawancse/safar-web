@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { OCCASIONS, PUJAS, pujasForOccasion } from './catalog';
 import { MUHURATS_2026, formatMuhuratDate, upcomingDates } from './muhurat';
 import { PANDIT_CITIES } from './cities';
+import LocalVendors from '../_LocalVendors';
 
 const INR = (p: number) => `₹${(p / 100).toLocaleString('en-IN')}`;
 
@@ -216,6 +217,9 @@ export default function PanditLandingPage() {
           ))}
         </div>
       </section>
+
+      {/* Local vendors */}
+      <LocalVendors serviceType="PANDIT" heading="Pandits near you" sub="Browse verified pandits on BhramanKaro." accentText="text-amber-600" />
 
       {/* How it works */}
       <section className="bg-gray-50">

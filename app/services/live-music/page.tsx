@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { SINGERS, GENRES, singersForGenre, SingerGenre } from './catalog';
+import LocalVendors from '../_LocalVendors';
 
 const INR = (p: number) => `₹${(p / 100).toLocaleString('en-IN')}`;
 
@@ -161,6 +162,9 @@ export default function LiveMusicLandingPage() {
           </Link>
         </div>
       </section>
+
+      {/* Local vendors */}
+      <LocalVendors serviceType="SINGER" heading="Singers & performers near you" sub="Browse verified performers on BhramanKaro." accentText="text-violet-600" />
 
       {/* How it works — availability-first flow (no instant pay) */}
       <section className="bg-gray-50">
