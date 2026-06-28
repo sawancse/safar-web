@@ -1034,18 +1034,17 @@ export const api = {
       headers: token ? { Authorization: `Bearer ${token}` } : {},
     }),
 
-  /** Upload a file to S3 via generic presign (for builder projects, sale properties, etc.) */
+  /** Upload a file to S3 via server-side proxy (no browser→S3 CORS required). Returns CDN URL. */
   uploadGenericFile: async (file: File, folder: string, token: string): Promise<string> => {
-    const res = await apiFetch<{ uploadUrl: string; publicUrl: string }>(
-      `/api/v1/media/upload/generic-presign?folder=${encodeURIComponent(folder)}&contentType=${encodeURIComponent(file.type)}`,
-      { method: 'POST', headers: { Authorization: `Bearer ${token}` } }
+    const form = new FormData();
+    form.append('file', file);
+    const res = await fetch(
+      `${API_URL}/api/v1/media/upload/generic?folder=${encodeURIComponent(folder)}`,
+      { method: 'POST', headers: { Authorization: `Bearer ${token}` }, body: form }
     );
-    await fetch(res.uploadUrl, {
-      method: 'PUT',
-      body: file,
-      headers: { 'Content-Type': file.type },
-    });
-    return res.publicUrl;
+    if (!res.ok) throw new Error(`Upload failed: ${res.status} ${res.statusText}`);
+    const data = await res.json();
+    return data.publicUrl;
   },
 
   reorderMedia: (listingId: string, mediaIds: string[]) =>
