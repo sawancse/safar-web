@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useParams, useSearchParams, useRouter } from 'next/navigation';
 import { api } from '@/lib/api';
 import RazorpayButton from '@/components/RazorpayButton';
@@ -66,6 +66,7 @@ export default function BookPage() {
   const [selectedInclusionIds, setSelectedInclusionIds] = useState<string[]>([]);
   const [guestList, setGuestList] = useState<GuestInfo[]>([]);
   const [booking, setBooking] = useState<Booking | null>(null);
+  const restoredFromBooking = useRef(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
@@ -184,6 +185,33 @@ export default function BookPage() {
       }
     }
   }, [selectedRoomSelections, roomTypes]);
+
+  // Resuming an existing booking (e.g. "Complete payment" from the dashboard):
+  // restore the originally-selected guests & room types so the summary reflects
+  // what was actually booked instead of resetting to the URL/default values.
+  // The dashboard link only carries checkIn/checkOut/guests + bookingId, so the
+  // room selection and per-room occupancy must come from the fetched booking.
+  useEffect(() => {
+    if (!booking || !listing || restoredFromBooking.current) return;
+    restoredFromBooking.current = true;
+
+    if (booking.guestsCount) { setAdults(booking.guestsCount); setChildrenCount(0); }
+    if (booking.roomsCount) setRooms(booking.roomsCount);
+
+    const pgLike = listing.type === 'PG' || listing.type === 'COLIVING';
+    const sels = booking.roomSelections?.length
+      ? booking.roomSelections.map(rs => ({ id: rs.roomTypeId, count: rs.count ?? 1 }))
+      : booking.roomTypeId
+        ? [{ id: booking.roomTypeId, count: booking.roomsCount ?? 1 }]
+        : [];
+    if (sels.length) {
+      setSelectedRoomSelections(sels.map(s => {
+        if (pgLike) return { id: s.id, rooms: s.count, gpr: 1, c: s.count };
+        const gpr = Math.max(1, Math.ceil((booking.guestsCount ?? s.count) / (booking.roomsCount || s.count || 1)));
+        return { id: s.id, rooms: s.count, gpr, c: s.count * gpr };
+      }));
+    }
+  }, [booking, listing]);
 
   // PG / Hotel helpers
   const isPG = listing?.type === 'PG' || listing?.type === 'COLIVING';
@@ -525,8 +553,11 @@ export default function BookPage() {
             </label>
           </div>
 
-          {/* Room type picker — unified component */}
-          {roomTypes.length > 0 && (
+          {/* Room type picker — unified component.
+              Hidden when completing payment for an already-created booking:
+              the room & price are locked to that booking (shown in the summary).
+              To change the room, the guest cancels and rebooks. */}
+          {!booking && roomTypes.length > 0 && (
             <div>
               <RoomTypeSelector
                 roomTypes={roomTypes}
