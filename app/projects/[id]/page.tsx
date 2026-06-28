@@ -237,6 +237,11 @@ export default function ProjectDetailPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
 
+  /* Owner controls */
+  const [loggedInUserId, setLoggedInUserId] = useState<string | null>(null);
+  const [photoUploading, setPhotoUploading] = useState(false);
+  const [photoUploadError, setPhotoUploadError] = useState<string | null>(null);
+
   /* Photo gallery */
   const [selectedPhotoIdx, setSelectedPhotoIdx] = useState(0);
   const [lightboxOpen, setLightboxOpen] = useState(false);
@@ -290,6 +295,12 @@ export default function ProjectDetailPage() {
   const [brochureReqName, setBrochureReqName] = useState('');
   const [brochureReqPhone, setBrochureReqPhone] = useState('');
   const [brochureRequested, setBrochureRequested] = useState(false);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      setLoggedInUserId(localStorage.getItem('user_id'));
+    }
+  }, []);
 
   useEffect(() => {
     if (!id) return;
@@ -397,6 +408,57 @@ export default function ProjectDetailPage() {
       alert('Failed to schedule visit. Please try again.');
     } finally {
       setVisitSending(false);
+    }
+  }
+
+  const isOwner = !!(loggedInUserId && project?.builderId && loggedInUserId === project.builderId);
+
+  function projectPatchPayload(p: BuilderProject, overrides: Record<string, any>) {
+    return {
+      builderName: p.builderName,
+      projectName: p.projectName,
+      city: p.city,
+      state: p.state || 'Telangana',
+      pincode: p.pincode || '500001',
+      projectStatus: p.projectStatus,
+      ...overrides,
+    };
+  }
+
+  async function handleOwnerPhotoUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const files = Array.from(e.target.files || []);
+    if (!files.length || !project) return;
+    const token = localStorage.getItem('access_token');
+    if (!token) { alert('Please sign in to upload photos.'); return; }
+    setPhotoUploading(true);
+    setPhotoUploadError(null);
+    try {
+      const newUrls: string[] = [];
+      for (const file of files) {
+        const res = await (api as any).uploadGenericFile(file, 'builder-photos', token);
+        newUrls.push(res);
+      }
+      const allPhotos = [...(project.photos || []), ...newUrls];
+      await (api as any).updateBuilderProject(project.id, projectPatchPayload(project, { photos: allPhotos }), token);
+      setProject(prev => prev ? { ...prev, photos: allPhotos } : prev);
+    } catch (err: any) {
+      setPhotoUploadError(err?.message || 'Upload failed. Check your connection and try again.');
+    } finally {
+      setPhotoUploading(false);
+      e.target.value = '';
+    }
+  }
+
+  async function handleOwnerRemovePhoto(idx: number) {
+    if (!project) return;
+    const token = localStorage.getItem('access_token');
+    if (!token) return;
+    const newPhotos = (project.photos || []).filter((_, i) => i !== idx);
+    try {
+      await (api as any).updateBuilderProject(project.id, projectPatchPayload(project, { photos: newPhotos }), token);
+      setProject(prev => prev ? { ...prev, photos: newPhotos } : prev);
+    } catch (err: any) {
+      alert('Failed to remove photo: ' + (err?.message || 'Unknown error'));
     }
   }
 
@@ -583,6 +645,56 @@ export default function ProjectDetailPage() {
             </div>
           )}
         </div>
+
+        {/* Owner photo management bar */}
+        {isOwner && (
+          <div className="mt-3 p-4 bg-blue-50 border border-blue-200 rounded-xl">
+            <div className="flex flex-wrap items-center gap-3">
+              <span className="text-sm font-semibold text-blue-800">Your Project</span>
+              <label className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold cursor-pointer transition ${
+                photoUploading
+                  ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                  : 'bg-blue-600 text-white hover:bg-blue-700'
+              }`}>
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
+                {photoUploading ? 'Uploading…' : 'Add Photos'}
+                <input type="file" accept="image/*" multiple disabled={photoUploading}
+                  onChange={handleOwnerPhotoUpload} className="hidden" />
+              </label>
+              <Link href={`/builder/new-project?edit=${id}`}
+                className="inline-flex items-center gap-2 px-4 py-2 bg-white border border-blue-300 text-blue-700 rounded-lg text-sm font-semibold hover:bg-blue-50 transition">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                </svg>
+                Edit Project
+              </Link>
+              {photos.length > 0 && (
+                <span className="text-xs text-blue-600">{photos.length} photo{photos.length !== 1 ? 's' : ''} — hover to remove</span>
+              )}
+            </div>
+            {photoUploadError && (
+              <p className="mt-2 text-sm text-red-600">{photoUploadError}</p>
+            )}
+            {/* Removable photo thumbnails for owner */}
+            {photos.length > 0 && (
+              <div className="flex flex-wrap gap-2 mt-3">
+                {photos.map((url, idx) => (
+                  <div key={idx} className="relative group w-16 h-16 rounded-lg overflow-hidden border-2 border-blue-200">
+                    <img src={url} alt="" className="w-full h-full object-cover" />
+                    <button
+                      onClick={() => handleOwnerRemovePhoto(idx)}
+                      className="absolute inset-0 bg-red-600/80 text-white opacity-0 group-hover:opacity-100 transition flex items-center justify-center text-lg font-bold"
+                    >
+                      &times;
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Documents strip */}
         {(project.masterPlanUrl || project.brochureUrl) && (
