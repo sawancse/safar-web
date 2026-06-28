@@ -67,6 +67,10 @@ export default function BookPage() {
   const [guestList, setGuestList] = useState<GuestInfo[]>([]);
   const [booking, setBooking] = useState<Booking | null>(null);
   const restoredFromBooking = useRef(false);
+  // True while the guest is editing an already-created PENDING_PAYMENT booking.
+  // In this mode the form is unlocked and the live price is shown; on submit the
+  // old booking is cancelled and a fresh one is created with the new selection.
+  const [modifying, setModifying] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
@@ -186,6 +190,35 @@ export default function BookPage() {
     }
   }, [selectedRoomSelections, roomTypes]);
 
+  // Load the originally-selected guests & room types from a fetched booking into
+  // the editable form state. Used both to render the locked summary when resuming
+  // payment, and to seed the form when the guest chooses to modify the booking.
+  const applyBookingToForm = (b: Booking) => {
+    if (b.guestsCount) { setAdults(b.guestsCount); setChildrenCount(0); }
+    if (b.roomsCount) setRooms(b.roomsCount);
+    if (b.checkIn) setCheckIn(b.checkIn.split('T')[0]);
+    if (b.checkOut) setCheckOut(b.checkOut.split('T')[0]);
+    if (b.guestFirstName) setFirstName(b.guestFirstName);
+    if (b.guestLastName) setLastName(b.guestLastName);
+    if (b.guestEmail) setEmail(b.guestEmail);
+    if (b.guestPhone) setPhone(sanitizePhone(b.guestPhone));
+    if (b.paymentMode === 'PREPAID' || b.paymentMode === 'PARTIAL_PREPAID') setPaymentMode(b.paymentMode);
+
+    const pgLike = listing?.type === 'PG' || listing?.type === 'COLIVING';
+    const sels = b.roomSelections?.length
+      ? b.roomSelections.map(rs => ({ id: rs.roomTypeId, count: rs.count ?? 1 }))
+      : b.roomTypeId
+        ? [{ id: b.roomTypeId, count: b.roomsCount ?? 1 }]
+        : [];
+    if (sels.length) {
+      setSelectedRoomSelections(sels.map(s => {
+        if (pgLike) return { id: s.id, rooms: s.count, gpr: 1, c: s.count };
+        const gpr = Math.max(1, Math.ceil((b.guestsCount ?? s.count) / (b.roomsCount || s.count || 1)));
+        return { id: s.id, rooms: s.count, gpr, c: s.count * gpr };
+      }));
+    }
+  };
+
   // Resuming an existing booking (e.g. "Complete payment" from the dashboard):
   // restore the originally-selected guests & room types so the summary reflects
   // what was actually booked instead of resetting to the URL/default values.
@@ -194,23 +227,7 @@ export default function BookPage() {
   useEffect(() => {
     if (!booking || !listing || restoredFromBooking.current) return;
     restoredFromBooking.current = true;
-
-    if (booking.guestsCount) { setAdults(booking.guestsCount); setChildrenCount(0); }
-    if (booking.roomsCount) setRooms(booking.roomsCount);
-
-    const pgLike = listing.type === 'PG' || listing.type === 'COLIVING';
-    const sels = booking.roomSelections?.length
-      ? booking.roomSelections.map(rs => ({ id: rs.roomTypeId, count: rs.count ?? 1 }))
-      : booking.roomTypeId
-        ? [{ id: booking.roomTypeId, count: booking.roomsCount ?? 1 }]
-        : [];
-    if (sels.length) {
-      setSelectedRoomSelections(sels.map(s => {
-        if (pgLike) return { id: s.id, rooms: s.count, gpr: 1, c: s.count };
-        const gpr = Math.max(1, Math.ceil((booking.guestsCount ?? s.count) / (booking.roomsCount || s.count || 1)));
-        return { id: s.id, rooms: s.count, gpr, c: s.count * gpr };
-      }));
-    }
+    applyBookingToForm(booking);
   }, [booking, listing]);
 
   // PG / Hotel helpers
@@ -395,10 +412,17 @@ export default function BookPage() {
   ].filter(Boolean).join(', ');
 
   async function handleCreateBooking() {
-    if (!token || !isFormValid || booking) return;
+    // Allow submit for a brand-new booking, or when modifying an existing one.
+    if (!token || !isFormValid || (booking && !modifying)) return;
     setLoading(true);
     setError('');
     try {
+      // Modifying a pending booking = cancel the old one (safe: no inventory is
+      // held until payment) and create a fresh booking with the new selection.
+      if (modifying && booking) {
+        await api.cancelBooking(booking.id, 'Modified before payment', token);
+        setBooking(null);
+      }
       const b = await api.createBooking(
         {
           listingId,
@@ -445,6 +469,7 @@ export default function BookPage() {
         token
       );
       setBooking(b);
+      setModifying(false);
     } catch (e: any) {
       setError(e.message || 'Booking failed. Please try again.');
     } finally {
@@ -554,17 +579,17 @@ export default function BookPage() {
           </div>
 
           {/* Room type picker — unified component.
-              Hidden when completing payment for an already-created booking:
-              the room & price are locked to that booking (shown in the summary).
-              To change the room, the guest cancels and rebooks. */}
-          {!booking && roomTypes.length > 0 && (
+              Hidden when completing payment for an already-created booking
+              (room & price are locked to that booking, shown in the summary),
+              UNLESS the guest has chosen to modify the booking. */}
+          {(!booking || modifying) && roomTypes.length > 0 && (
             <div>
               <RoomTypeSelector
                 roomTypes={roomTypes}
                 perNightLabel={`per ${unitLabel}`}
                 listingId={listingId}
                 isPG={isPG}
-                initialSelections={urlRoomSelections.length > 0 ? urlRoomSelections.map(s => ({
+                initialSelections={selectedRoomSelections.length > 0 ? selectedRoomSelections.map(s => ({
                   roomTypeId: s.id,
                   rooms: s.rooms ?? 1,
                   guestsPerRoom: s.gpr ?? s.c ?? 1,
@@ -643,7 +668,7 @@ export default function BookPage() {
           {error && <div className="bg-red-50 text-red-600 rounded-xl px-4 py-3 text-sm">{error}</div>}
 
           {/* Payment mode (PG only, when host has enabled partial-prepayment) */}
-          {!booking && isPG && listing?.payAtPropertyEnabled && (() => {
+          {(!booking || modifying) && isPG && listing?.payAtPropertyEnabled && (() => {
             const pct = Math.min(50, Math.max(10, listing?.partialPrepaidPercent ?? 30));
             const upfront = Math.round(totalPaise * pct / 100);
             const due = totalPaise - upfront;
@@ -682,7 +707,7 @@ export default function BookPage() {
           {roomTypes.length > 0 && selectedRoomSelections.length === 0 && (
             <p className="text-xs text-red-500 font-medium text-center mb-2">Please select a room type above to continue</p>
           )}
-          {!booking ? (() => {
+          {(!booking || modifying) ? (() => {
             const partialActive = isPG && listing?.payAtPropertyEnabled && paymentMode === 'PARTIAL_PREPAID';
             const pct = Math.min(50, Math.max(10, listing?.partialPrepaidPercent ?? 30));
             const upfrontPaise = partialActive ? Math.round(totalPaise * pct / 100) : totalPaise;
@@ -709,13 +734,20 @@ export default function BookPage() {
                 {stayError && (
                   <p className="text-xs text-red-600 mb-2 text-center">{stayError}</p>
                 )}
+                {modifying && (
+                  <div className="flex items-center justify-between mb-2 bg-blue-50 border border-blue-200 rounded-lg px-3 py-2">
+                    <span className="text-xs text-blue-700 font-medium">Editing your booking — the price updates as you change rooms, dates or guests.</span>
+                    <button type="button" onClick={() => { setModifying(false); if (booking) applyBookingToForm(booking); }}
+                      className="text-xs text-gray-500 underline shrink-0 ml-2">Cancel</button>
+                  </div>
+                )}
                 <button onClick={handleCreateBooking} disabled={loading || !isFormValid}
                   className="w-full bg-orange-500 hover:bg-orange-600 text-white font-semibold py-3 rounded-xl disabled:opacity-50 transition">
                   {loading
-                    ? 'Creating booking...'
+                    ? (modifying ? 'Updating booking...' : 'Creating booking...')
                     : partialActive
                       ? `Pay ${formatPaise(upfrontPaise)} now · ${pct}% upfront`
-                      : `Proceed to Payment · ${formatPaise(totalPaise)}`}
+                      : `${modifying ? 'Update & proceed to payment' : 'Proceed to Payment'} · ${formatPaise(totalPaise)}`}
                 </button>
               </>
             );
@@ -757,6 +789,12 @@ export default function BookPage() {
                   <p className="text-xs text-gray-400 text-center">Pay directly at the property. Host will confirm your booking.</p>
                 </>
               )}
+              <div className="pt-1 text-center">
+                <button type="button" onClick={() => setModifying(true)}
+                  className="text-xs text-orange-600 hover:text-orange-700 font-semibold underline">
+                  Need to change room, dates or guests? Modify booking
+                </button>
+              </div>
             </div>
           )}
         </div>
@@ -788,7 +826,7 @@ export default function BookPage() {
             <div className="border-t pt-3">
               <div className="flex items-center justify-between mb-2">
                 <p className="text-xs font-semibold text-gray-500 uppercase">Your stay</p>
-                {!booking && (
+                {(!booking || modifying) && (
                   <button type="button" onClick={() => setEditingDates(!editingDates)}
                     className="text-xs text-orange-600 hover:text-orange-700 font-semibold">
                     {editingDates ? 'Done' : 'Change'}
@@ -927,7 +965,7 @@ export default function BookPage() {
                 <>
                   <div className="flex items-center justify-between mb-2">
                     <p className="text-xs font-semibold text-gray-500 uppercase">Rooms & Guests</p>
-                    {!booking && (
+                    {(!booking || modifying) && (
                       <button type="button" onClick={() => setEditingGuests(!editingGuests)}
                         className="text-xs text-orange-600 hover:text-orange-700 font-semibold">
                         {editingGuests ? 'Done' : 'Change'}
@@ -1049,7 +1087,7 @@ export default function BookPage() {
             <div className="border-t pt-3 space-y-2 text-sm">
               <p className="text-xs font-semibold text-gray-500 uppercase mb-2">Price Details</p>
 
-              {booking ? (
+              {booking && !modifying ? (
                 /* ── After booking: show backend-confirmed breakdown ── */
                 <>
                   {/* Room selections */}
