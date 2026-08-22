@@ -172,8 +172,10 @@ export default function HostPage() {
 
   const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
   const getAuthHeaders = () => ({ Authorization: `Bearer ${token}` });
-  // File uploads go directly to listing-service — gateway WebFlux has issues with multipart forwarding
-  const uploadUrl = process.env.NEXT_PUBLIC_LISTING_SERVICE_URL || 'http://localhost:8083';
+  // Route through the API gateway like the rest of the app. The old fallback was
+  // http://localhost:8083 (listing-service direct), which on a deployed build points at
+  // the visitor's own machine — every host-page call silently failed in production.
+  const uploadUrl = process.env.NEXT_PUBLIC_LISTING_SERVICE_URL || apiUrl;
 
   // Subscription helpers
   const TIER_LIMITS: Record<string, number> = { STARTER: 2, PRO: 10, COMMERCIAL: Infinity };
